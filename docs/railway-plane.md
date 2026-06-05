@@ -42,23 +42,23 @@ handle_path /uploads* {
 }
 ```
 
-This repository's Railway AIO Dockerfile uses `apps/proxy/Caddyfile.aio.ce`, which includes that `/uploads` route.
+The current live rollback image is `makeplane/plane-aio-community:stable`, so keep this upload check in the smoke suite after every deploy.
 
 ## GitHub to Railway Source Deploy
 
 The `preview` branch includes:
 
 - `railway.json`, which tells Railway to build `deployments/aio/community/Dockerfile.railway`.
-- `.github/workflows/railway-aio-ghcr.yml`, which builds patched component images and a patched AIO image in GitHub Container Registry.
+- `deployments/aio/community/Dockerfile.railway`, currently a minimal wrapper around the public `makeplane/plane-aio-community:stable` image.
+- `.github/workflows/railway-aio-ghcr.yml`, which can build patched component images and a patched AIO image in GitHub Container Registry for a later custom-image rollout.
 
 Recommended Railway flow:
 
 1. Keep the service connected to `mygogocash/plane` branch `preview`.
-2. Turn on `Wait for CI`.
-3. Wait until the `Railway AIO GHCR Image` workflow succeeds.
-4. Redeploy the latest `preview` commit in Railway.
+2. Keep `Wait for CI` off until the duplicate GitHub CodeQL setup is resolved.
+3. Redeploy the latest `preview` commit in Railway.
 
-If GHCR packages are private, either make the generated packages public or configure Railway registry credentials for `ghcr.io`.
+Do not switch the Railway Dockerfile back to GHCR-based component `FROM` stages until GHCR packages are public or Railway has registry credentials for `ghcr.io`.
 
 ### Upload Verification
 
