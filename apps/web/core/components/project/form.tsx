@@ -24,6 +24,12 @@ import { ImagePickerPopover } from "@/components/core/image-picker-popover";
 import { TimezoneSelect } from "@/components/global";
 // helpers
 import { handleCoverImageChange } from "@/helpers/cover-image.helper";
+import {
+  PROJECT_IDENTIFIER_SPECIAL_CHAR_ERROR_CODE,
+  PROJECT_NAME_SPECIAL_CHAR_ERROR_CODE,
+  getProjectNameValidationMessageKey,
+  hasProjectValidationErrorCode,
+} from "@/helpers/project-validation.helper";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -100,14 +106,16 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
       })
       .catch((err) => {
         try {
-          // Handle the new error format where codes are nested in arrays under field names
-          const errorData = err ?? {};
+          const nameError = hasProjectValidationErrorCode(err, "name", "PROJECT_NAME_ALREADY_EXIST");
+          const identifierError = hasProjectValidationErrorCode(err, "identifier", "PROJECT_IDENTIFIER_ALREADY_EXIST");
+          const nameSpecialCharError = hasProjectValidationErrorCode(err, "name", PROJECT_NAME_SPECIAL_CHAR_ERROR_CODE);
+          const identifierSpecialCharError = hasProjectValidationErrorCode(
+            err,
+            "identifier",
+            PROJECT_IDENTIFIER_SPECIAL_CHAR_ERROR_CODE
+          );
 
-          const nameError = errorData.name?.includes("PROJECT_NAME_ALREADY_EXIST");
-          const identifierError = errorData?.identifier?.includes("PROJECT_IDENTIFIER_ALREADY_EXIST");
-          const nameSpecialCharError = errorData?.name?.includes("PROJECT_NAME_CANNOT_CONTAIN_SPECIAL_CHARACTERS");
-
-          if (nameError || identifierError || nameSpecialCharError) {
+          if (nameError || identifierError || nameSpecialCharError || identifierSpecialCharError) {
             if (nameError) {
               setToast({
                 type: TOAST_TYPE.ERROR,
@@ -129,6 +137,14 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                 type: TOAST_TYPE.ERROR,
                 title: t("toast.error"),
                 message: t("project_name_cannot_contain_special_characters"),
+              });
+            }
+
+            if (identifierSpecialCharError) {
+              setToast({
+                type: TOAST_TYPE.ERROR,
+                title: t("toast.error"),
+                message: t("project_id_allowed_char"),
               });
             }
           } else {
@@ -281,6 +297,10 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
             name="name"
             rules={{
               required: t("name_is_required"),
+              validate: (value) => {
+                const messageKey = getProjectNameValidationMessageKey(value);
+                return messageKey ? t(messageKey) : true;
+              },
               maxLength: {
                 value: 255,
                 message: "Project name should be less than 255 characters",

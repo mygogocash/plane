@@ -143,6 +143,40 @@ class TestProjectListCreateAPIEndpoint:
         assert Project.objects.count() == 0
 
     @pytest.mark.django_db
+    def test_create_project_with_invalid_name_returns_field_error_code(self, api_key_client, workspace):
+        url = self.get_url(workspace.slug)
+        payload = {
+            "name": "BUGHUNT 2026.06",
+            "identifier": "BH",
+        }
+
+        response = api_key_client.post(url, payload, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, f"Got {response.status_code}: {response.data!r}"
+        assert "name" in response.data
+        assert [str(error) for error in response.data["name"]] == [
+            "PROJECT_NAME_CANNOT_CONTAIN_SPECIAL_CHARACTERS"
+        ]
+        assert Project.objects.count() == 0
+
+    @pytest.mark.django_db
+    def test_create_project_with_invalid_identifier_returns_field_error_code(self, api_key_client, workspace):
+        url = self.get_url(workspace.slug)
+        payload = {
+            "name": "Bug Hunt Project",
+            "identifier": "BUG.HUNT",
+        }
+
+        response = api_key_client.post(url, payload, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST, f"Got {response.status_code}: {response.data!r}"
+        assert "identifier" in response.data
+        assert [str(error) for error in response.data["identifier"]] == [
+            "PROJECT_IDENTIFIER_CANNOT_CONTAIN_SPECIAL_CHARACTERS"
+        ]
+        assert Project.objects.count() == 0
+
+    @pytest.mark.django_db
     def test_model_activity_not_called_on_rollback(self, api_key_client, workspace, create_user):
         """If anything inside the transaction.atomic() block raises, the
         whole creation must roll back (no Project, no ProjectMember, no

@@ -146,6 +146,26 @@ class WorkspaceInvitationsViewset(BaseViewSet):
         workspace_member_invite.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def resend(self, request, slug, pk):
+        workspace_member_invite = WorkspaceMemberInvite.objects.get(pk=pk, workspace__slug=slug)
+
+        if workspace_member_invite.responded_at:
+            return Response(
+                {"error": "Invite already responded", "code": "INVITE_ALREADY_RESPONDED"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        current_site = base_host(request=request, is_app=True)
+        workspace_invitation.delay(
+            workspace_member_invite.email,
+            workspace_member_invite.workspace_id,
+            workspace_member_invite.token,
+            current_site,
+            request.user.email,
+        )
+
+        return Response({"message": "Invitation resent successfully"}, status=status.HTTP_200_OK)
+
 
 class WorkspaceJoinEndpoint(BaseAPIView):
     permission_classes = [AllowAny]

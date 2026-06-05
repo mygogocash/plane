@@ -59,6 +59,7 @@ export interface IWorkspaceMemberStore {
     invitationId: string,
     data: Partial<IWorkspaceMemberInvitation>
   ) => Promise<void>;
+  resendMemberInvitation: (workspaceSlug: string, invitationId: string) => Promise<void>;
   deleteMemberInvitation: (workspaceSlug: string, invitationId: string) => Promise<void>;
   isUserSuspended: (userId: string, workspaceSlug: string) => boolean;
 }
@@ -93,6 +94,7 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
       removeMemberFromWorkspace: action,
       fetchWorkspaceMemberInvitations: action,
       updateMemberInvitation: action,
+      resendMemberInvitation: action,
       deleteMemberInvitation: action,
     });
     // initialize filters store
@@ -342,6 +344,14 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
       throw error;
     }
   };
+
+  /**
+   * @description resend a pending member invitation email
+   * @param workspaceSlug
+   * @param invitationId
+   */
+  resendMemberInvitation = async (workspaceSlug: string, invitationId: string) =>
+    await this.workspaceService.resendWorkspaceInvitation(workspaceSlug.toString(), invitationId);
 
   /**
    * @description delete a member invitation

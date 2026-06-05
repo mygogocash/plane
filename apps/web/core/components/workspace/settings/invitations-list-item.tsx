@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { Mails } from "lucide-react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 // plane imports
@@ -36,7 +37,12 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
   // store hooks
   const { allowPermissions, workspaceInfoBySlug } = useUserPermissions();
   const {
-    workspace: { updateMemberInvitation, deleteMemberInvitation, getWorkspaceInvitationDetails },
+    workspace: {
+      updateMemberInvitation,
+      resendMemberInvitation,
+      deleteMemberInvitation,
+      getWorkspaceInvitationDetails,
+    },
   } = useMember();
   // derived values
   const invitationDetails = getWorkspaceInvitationDetails(invitationId);
@@ -73,6 +79,26 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
     }
   };
 
+  const handleResendInvitation = async () => {
+    try {
+      if (!workspaceSlug || !invitationDetails) return;
+
+      await resendMemberInvitation(workspaceSlug.toString(), invitationDetails.id);
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: "Success!",
+        message: "Invitation email resent successfully.",
+      });
+    } catch (err: unknown) {
+      const error = err as { error?: string };
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: error?.error || "Something went wrong. Please try again.",
+      });
+    }
+  };
+
   if (!invitationDetails || !currentWorkspaceMemberInfo) return null;
 
   const handleCopyText = async () => {
@@ -96,6 +122,13 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
       title: t("common.actions.copy_link"),
       icon: LinkIcon,
       shouldRender: !!invitationDetails.invite_link,
+    },
+    {
+      key: "resend-email",
+      action: () => void handleResendInvitation(),
+      title: "Resend email",
+      icon: Mails,
+      shouldRender: isAdmin,
     },
     {
       key: "remove",

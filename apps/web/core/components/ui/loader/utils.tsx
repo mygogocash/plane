@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-export const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const getDeterministicIndex = (seed: number, length: number) => Math.abs(seed) % length;
 
-export const getRandomLength = (lengthArray: string[]) => {
-  const randomIndex = Math.floor(Math.random() * lengthArray.length);
-  return `${lengthArray[randomIndex]}`;
-};
+export const getRandomInt = (min: number, max: number, seed = 0) => min + getDeterministicIndex(seed, max - min + 1);
+
+export const getRandomLength = (lengthArray: string[], seed = 0) =>
+  `${lengthArray[getDeterministicIndex(seed, lengthArray.length)]}`;

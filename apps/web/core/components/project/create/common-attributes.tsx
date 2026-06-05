@@ -17,6 +17,7 @@ import { Input, TextArea } from "@plane/ui";
 import { cn, projectIdentifierSanitizer, getTabIndex } from "@plane/utils";
 // plane utils
 // helpers
+import { getProjectNameValidationMessageKey } from "@/helpers/project-validation.helper";
 // plane-web types
 import type { TProject } from "@/plane-web/types/projects";
 
@@ -65,6 +66,10 @@ function ProjectCommonAttributes(props: Props) {
           name="name"
           rules={{
             required: t("name_is_required"),
+            validate: (value) => {
+              const messageKey = getProjectNameValidationMessageKey(value);
+              return messageKey ? t(messageKey) : true;
+            },
             maxLength: {
               value: 255,
               message: t("title_should_be_less_than_255_characters"),

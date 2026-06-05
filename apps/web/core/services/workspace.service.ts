@@ -189,6 +189,14 @@ export class WorkspaceService extends APIService {
       });
   }
 
+  async resendWorkspaceInvitation(workspaceSlug: string, invitationId: string): Promise<any> {
+    return this.post(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/resend/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
   async deleteWorkspaceInvitations(workspaceSlug: string, invitationId: string): Promise<any> {
     return this.delete(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/`)
       .then((response) => response?.data)

@@ -187,6 +187,42 @@ class TestProjectAPIPost(TestProjectBase):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     @pytest.mark.django_db
+    def test_create_project_with_invalid_name_returns_field_error_code(self, session_client, workspace, create_user):
+        url = self.get_project_url(workspace.slug)
+        project_data = {
+            "name": "BUGHUNT 2026.06",
+            "identifier": "BH",
+        }
+
+        response = session_client.post(url, project_data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "name" in response.data
+        assert [str(error) for error in response.data["name"]] == [
+            "PROJECT_NAME_CANNOT_CONTAIN_SPECIAL_CHARACTERS"
+        ]
+        assert Project.objects.count() == 0
+
+    @pytest.mark.django_db
+    def test_create_project_with_invalid_identifier_returns_field_error_code(
+        self, session_client, workspace, create_user
+    ):
+        url = self.get_project_url(workspace.slug)
+        project_data = {
+            "name": "Bug Hunt Project",
+            "identifier": "BUG.HUNT",
+        }
+
+        response = session_client.post(url, project_data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "identifier" in response.data
+        assert [str(error) for error in response.data["identifier"]] == [
+            "PROJECT_IDENTIFIER_CANNOT_CONTAIN_SPECIAL_CHARACTERS"
+        ]
+        assert Project.objects.count() == 0
+
+    @pytest.mark.django_db
     def test_create_project_missing_required_fields(self, session_client, workspace, create_user):
         """Test validation with missing required fields"""
         url = self.get_project_url(workspace.slug)

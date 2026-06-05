@@ -17,7 +17,8 @@ export const ListLoaderItemRow = forwardRef(function ListLoaderItemRow(
     shouldAnimate = true,
     renderForPlaceHolder = false,
     defaultPropertyCount = 6,
-  }: { shouldAnimate?: boolean; renderForPlaceHolder?: boolean; defaultPropertyCount?: number },
+    rowIndex = 0,
+  }: { shouldAnimate?: boolean; renderForPlaceHolder?: boolean; defaultPropertyCount?: number; rowIndex?: number },
   ref: React.ForwardedRef<HTMLDivElement>
 ) {
   return (
@@ -37,7 +38,7 @@ export const ListLoaderItemRow = forwardRef(function ListLoaderItemRow(
         />
         <span
           className={cn(
-            `h-5 w-${getRandomLength(["32", "52", "72"])} rounded-sm bg-[var(--illustration-fill-tertiary)]`,
+            `h-5 w-${getRandomLength(["32", "52", "72"], rowIndex)} rounded-sm bg-[var(--illustration-fill-tertiary)]`,
             {
               "animate-pulse": shouldAnimate,
               "bg-surface-2": renderForPlaceHolder,
@@ -48,7 +49,7 @@ export const ListLoaderItemRow = forwardRef(function ListLoaderItemRow(
       <div className="flex items-center gap-2">
         {range(defaultPropertyCount).map((index) => (
           <Fragment key={index}>
-            {getRandomInt(1, 2) % 2 === 0 ? (
+            {getRandomInt(1, 2, rowIndex + index) % 2 === 0 ? (
               <span
                 key={index}
                 className={cn("h-5 w-5 rounded-sm bg-[var(--illustration-fill-tertiary)]", {
@@ -84,7 +85,7 @@ function ListSection({ itemCount }: { itemCount: number }) {
       </Row>
       <div className="relative h-full w-full">
         {range(itemCount).map((index) => (
-          <ListLoaderItemRow key={index} />
+          <ListLoaderItemRow key={index} rowIndex={index} />
         ))}
       </div>
     </div>

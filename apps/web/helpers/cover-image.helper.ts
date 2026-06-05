@@ -285,3 +285,5 @@ export const handleCoverImageChange = async (
  */
 export const getRandomCoverImage = (): string =>
   Object.values(STATIC_COVER_IMAGES)[Math.floor(Math.random() * Object.keys(STATIC_COVER_IMAGES).length)];
+
+export const getDefaultCoverImage = (): string => Object.values(STATIC_COVER_IMAGES)[0];

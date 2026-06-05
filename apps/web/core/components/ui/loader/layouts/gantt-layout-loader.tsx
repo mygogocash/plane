@@ -13,7 +13,7 @@ export function GanttLayoutListItemLoader() {
   return (
     <div className="flex w-full items-center gap-4 px-6" style={{ height: `${BLOCK_HEIGHT}px` }}>
       <div className="h-6 w-8 rounded-sm bg-layer-1 px-3" />
-      <div className={`h-6 px-3 w-${getRandomLength(["32", "52", "72"])} rounded-sm bg-layer-1`} />
+      <div className={`h-6 px-3 w-${getRandomLength(["32", "52", "72"], 1)} rounded-sm bg-layer-1`} />
     </div>
   );
 }
@@ -36,7 +36,7 @@ export function GanttLayoutLoader() {
             {range(6).map((index) => (
               <div key={index} className="flex h-11 w-full items-center gap-3">
                 <span className="h-6 w-6 rounded-sm bg-layer-1" />
-                <span className={`h-6 w-${getRandomLength(["32", "52", "72"])} rounded-sm bg-layer-1`} />
+                <span className={`h-6 w-${getRandomLength(["32", "52", "72"], index)} rounded-sm bg-layer-1`} />
               </div>
             ))}
           </Row>
@@ -57,9 +57,11 @@ export function GanttLayoutLoader() {
               <div
                 key={index}
                 className={`flex h-11 w-full items-center gap-3`}
-                style={{ paddingLeft: getRandomLength(["115px", "208px", "260px"]) }}
+                style={{ paddingLeft: getRandomLength(["115px", "208px", "260px"], index) }}
               >
-                <span className={`h-6 w-40 w-${getRandomLength(["32", "52", "72"])} rounded-sm bg-layer-1`} />
+                <span
+                  className={`h-6 w-40 w-${getRandomLength(["32", "52", "72"], index + 1)} rounded-sm bg-layer-1`}
+                />
               </div>
             ))}
           </div>

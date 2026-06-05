@@ -44,6 +44,7 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
   const { preferences: workspacePreferences } = useWorkspaceNavigationPreferences();
   // translation
   const { t } = useTranslation();
+  const workspaceMenuAriaLabel = isWorkspaceMenuOpen ? "Close workspace menu" : "Open workspace menu";
 
   const toggleListDisclosure = (isOpen: boolean) => {
     toggleWorkspaceMenu(isOpen);
@@ -108,11 +109,7 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
             type="button"
             className="flex w-full items-center gap-1 text-left text-13 font-semibold whitespace-nowrap text-placeholder"
             onClick={() => toggleListDisclosure(!isWorkspaceMenuOpen)}
-            aria-label={t(
-              isWorkspaceMenuOpen
-                ? "aria_labels.app_sidebar.close_workspace_menu"
-                : "aria_labels.app_sidebar.open_workspace_menu"
-            )}
+            aria-label={workspaceMenuAriaLabel}
           >
             <span className="text-13 font-semibold">{t("common.workspace")}</span>
           </Disclosure.Button>
@@ -122,11 +119,7 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
               type="button"
               className="flex-shrink-0 rounded-sm p-0.5 hover:bg-layer-1"
               onClick={() => toggleListDisclosure(!isWorkspaceMenuOpen)}
-              aria-label={t(
-                isWorkspaceMenuOpen
-                  ? "aria_labels.app_sidebar.close_workspace_menu"
-                  : "aria_labels.app_sidebar.open_workspace_menu"
-              )}
+              aria-label={workspaceMenuAriaLabel}
             >
               <ChevronRightIcon
                 className={cn("size-3 flex-shrink-0 transition-all", {
@@ -162,8 +155,8 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
                     id="extended-sidebar-toggle"
                     aria-label={t(
                       isExtendedSidebarOpened
-                        ? "aria_labels.app_sidebar.close_extended_sidebar"
-                        : "aria_labels.app_sidebar.open_extended_sidebar"
+                        ? "aria_labels.projects_sidebar.close_extended_sidebar"
+                        : "aria_labels.projects_sidebar.open_extended_sidebar"
                     )}
                   >
                     <Ellipsis className="size-4 flex-shrink-0" />

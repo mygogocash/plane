@@ -17,6 +17,11 @@ import ProjectCreateHeader from "@/components/project/create/header";
 import ProjectCreateButtons from "@/components/project/create/project-create-buttons";
 // hooks
 import { getCoverImageType, uploadCoverImage } from "@/helpers/cover-image.helper";
+import {
+  PROJECT_IDENTIFIER_SPECIAL_CHAR_ERROR_CODE,
+  PROJECT_NAME_SPECIAL_CHAR_ERROR_CODE,
+  hasProjectValidationErrorCode,
+} from "@/helpers/project-validation.helper";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web types
@@ -114,14 +119,16 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
       })
       .catch((err) => {
         try {
-          // Handle the new error format where codes are nested in arrays under field names
-          const errorData = err?.data ?? {};
+          const nameError = hasProjectValidationErrorCode(err, "name", "PROJECT_NAME_ALREADY_EXIST");
+          const identifierError = hasProjectValidationErrorCode(err, "identifier", "PROJECT_IDENTIFIER_ALREADY_EXIST");
+          const nameSpecialCharError = hasProjectValidationErrorCode(err, "name", PROJECT_NAME_SPECIAL_CHAR_ERROR_CODE);
+          const identifierSpecialCharError = hasProjectValidationErrorCode(
+            err,
+            "identifier",
+            PROJECT_IDENTIFIER_SPECIAL_CHAR_ERROR_CODE
+          );
 
-          const nameError = errorData.name?.includes("PROJECT_NAME_ALREADY_EXIST");
-          const identifierError = errorData?.identifier?.includes("PROJECT_IDENTIFIER_ALREADY_EXIST");
-          const nameSpecialCharError = errorData?.name?.includes("PROJECT_NAME_CANNOT_CONTAIN_SPECIAL_CHARACTERS");
-
-          if (nameError || identifierError || nameSpecialCharError) {
+          if (nameError || identifierError || nameSpecialCharError || identifierSpecialCharError) {
             if (nameError) {
               setToast({
                 type: TOAST_TYPE.ERROR,
@@ -143,6 +150,14 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
                 type: TOAST_TYPE.ERROR,
                 title: t("toast.error"),
                 message: t("project_name_cannot_contain_special_characters"),
+              });
+            }
+
+            if (identifierSpecialCharError) {
+              setToast({
+                type: TOAST_TYPE.ERROR,
+                title: t("toast.error"),
+                message: t("project_id_allowed_char"),
               });
             }
           } else {
