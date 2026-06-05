@@ -31,15 +31,34 @@ For the current Railway deployment:
 AWS_S3_ENDPOINT_URL=https://<your-plane-domain>
 USE_MINIO=1
 MINIO_ENDPOINT_SSL=0
+MINIO_PROXY_ENDPOINT=minio.railway.internal:9000
 ```
 
-The Plane service start command or image must include a Caddy/proxy rule equivalent to:
+The Plane service image must include a Caddy/proxy rule equivalent to:
 
 ```caddyfile
 handle_path /uploads* {
-  reverse_proxy minio.railway.internal:9000
+  reverse_proxy {$MINIO_PROXY_ENDPOINT:minio:9000}
 }
 ```
+
+This repository's Railway AIO Dockerfile uses `apps/proxy/Caddyfile.aio.ce`, which includes that `/uploads` route.
+
+## GitHub to Railway Source Deploy
+
+The `preview` branch includes:
+
+- `railway.json`, which tells Railway to build `deployments/aio/community/Dockerfile.railway`.
+- `.github/workflows/railway-aio-ghcr.yml`, which builds patched component images and a patched AIO image in GitHub Container Registry.
+
+Recommended Railway flow:
+
+1. Keep the service connected to `mygogocash/plane` branch `preview`.
+2. Turn on `Wait for CI`.
+3. Wait until the `Railway AIO GHCR Image` workflow succeeds.
+4. Redeploy the latest `preview` commit in Railway.
+
+If GHCR packages are private, either make the generated packages public or configure Railway registry credentials for `ghcr.io`.
 
 ### Upload Verification
 
