@@ -73,7 +73,7 @@ export function EstimateCreateStageOne(props: TEstimateCreateStageOne) {
           onChange={(value) => handleEstimateSystem(value as TEstimateSystemKeys)}
         />
       </div>
-      {ESTIMATE_SYSTEMS[estimateSystem]?.is_available && !ESTIMATE_SYSTEMS[estimateSystem]?.is_ee && (
+      {ESTIMATE_SYSTEMS[estimateSystem]?.is_available && isEstimateSystemEnabled(estimateSystem) && (
         <>
           <div className="space-y-1.5">
             <div className="text-13 font-medium text-secondary">

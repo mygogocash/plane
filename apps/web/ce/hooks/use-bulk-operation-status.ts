@@ -4,4 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export const useBulkOperationStatus = () => false;
+import { SELF_HOSTED_PAID_FEATURES_ENABLED } from "@/plane-web/lib/self-host-entitlements";
+
+export const useBulkOperationStatus = () => SELF_HOSTED_PAID_FEATURES_ENABLED;

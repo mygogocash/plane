@@ -7,6 +7,7 @@
 // helpers
 import { useTranslation } from "@plane/i18n";
 import { cn } from "@plane/utils";
+import { SELF_HOSTED_PAID_FEATURES_ENABLED } from "@/plane-web/lib/self-host-entitlements";
 
 type TUpgradeBadge = {
   className?: string;
@@ -17,6 +18,8 @@ export function UpgradeBadge(props: TUpgradeBadge) {
   const { className, size = "sm" } = props;
 
   const { t } = useTranslation();
+
+  if (SELF_HOSTED_PAID_FEATURES_ENABLED) return null;
 
   return (
     <div

@@ -9,8 +9,15 @@ import { getButtonStyling } from "@plane/propel/button";
 import { cn } from "@plane/utils";
 // components
 import { ProIcon } from "@/components/common/pro-icon";
+import { SELF_HOSTED_PAID_FEATURES_ENABLED } from "@/plane-web/lib/self-host-entitlements";
 
-export function IssueEmbedUpgradeCard(props: any) {
+type Props = {
+  selected?: boolean;
+};
+
+export function IssueEmbedUpgradeCard(props: Props) {
+  if (SELF_HOSTED_PAID_FEATURES_ENABLED) return null;
+
   return (
     <div
       className={cn(

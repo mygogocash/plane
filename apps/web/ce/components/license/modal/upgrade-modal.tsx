@@ -21,6 +21,7 @@ import { cn } from "@plane/utils";
 // components
 import { FreePlanCard, PlanUpgradeCard } from "@/components/license";
 import type { TCheckoutParams } from "@/components/license/modal/card/checkout-button";
+import { SELF_HOSTED_PAID_FEATURES_ENABLED } from "@/plane-web/lib/self-host-entitlements";
 
 // Constants
 const COMMON_CARD_CLASSNAME = "flex flex-col w-full h-full justify-end col-span-12 sm:col-span-6 xl:col-span-3";
@@ -33,6 +34,8 @@ export type PaidPlanUpgradeModalProps = {
 
 export const PaidPlanUpgradeModal = observer(function PaidPlanUpgradeModal(props: PaidPlanUpgradeModalProps) {
   const { isOpen, handleClose } = props;
+  if (SELF_HOSTED_PAID_FEATURES_ENABLED) return null;
+
   // derived values
   const isSelfHosted = true;
   const isTrialAllowed = false;
@@ -40,8 +43,8 @@ export const PaidPlanUpgradeModal = observer(function PaidPlanUpgradeModal(props
   const handleRedirection = ({ planVariant, priceId }: TCheckoutParams) => {
     // Get the product and price using plane community constants
     const product = PLANE_COMMUNITY_PRODUCTS[planVariant];
-    const price = product.prices.find((price) => price.id === priceId);
-    const frequency = price?.recurring ?? "year";
+    const selectedPrice = product.prices.find((price) => price.id === priceId);
+    const frequency = selectedPrice?.recurring ?? "year";
     // Redirect to the appropriate URL
     const redirectUrl = SUBSCRIPTION_REDIRECTION_URLS[planVariant][frequency] ?? TALK_TO_SALES_URL;
     window.open(redirectUrl, "_blank");

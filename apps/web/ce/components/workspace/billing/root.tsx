@@ -14,6 +14,11 @@ import { EProductSubscriptionEnum } from "@plane/types";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
+import {
+  SELF_HOSTED_PAID_FEATURES_ENABLED,
+  SELF_HOSTED_PLAN_DESCRIPTION,
+  SELF_HOSTED_PLAN_LABEL,
+} from "@/plane-web/lib/self-host-entitlements";
 // local imports
 import { PlansComparison } from "./comparison/root";
 
@@ -51,21 +56,20 @@ export const BillingRoot = observer(function BillingRoot() {
           description={t("workspace_settings.settings.billing_and_plans.description")}
         />
         <div className="mt-6">
-          <SettingsBoxedControlItem
-            title="Community"
-            description="Unlimited projects, issues, cycles, modules, pages, and storage"
-          />
+          <SettingsBoxedControlItem title={SELF_HOSTED_PLAN_LABEL} description={SELF_HOSTED_PLAN_DESCRIPTION} />
         </div>
       </div>
-      <div className="mt-10 flex flex-col gap-y-3">
-        <h4 className="text-h6-semibold">All plans</h4>
-        <PlansComparison
-          isCompareAllFeaturesSectionOpen={isCompareAllFeaturesSectionOpen}
-          getBillingFrequency={getBillingFrequency}
-          setBillingFrequency={setBillingFrequency}
-          setIsCompareAllFeaturesSectionOpen={setIsCompareAllFeaturesSectionOpen}
-        />
-      </div>
+      {!SELF_HOSTED_PAID_FEATURES_ENABLED && (
+        <div className="mt-10 flex flex-col gap-y-3">
+          <h4 className="text-h6-semibold">All plans</h4>
+          <PlansComparison
+            isCompareAllFeaturesSectionOpen={isCompareAllFeaturesSectionOpen}
+            getBillingFrequency={getBillingFrequency}
+            setBillingFrequency={setBillingFrequency}
+            setIsCompareAllFeaturesSectionOpen={setIsCompareAllFeaturesSectionOpen}
+          />
+        </div>
+      )}
     </section>
   );
 });

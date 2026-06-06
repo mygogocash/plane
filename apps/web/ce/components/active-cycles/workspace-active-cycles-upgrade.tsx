@@ -24,6 +24,7 @@ import ctaR2Light from "@/app/assets/workspace-active-cycles/cta-r-2-light.webp?
 import { ProIcon } from "@/components/common/pro-icon";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { SELF_HOSTED_PAID_FEATURES_ENABLED, SELF_HOSTED_PLAN_LABEL } from "@/plane-web/lib/self-host-entitlements";
 
 export const WORKSPACE_ACTIVE_CYCLES_DETAILS = [
   {
@@ -91,15 +92,21 @@ export const WorkspaceActiveCyclesUpgrade = observer(function WorkspaceActiveCyc
             <p className="text-14 font-medium text-tertiary">{t("active_cycles_description")}</p>
           </div>
           <div className="flex items-center gap-3">
-            <a
-              className={`${getButtonStyling("primary", "base")} cursor-pointer`}
-              href={MARKETING_PRICING_PAGE_LINK}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ProIcon className="h-3.5 w-3.5 text-on-color" />
-              {t("upgrade")}
-            </a>
+            {SELF_HOSTED_PAID_FEATURES_ENABLED ? (
+              <span className="rounded-md border border-subtle bg-layer-1 px-3 py-2 text-13 font-medium text-secondary">
+                {SELF_HOSTED_PLAN_LABEL}
+              </span>
+            ) : (
+              <a
+                className={`${getButtonStyling("primary", "base")} cursor-pointer`}
+                href={MARKETING_PRICING_PAGE_LINK}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ProIcon className="h-3.5 w-3.5 text-on-color" />
+                {t("upgrade")}
+              </a>
+            )}
           </div>
           <span className="absolute top-0 left-0">
             <img

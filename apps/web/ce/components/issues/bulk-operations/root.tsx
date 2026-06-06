@@ -10,6 +10,7 @@ import { BulkOperationsUpgradeBanner } from "@/components/issues/bulk-operations
 // hooks
 import { useMultipleSelectStore } from "@/hooks/store/use-multiple-select-store";
 import type { TSelectionHelper } from "@/hooks/use-multiple-select";
+import { SELF_HOSTED_PAID_FEATURES_ENABLED } from "@/plane-web/lib/self-host-entitlements";
 
 type Props = {
   className?: string;
@@ -22,6 +23,8 @@ export const IssueBulkOperationsRoot = observer(function IssueBulkOperationsRoot
   const { isSelectionActive } = useMultipleSelectStore();
 
   if (!isSelectionActive || selectionHelpers.isSelectionDisabled) return null;
+
+  if (SELF_HOSTED_PAID_FEATURES_ENABLED) return null;
 
   return <BulkOperationsUpgradeBanner className={className} />;
 });
