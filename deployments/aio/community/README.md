@@ -8,12 +8,15 @@ Registry and rolls GKE workloads through `.github/workflows/ci-cd.yml`; do not
 wire Railway deploy hooks or Railway-specific Dockerfiles back into this
 directory.
 
-Current GoGoCash/Manut production release evidence:
+GoGoCash/Manut GCP release evidence:
 
 - Source commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
 - Image tag: `preview-0b80aadd9610`
 - CI/CD run: `Plane CI/CD` `27065884344`, success
 - Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`
+
+Docs-only commits may create newer immutable GKE tags; confirm the live tag with
+the ops handover commands when needed.
 
 ## What's Included
 

@@ -428,11 +428,11 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
   live/space deployments in namespace `plane-ce`, and smoke
   `https://app.manut.xyz/api/instances/`. No Railway deploy hook or Railway AIO
   image build remains in the active workflow.
-- Final GCP CI/CD verification: commit
+- GCP CI/CD feature rollout verification: commit
   `0b80aadd9610d2446f835d06c872c4283b6ddd83` deployed through `Plane CI/CD` run
   `27065884344`. CodeQL run `27065883913` also passed. The live GKE workloads
-  API, worker, beat-worker, web, admin, live, and space are all `1/1` ready on
-  Artifact Registry tag `preview-0b80aadd9610`, and
+  API, worker, beat-worker, web, admin, live, and space were verified `1/1`
+  ready on Artifact Registry tag `preview-0b80aadd9610`, and
   `GET https://app.manut.xyz/api/instances/` returns `200`.
 - CI cleanup: removed `.github/workflows/codeql.yml` because GitHub default
   CodeQL setup is already enabled for this repository. Keeping both the advanced

@@ -16,18 +16,21 @@ strategy is not a one-line license bypass. The safe path is:
 4. Deploy each feature family to GCP only after tests and rollback paths are
    proven.
 
-# Current Production State
+# Verified GCP Deployment Evidence
 
-- Latest deployed `preview` commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
-- Current immutable Artifact Registry tag: `preview-0b80aadd9610`.
+- Feature rollout commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
+- Feature rollout Artifact Registry tag: `preview-0b80aadd9610`.
 - `Plane CI/CD` run `27065884344` completed successfully with web checks, API
   checks, six component image builds, migration job, GKE rollout, and production
   smoke.
 - CodeQL run `27065883913` completed successfully for JavaScript/TypeScript,
   GitHub Actions, and Python.
 - Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
-- GKE deployments currently ready on the same tag: API, worker, beat-worker,
-  web, admin, live, and space.
+- GKE deployments verified ready on the same feature rollout tag: API, worker,
+  beat-worker, web, admin, live, and space.
+- Docs-only commits may create newer immutable deployment tags. Use
+  `kubectl -n plane-ce get deploy -o jsonpath=...` from the ops handover to
+  confirm the live tag.
 
 # Business Goals
 

@@ -10,7 +10,7 @@ tests.
 
 - The production GCP deploy path is active and verified through `Plane CI/CD`
   run `27065884344`.
-- Current live tag: `preview-0b80aadd9610`.
+- Verified feature rollout tag: `preview-0b80aadd9610`.
 - Live HTTPS smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
 - Responsiveness work still should avoid Kubernetes, Cloudflare, and GCP runtime
   changes unless a separate deployment task explicitly requires them.

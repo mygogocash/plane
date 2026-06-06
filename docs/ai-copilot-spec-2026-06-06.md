@@ -4,9 +4,10 @@ Expand Plane Copilot into a Vertex Gemini-first workspace assistant. V1 supports
 
 # Current Rollout Evidence
 
-- Copilot database migrations are already applied in production; the latest GCP
-  CI/CD migration job for `preview-0b80aadd9610` reported no pending migrations.
-- The deployed source commit is
+- Copilot database migrations are already applied in production; the GCP CI/CD
+  migration job for feature rollout tag `preview-0b80aadd9610` reported no
+  pending migrations.
+- The verified feature rollout source commit is
   `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
 - `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
   successfully.

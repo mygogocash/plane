@@ -34,13 +34,16 @@ This fork deploys the `preview` branch to the GoGoCash/Manut self-hosted Plane
 runtime on GCP, not Railway. The active path is GitHub Actions -> Google
 Artifact Registry -> GKE namespace `plane-ce`.
 
-Current verified production state:
+Verified GCP rollout evidence:
 
 - Source commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
 - Image tag: `preview-0b80aadd9610`
 - `Plane CI/CD` run `27065884344`: success
 - CodeQL run `27065883913`: success
 - Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`
+
+Docs-only commits may create newer immutable tags. Use the ops handover commands
+to confirm the live GKE tag.
 
 Operational details live in `docs/gcp-plane-ops-handover.md` and
 `docs/cicd-spec-2026-06-06.md`.
