@@ -22,6 +22,41 @@ export type TTaskPayload = {
   text_input: string;
 };
 
+export type TCopilotMode = "answer" | "draft_subtasks" | "auto";
+
+export type TCopilotCitation = {
+  entity_type: "issue" | "sub_issue" | "project" | "page" | "comment" | "activity";
+  entity_id: string;
+  title: string;
+  url: string;
+  excerpt: string;
+};
+
+export type TCopilotSubtaskDraftItem = {
+  name: string;
+  description_html: string;
+  priority: "urgent" | "high" | "medium" | "low" | "none";
+  assignee_ids: string[];
+  label_ids: string[];
+  rationale: string;
+};
+
+export type TCopilotMessagePayload = {
+  message: string;
+  mode?: TCopilotMode;
+  project_id?: string;
+  issue_id?: string;
+};
+
+export type TCopilotMessageResponse = {
+  mode: Exclude<TCopilotMode, "auto">;
+  answer: string;
+  citations: TCopilotCitation[];
+  subtask_draft: {
+    items: TCopilotSubtaskDraftItem[];
+  } | null;
+};
+
 export class AIService extends APIService {
   constructor() {
     super(API_BASE_URL);
@@ -32,6 +67,14 @@ export class AIService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response;
+      });
+  }
+
+  async sendCopilotMessage(workspaceSlug: string, data: TCopilotMessagePayload): Promise<TCopilotMessageResponse> {
+    return this.post(`/api/workspaces/${workspaceSlug}/copilot/messages/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data ?? error?.response ?? error;
       });
   }
 

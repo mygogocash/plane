@@ -14,6 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 # Module imports
+from plane.app.views.external.base import is_llm_configured
 from plane.app.views import BaseAPIView
 from plane.db.models import Workspace
 from plane.license.api.permissions import InstanceAdminPermission
@@ -63,6 +64,8 @@ class InstanceEndpoint(BaseAPIView):
             POSTHOG_HOST,
             UNSPLASH_ACCESS_KEY,
             LLM_API_KEY,
+            LLM_PROVIDER,
+            LLM_MODEL,
         ) = get_configuration_value(
             [
                 {
@@ -122,6 +125,14 @@ class InstanceEndpoint(BaseAPIView):
                     "key": "LLM_API_KEY",
                     "default": os.environ.get("LLM_API_KEY", ""),
                 },
+                {
+                    "key": "LLM_PROVIDER",
+                    "default": os.environ.get("LLM_PROVIDER", "vertexai"),
+                },
+                {
+                    "key": "LLM_MODEL",
+                    "default": os.environ.get("LLM_MODEL", "gemini-2.5-flash"),
+                },
             ]
         )
 
@@ -149,8 +160,8 @@ class InstanceEndpoint(BaseAPIView):
         # Unsplash
         data["has_unsplash_configured"] = bool(UNSPLASH_ACCESS_KEY)
 
-        # Open AI settings
-        data["has_llm_configured"] = bool(LLM_API_KEY)
+        # AI settings
+        data["has_llm_configured"] = is_llm_configured(LLM_API_KEY, LLM_MODEL, LLM_PROVIDER)
 
         # File size settings
         data["file_size_limit"] = float(os.environ.get("FILE_SIZE_LIMIT", 5242880))

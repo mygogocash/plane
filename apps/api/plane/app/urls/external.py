@@ -7,6 +7,7 @@ from django.urls import path
 
 from plane.app.views import UnsplashEndpoint
 from plane.app.views import GPTIntegrationEndpoint, WorkspaceGPTIntegrationEndpoint
+from plane.app.views import CopilotMessagesEndpoint
 
 
 urlpatterns = [
@@ -20,5 +21,10 @@ urlpatterns = [
         "workspaces/<str:slug>/ai-assistant/",
         WorkspaceGPTIntegrationEndpoint.as_view(),
         name="importer",
+    ),
+    path(
+        "workspaces/<str:slug>/copilot/messages/",
+        CopilotMessagesEndpoint.as_view(),
+        name="workspace-copilot-messages",
     ),
 ]

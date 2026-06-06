@@ -29,6 +29,7 @@ class LLMProvider:
     name: str = ""
     models: List[str] = []
     default_model: str = ""
+    requires_api_key: bool = True
 
     @classmethod
     def get_config(cls) -> Dict[str, str | List[str]]:
@@ -37,6 +38,10 @@ class LLMProvider:
             "models": cls.models,
             "default_model": cls.default_model,
         }
+
+    @classmethod
+    def supports_model(cls, model: str) -> bool:
+        return model in cls.models
 
 
 class OpenAIProvider(LLMProvider):
@@ -66,11 +71,77 @@ class GeminiProvider(LLMProvider):
     default_model = "gemini-pro"
 
 
+class GoogleVertexAIProvider(LLMProvider):
+    name = "Google Vertex AI"
+    models = [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+    ]
+    default_model = "gemini-2.5-flash"
+    requires_api_key = False
+
+    @classmethod
+    def supports_model(cls, model: str) -> bool:
+        return (
+            super().supports_model(model)
+            or model.startswith("gemini-")
+            or model.startswith("publishers/google/models/gemini-")
+        )
+
+
 SUPPORTED_PROVIDERS = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
     "gemini": GeminiProvider,
+    "vertex": GoogleVertexAIProvider,
+    "vertexai": GoogleVertexAIProvider,
+    "google-vertex": GoogleVertexAIProvider,
+    "google_vertex": GoogleVertexAIProvider,
 }
+
+
+def is_vertex_provider(provider: str | None) -> bool:
+    return (provider or "").lower() in {"vertex", "vertexai", "google-vertex", "google_vertex"}
+
+
+def get_vertex_ai_config() -> Tuple[str | None, str | None]:
+    """
+    Helper to get Vertex AI configuration values, returns:
+        - Google Cloud project, Google Cloud location
+    """
+    project, location = get_configuration_value(
+        [
+            {
+                "key": "LLM_VERTEX_PROJECT",
+                "default": os.environ.get("LLM_VERTEX_PROJECT") or os.environ.get("GOOGLE_CLOUD_PROJECT"),
+            },
+            {
+                "key": "LLM_VERTEX_LOCATION",
+                "default": os.environ.get("LLM_VERTEX_LOCATION")
+                or os.environ.get("GOOGLE_CLOUD_LOCATION")
+                or "us-central1",
+            },
+        ]
+    )
+    return project or None, location or None
+
+
+def is_llm_configured(api_key: str | None, model: str | None, provider: str | None) -> bool:
+    if not model or not provider:
+        return False
+
+    provider_config = SUPPORTED_PROVIDERS.get(provider.lower())
+    if not provider_config:
+        return False
+
+    if is_vertex_provider(provider):
+        project, location = get_vertex_ai_config()
+        return bool(project and location)
+
+    return bool(api_key)
 
 
 def get_llm_config() -> Tuple[str | None, str | None, str | None]:
@@ -86,7 +157,7 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None]:
             },
             {
                 "key": "LLM_PROVIDER",
-                "default": os.environ.get("LLM_PROVIDER", "openai"),
+                "default": os.environ.get("LLM_PROVIDER", "vertexai"),
             },
             {
                 "key": "LLM_MODEL",
@@ -95,12 +166,13 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None]:
         ]
     )
 
-    provider = SUPPORTED_PROVIDERS.get(provider_key.lower())
+    provider_key = (provider_key or "openai").lower()
+    provider = SUPPORTED_PROVIDERS.get(provider_key)
     if not provider:
         log_exception(ValueError(f"Unsupported provider: {provider_key}"))
         return None, None, None
 
-    if not api_key:
+    if provider.requires_api_key and not api_key:
         log_exception(ValueError(f"Missing API key for provider: {provider.name}"))
         return None, None, None
 
@@ -109,7 +181,7 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None]:
         model = provider.default_model
 
     # Validate model is supported by provider
-    if model not in provider.models:
+    if not provider.supports_model(model):
         log_exception(
             ValueError(
                 f"Model {model} not supported by {provider.name}. Supported models: {', '.join(provider.models)}"
@@ -124,6 +196,9 @@ def get_llm_response(task, prompt, api_key: str, model: str, provider: str) -> T
     """Helper to get LLM completion response"""
     final_text = task + "\n" + prompt
     try:
+        if is_vertex_provider(provider):
+            return _get_vertex_llm_response(final_text, model)
+
         # For Gemini, prepend provider name to model
         if provider.lower() == "gemini":
             model = f"gemini/{model}"
@@ -145,12 +220,40 @@ def get_llm_response(task, prompt, api_key: str, model: str, provider: str) -> T
             return None, f"Error occurred while generating response from {provider}"
 
 
+def _get_vertex_llm_response(final_text: str, model: str) -> Tuple[str | None, str | None]:
+    project, location = get_vertex_ai_config()
+    if not project or not location:
+        return None, "Missing Google Vertex AI project or location"
+
+    try:
+        from google import genai
+        from google.genai.types import HttpOptions
+
+        client = genai.Client(
+            vertexai=True,
+            project=project,
+            location=location,
+            http_options=HttpOptions(api_version="v1"),
+        )
+        response = client.models.generate_content(
+            model=model,
+            contents=final_text,
+        )
+        text = getattr(response, "text", None)
+        if text:
+            return text, None
+        return None, "Google Vertex AI returned an empty response"
+    except Exception as e:
+        log_exception(e)
+        return None, "Error occurred while generating response from Google Vertex AI"
+
+
 class GPTIntegrationEndpoint(BaseAPIView):
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
     def post(self, request, slug, project_id):
         api_key, model, provider = get_llm_config()
 
-        if not api_key or not model or not provider:
+        if not is_llm_configured(api_key, model, provider):
             return Response(
                 {"error": "LLM provider API key and model are required"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -186,7 +289,7 @@ class WorkspaceGPTIntegrationEndpoint(BaseAPIView):
     def post(self, request, slug):
         api_key, model, provider = get_llm_config()
 
-        if not api_key or not model or not provider:
+        if not is_llm_configured(api_key, model, provider):
             return Response(
                 {"error": "LLM provider API key and model are required"},
                 status=status.HTTP_400_BAD_REQUEST,

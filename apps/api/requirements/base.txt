@@ -35,6 +35,7 @@ uvicorn==0.29.0
 # sockets
 channels==4.1.0
 # ai
+google-genai==1.0.0
 openai==1.63.2
 # slack
 slack-sdk==3.27.1

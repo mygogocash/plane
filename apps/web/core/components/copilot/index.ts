@@ -4,9 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export type TInstanceAIConfigurationKeys =
-  | "LLM_API_KEY"
-  | "LLM_PROVIDER"
-  | "LLM_MODEL"
-  | "LLM_VERTEX_PROJECT"
-  | "LLM_VERTEX_LOCATION";
+export * from "./panel";

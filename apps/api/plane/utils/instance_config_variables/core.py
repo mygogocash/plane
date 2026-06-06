@@ -204,13 +204,25 @@ llm_config_variables = [
     },
     {
         "key": "LLM_PROVIDER",
-        "value": os.environ.get("LLM_PROVIDER", "openai"),
+        "value": os.environ.get("LLM_PROVIDER", "vertexai"),
         "category": "AI",
         "is_encrypted": False,
     },
     {
         "key": "LLM_MODEL",
-        "value": os.environ.get("LLM_MODEL", "gpt-4o-mini"),
+        "value": os.environ.get("LLM_MODEL", "gemini-2.5-flash"),
+        "category": "AI",
+        "is_encrypted": False,
+    },
+    {
+        "key": "LLM_VERTEX_PROJECT",
+        "value": os.environ.get("LLM_VERTEX_PROJECT") or os.environ.get("GOOGLE_CLOUD_PROJECT"),
+        "category": "AI",
+        "is_encrypted": False,
+    },
+    {
+        "key": "LLM_VERTEX_LOCATION",
+        "value": os.environ.get("LLM_VERTEX_LOCATION") or os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
         "category": "AI",
         "is_encrypted": False,
     },

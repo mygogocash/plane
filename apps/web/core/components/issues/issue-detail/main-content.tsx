@@ -6,12 +6,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
+import { Sparkles } from "lucide-react";
 // plane imports
 import type { EditorRefApi } from "@plane/editor";
+import { Button } from "@plane/propel/button";
 import type { TNameDescriptionLoader } from "@plane/types";
 import { EFileAssetType, EIssueServiceType } from "@plane/types";
 import { getTextContent } from "@plane/utils";
 // components
+import { CopilotPanel } from "@/components/copilot";
 import { DescriptionVersionsRoot } from "@/components/core/description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 // hooks
@@ -60,10 +63,12 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   const { getUserDetails } = useMember();
   const {
     issue: { getIssueById },
+    fetchSubIssues,
     peekIssue,
   } = useIssueDetail();
   const { getProjectById } = useProject();
   const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   // derived values
   const projectDetails = getProjectById(projectId);
   const issue = issueId ? getIssueById(issueId) : undefined;
@@ -164,26 +169,44 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
               disabled={isArchived}
             />
           )}
-          {isEditable && (
-            <DescriptionVersionsRoot
-              className="flex-shrink-0"
-              entityInformation={{
-                createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),
-                createdByDisplayName: getUserDetails(issue.created_by ?? "")?.display_name ?? "",
-                id: issueId,
-                isRestoreDisabled: !isEditable || isArchived,
-              }}
-              fetchHandlers={{
-                listDescriptionVersions: (issueId) =>
-                  workItemVersionService.listDescriptionVersions(workspaceSlug, projectId, issueId),
-                retrieveDescriptionVersion: (issueId, versionId) =>
-                  workItemVersionService.retrieveDescriptionVersion(workspaceSlug, projectId, issueId, versionId),
-              }}
-              handleRestore={(descriptionHTML) => editorRef.current?.setEditorValue(descriptionHTML, true)}
-              projectId={projectId}
-              workspaceSlug={workspaceSlug}
-            />
-          )}
+          <div className="flex items-center gap-2">
+            {isEditable && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsCopilotOpen(true)}
+                prependIcon={<Sparkles />}
+                disabled={isArchived}
+              >
+                Copilot
+              </Button>
+            )}
+            {isEditable && (
+              <DescriptionVersionsRoot
+                className="flex-shrink-0"
+                entityInformation={{
+                  createdAt: issue.created_at ? new Date(issue.created_at) : new Date(),
+                  createdByDisplayName: getUserDetails(issue.created_by ?? "")?.display_name ?? "",
+                  id: issueId,
+                  isRestoreDisabled: !isEditable || isArchived,
+                }}
+                fetchHandlers={{
+                  listDescriptionVersions: (versionIssueId) =>
+                    workItemVersionService.listDescriptionVersions(workspaceSlug, projectId, versionIssueId),
+                  retrieveDescriptionVersion: (versionIssueId, versionId) =>
+                    workItemVersionService.retrieveDescriptionVersion(
+                      workspaceSlug,
+                      projectId,
+                      versionIssueId,
+                      versionId
+                    ),
+                }}
+                handleRestore={(descriptionHTML) => editorRef.current?.setEditorValue(descriptionHTML, true)}
+                projectId={projectId}
+                workspaceSlug={workspaceSlug}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -194,6 +217,17 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
         disabled={!isEditable || isArchived}
         renderWidgetModals={!isPeekModeActive}
         issueServiceType={EIssueServiceType.ISSUES}
+      />
+
+      <CopilotPanel
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+        onSubtasksCreated={async () => {
+          await fetchSubIssues(workspaceSlug, projectId, issueId);
+        }}
       />
 
       {windowSize[0] < 768 && (
