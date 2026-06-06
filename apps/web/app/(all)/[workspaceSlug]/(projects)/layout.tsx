@@ -15,12 +15,12 @@ function WorkspaceLayout() {
   return (
     <>
       <ProjectsAppPowerKProvider />
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-subtle">
+      <div className="relative flex h-full w-full min-w-0 flex-col overflow-hidden border-subtle md:rounded-lg md:border">
         <div id="full-screen-portal" className="absolute inset-0 w-full" />
-        <div className="relative flex size-full overflow-hidden">
+        <div className="relative flex size-full min-w-0 overflow-hidden">
           <ProjectAppSidebar />
           <ExtendedProjectSidebar />
-          <main className="relative flex h-full w-full flex-col overflow-hidden bg-surface-1">
+          <main className="relative flex h-full w-full min-w-0 flex-col overflow-hidden bg-surface-1">
             <Outlet />
           </main>
         </div>

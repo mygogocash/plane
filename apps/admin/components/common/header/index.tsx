@@ -21,7 +21,7 @@ export const HamburgerToggle = observer(function HamburgerToggle() {
   const { isSidebarCollapsed, toggleSidebar } = useTheme();
   return (
     <button
-      className="group flex size-7 cursor-pointer items-center justify-center rounded-sm bg-layer-1 transition-all hover:bg-layer-1-hover md:hidden"
+      className="group flex size-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-sm bg-layer-1 transition-all hover:bg-layer-1-hover md:hidden"
       onClick={() => toggleSidebar(!isSidebarCollapsed)}
     >
       <Menu size={14} className="text-secondary transition-all group-hover:text-primary" />
@@ -56,11 +56,11 @@ export const AdminHeader = observer(function AdminHeader() {
   const breadcrumbItems = generateBreadcrumbItems(pathName || "");
 
   return (
-    <div className="relative z-10 flex h-header w-full flex-shrink-0 flex-row items-center justify-between gap-x-2 gap-y-4 border-b border-subtle bg-surface-1 p-4">
-      <div className="flex w-full flex-grow items-center gap-2 overflow-ellipsis whitespace-nowrap">
+    <div className="relative z-10 flex min-h-header w-full min-w-0 flex-shrink-0 flex-row items-center justify-between gap-x-2 gap-y-4 border-b border-subtle bg-surface-1 p-3 md:p-4">
+      <div className="flex w-full min-w-0 flex-grow items-center gap-2 overflow-hidden whitespace-nowrap">
         <HamburgerToggle />
         {breadcrumbItems.length >= 0 && (
-          <div>
+          <div className="min-w-0 overflow-x-auto">
             <Breadcrumbs>
               <Breadcrumbs.Item
                 component={

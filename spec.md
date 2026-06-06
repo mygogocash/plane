@@ -1,316 +1,329 @@
 # Executive Summary
 
-Plane AI Copilot V1 adds a Plane-native right-side panel that answers questions from permission-scoped workspace data and drafts child work items for review before creation. The feature extends the existing Django API and React web app, uses Google Vertex AI Gemini through backend-only configuration, and leaves the existing `/ai-assistant/` editor endpoints intact.
+Make Plane CE mobile responsive across the web app, admin app, and shared UI
+surfaces without changing backend contracts. The first implementation path is a
+responsive foundation plus shell-level parity: viewport-aware hooks, mobile-safe
+navigation, app/admin shell overflow guards, and reproducible responsive smoke
+tests.
+
+The previous GKE deployment spec was preserved at
+`docs/gke-plane-ce-spec-2026-06-05.md`.
 
 # Business Goals
 
-- Help workspace users find answers from Plane data without leaving the product.
-- Reduce manual breakdown work by drafting sub-work-items from an existing work item.
-- Preserve user control by requiring explicit review and apply before any work item is created.
-- Keep V1 deployable without vector indexes, embeddings, file ingestion, or persistent chat history.
+- Allow GoGoCash and Manut users to navigate Plane from phones and tablets.
+- Keep the existing desktop product experience intact.
+- Add a repeatable responsive QA gate before further visual/product changes.
+- Keep the preview branch deployable and rollback-friendly.
 
 # Technical Goals
 
-- Add `POST /api/workspaces/:slug/copilot/messages/`.
-- Retrieve compact evidence from readable issues, sub-issues, projects, pages, comments, and activity.
-- Enforce workspace and project membership before evidence reaches the configured LLM provider.
-- Return typed response data with answer text, citations, and optional subtask draft items.
-- Apply selected subtask drafts through the existing issue creation API with `parent_id`.
-- Expose workspace and issue-detail Copilot entry points in the web app.
+- Base responsive behavior on viewport measurements, not user-agent checks.
+- Prevent page-level horizontal overflow at common mobile, tablet, laptop, and
+  desktop sizes.
+- Convert fixed shell surfaces into mobile-safe overlays, drawers, or collapsed
+  controls where needed.
+- Keep dense work-management views reachable on mobile even when content needs
+  local horizontal scrolling.
+- Add a committed responsive smoke harness for local and CI use.
 
 # Requirements
 
-- Input fields: `message`, optional `project_id`, optional `issue_id`, and `mode` as `answer`, `draft_subtasks`, or `auto`.
-- Output fields: `mode`, `answer`, `citations[]`, and optional `subtask_draft.items[]`.
-- Citation fields: `entity_type`, `entity_id`, `title`, `url`, and `excerpt`.
-- Subtask fields: `name`, `description_html`, `priority`, `assignee_ids`, `label_ids`, and `rationale`.
-- Guests may ask within readable scope but cannot request subtask drafts.
-- Missing LLM configuration must return `400` before model calls.
-- Existing `/ai-assistant/` behavior must keep working with Vertex AI or the existing API-key providers.
-- Secrets must remain backend-only.
-- Vertex AI uses `LLM_PROVIDER=vertexai`, `LLM_MODEL`, `LLM_VERTEX_PROJECT`, and `LLM_VERTEX_LOCATION`; credentials are supplied through Google ADC or service account environment configuration, not frontend code.
+- Validate at `360x740`, `390x844`, `430x932`, `768x1024`, `1024x768`, and
+  `1440x900`.
+- Shared hooks must expose stable breakpoint helpers and SSR-safe viewport
+  state.
+- Main web shell must keep sidebar, app rail, top navigation, and extended
+  sidebar usable under `768px`.
+- Admin shell must keep sidebar, header breadcrumbs, page wrappers, and forms
+  usable under `768px`.
+- Global dialogs and modal panels must fit mobile viewports and remain
+  scrollable.
+- New tests must fail on document-level horizontal overflow and relevant console
+  errors.
 
 # Non-Goals
 
-- No embeddings, vector database, semantic index, or attachment ingestion in V1.
-- No autonomous project changes or model-created work items.
-- No persistent chat threads.
-- No voice UI.
-- No new subtask tracking data model.
-- No provider-specific parity beyond Google Vertex AI for Copilot V1; the existing API-key providers remain rollback-compatible for legacy editor prompts.
+- No backend API changes.
+- No database schema changes.
+- No Kubernetes, Railway, Cloudflare, or GCP changes for responsiveness.
+- No visual redesign beyond responsive layout and touch ergonomics.
+- No forced replacement of existing dense desktop views when contained
+  horizontal scrolling is the only practical mobile contract.
 
 # Architecture
 
-- React web opens a Copilot panel from the workspace dashboard and issue detail.
-- `AIService.sendCopilotMessage` posts to the new workspace Copilot endpoint.
-- Django validates request payload and permissions, then gathers compact evidence from existing Plane models.
-- Django sends only permission-scoped snippets to Google Vertex AI Gemini or the configured rollback provider.
-- The LLM returns structured JSON for answer and optional subtask draft.
-- React renders citations and editable draft rows.
-- React applies selected draft rows with `IssueService.createIssue`, passing `parent_id` to the existing issue create path.
-- Existing sub-work-items store refreshes after apply.
+- `packages/hooks` owns viewport primitives shared across apps.
+- `apps/web/core` and `apps/admin` consume viewport primitives for shell state
+  and mobile behavior.
+- CSS remains the first line of defense: responsive utilities, safe min-widths,
+  `min-w-0`, contained scroll regions, and mobile padding rules.
+- JavaScript behavior is reserved for stateful shell changes such as sidebar
+  auto-collapse and drawer close behavior.
+- Playwright responsive smoke tests run against supplied local or preview URLs.
 
 # Data Models
 
-- No new database tables.
-- Evidence is transient request data.
-- Draft subtasks are transient frontend state until the user clicks apply.
-- Created child work items use the existing `Issue.parent_id` relationship.
+- No application data model changes.
+- Local storage keys used for shell preferences remain compatible. New mobile
+  behavior must not overwrite desktop width/display preferences.
 
 # API Contracts
 
-## `POST /api/workspaces/:slug/copilot/messages/`
-
-Request:
-
-```json
-{
-  "message": "Break this work item into subtasks.",
-  "mode": "draft_subtasks",
-  "project_id": "uuid",
-  "issue_id": "uuid"
-}
-```
-
-Response:
-
-```json
-{
-  "mode": "draft_subtasks",
-  "answer": "Review these subtasks before creating them.",
-  "citations": [
-    {
-      "entity_type": "issue",
-      "entity_id": "uuid",
-      "title": "Launch checklist",
-      "url": "/workspace/projects/project-id/issues/issue-id",
-      "excerpt": "Relevant evidence text"
-    }
-  ],
-  "subtask_draft": {
-    "items": [
-      {
-        "name": "Verify invite email",
-        "description_html": "<p>Send a test invite and confirm delivery.</p>",
-        "priority": "high",
-        "assignee_ids": [],
-        "label_ids": [],
-        "rationale": "Invite delivery is part of the launch checklist."
-      }
-    ]
-  }
-}
-```
+- Existing routes and API calls remain unchanged.
+- The responsive smoke harness accepts:
+  - `RESPONSIVE_WEB_URL`, default `http://127.0.0.1:3000`
+  - `RESPONSIVE_ADMIN_URL`, default `http://127.0.0.1:3001`
+  - `RESPONSIVE_AUTH_URLS`, optional comma-separated authenticated route list
+- Tests should tolerate expected unauthenticated `401` API calls but fail on
+  framework/runtime errors.
 
 # Security
 
-- Workspace membership is required before the endpoint executes.
-- Project and issue context must be readable by the requesting user.
-- Evidence retrieval is scoped to projects where the user is an active project member.
-- Guests are blocked from `draft_subtasks`.
-- LLM credentials and Google Cloud project/location are read from backend configuration only.
-- The frontend receives only model output and citations, never API keys.
-- Model output is normalized before returning to the frontend.
-- Writes use existing issue creation validation, activity logging, and permission checks.
+- Do not print or commit secrets, cookies, tokens, upload URLs, or environment
+  values.
+- Authenticated responsive QA must use an already-approved local or browser
+  session.
+- Mobile changes must not bypass permission checks or expose hidden admin
+  actions.
+- New scripts must not scrape or persist private user data.
 
 # Edge Cases
 
-- Missing LLM configuration returns `400`; for Vertex AI this means missing `LLM_PROVIDER`, `LLM_MODEL`, or Google Cloud project/location, while API-key providers still require `LLM_API_KEY`.
-- `auto` mode becomes `draft_subtasks` only for subtask-like prompts.
-- Empty evidence still allows an answer, but the model is instructed to state missing context.
-- Invalid project or issue context returns `403`.
-- Draft rows with empty names are ignored on apply.
-- Unsupported or malformed priorities normalize to `none`.
-- Failed apply leaves draft rows in place for retry.
-- Existing sub-work-items may be filtered; refresh uses the current store behavior.
+- The app can be served under custom base paths.
+- A running local port may belong to another project; verify page identity before
+  using browser evidence.
+- Mobile devices can report desktop-like user agents; viewport width is the
+  source of truth for layout.
+- Dense tables, kanban boards, calendars, gantt views, and spreadsheet views may
+  need contained horizontal scroll rather than collapsed cards.
+- Virtualized lists and drag/drop regions can mis-measure when parent panes use
+  `overflow-hidden`.
+- Modals with fixed widths can clip actions on short mobile screens.
+- Breadcrumbs and command controls can overflow before content panes do.
 
 # Testing Strategy
 
-- Backend contract tests cover permission failure, missing config, citations, and structured draft output.
-- Frontend service and UI should be covered by component tests when the web test harness is available.
-- Apply flow must be browser-smoked against an issue detail page.
-- Verification gates:
-  - `pnpm check`
-  - `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest -m contract -k "copilot or issue"`
-  - `docker compose -f docker-compose-test.yml run --rm api-tests pytest -m unit`
-  - Browser smoke: ask a workspace question, draft subtasks from an issue, apply selected subtasks, verify sub-work-items count refreshes.
+- RED: create responsive smoke tests that expose existing horizontal overflow,
+  clipped shell controls, or console errors.
+- GREEN: implement the smallest shell/foundation fixes needed for the smoke
+  matrix to pass on unauthenticated and shell-level routes.
+- REFACTOR: consolidate helpers and remove duplicated viewport checks.
+- Run:
+  - `pnpm --filter=@plane/hooks test`
+  - `pnpm test:responsive`
+  - `pnpm check:types`
+  - `pnpm check:lint`
+  - `pnpm check:format`
+  - `pnpm build`
 
 # Rollback Plan
 
-- Hide or remove Copilot trigger buttons in the web app.
-- Disable or remove the `/copilot/messages/` route.
-- Keep existing issue creation and sub-work-items behavior unchanged.
-- Existing created subtasks remain normal Plane work items and can be deleted or edited through current workflows.
+- Revert the responsive commit on the `preview` branch.
+- If a deployment is already live, redeploy the previous preview image or roll
+  back the hosting platform to the previous commit.
+- Remove only the new responsive test scripts if Playwright dependency issues
+  block emergency rollback; do not change app runtime behavior during rollback
+  triage.
 
 # Milestones
 
-## Milestone 1 - Planning And Spec
+## Milestone 1 - Audit And Spec
 
-- Objective: document the feature contract and rollout gates.
-- Business impact: gives implementation and review a clear boundary.
-- Technical scope: `spec.md` and env documentation.
-- Dependencies: existing AI config names plus Vertex AI project/location settings.
-- Risks: stale deployment spec replaced in this local non-git workspace.
-- Success metrics: spec contains all required AGENTS sections.
-- Rollback strategy: restore prior spec content if this branch is not for Copilot.
+- Objective: define scope, preserved deployment context, route inventory, and
+  acceptance criteria.
+- Business impact: prevents mixing deployment planning with mobile UI work.
+- Technical scope: docs only.
+- Dependencies: existing `spec.md`.
+- Risks: stale deployment details.
+- Success metrics: responsive `spec.md` exists and previous GKE spec is
+  preserved.
+- Rollback strategy: restore previous `spec.md`.
 
-## Milestone 2 - Backend Retrieval And LLM Adapter
+## Milestone 2 - Responsive Test Harness
 
-- Objective: add permission-scoped Copilot API.
-- Business impact: enables internal-data answers and drafts.
-- Technical scope: endpoint, serializer, retrieval helpers, LLM adapter, tests.
-- Dependencies: existing `LLM_*` configuration, Vertex AI credentials, and Plane membership models.
-- Risks: R1 because selected workspace snippets leave the app boundary through Google Vertex AI.
-- Success metrics: backend contract tests pass.
-- Rollback strategy: remove route and view module.
+- Objective: add reproducible responsive smoke tests.
+- Business impact: catches mobile regressions before deploy.
+- Technical scope: Playwright config, scripts, viewport matrix.
+- Dependencies: runnable local or preview URLs.
+- Risks: unauthenticated pages may not cover all app shells.
+- Success metrics: tests fail on real overflow and pass after shell fixes.
+- Rollback strategy: remove test harness and dependency.
 
-## Milestone 3 - Frontend Copilot Panel
+## Milestone 3 - Shared Viewport Foundation
 
-- Objective: expose workspace Q&A and issue-context drafting.
-- Business impact: makes Copilot usable without changing existing workflows.
-- Technical scope: service types, panel UI, citations, draft review controls.
-- Dependencies: instance config and existing layout portal.
-- Risks: R2 reversible UI changes.
-- Success metrics: panel renders configured and unconfigured states.
-- Rollback strategy: remove trigger buttons and component imports.
+- Objective: introduce SSR-safe viewport helpers.
+- Business impact: consistent mobile behavior across apps.
+- Technical scope: `packages/hooks`.
+- Dependencies: React hooks package build.
+- Risks: hydration mismatch if defaults are unstable.
+- Success metrics: hook unit tests pass and apps typecheck.
+- Rollback strategy: remove hook and revert consumers.
 
-## Milestone 4 - Apply Flow And Tracking Refresh
+## Milestone 4 - Web Shell Parity
 
-- Objective: create reviewed subtasks through existing issue APIs.
-- Business impact: turns draft decomposition into tracked child work.
-- Technical scope: `IssueService.createIssue` with `parent_id`, refresh sub-work-items.
-- Dependencies: existing issue create permissions and sub-issue store.
-- Risks: R1 user-facing writes, mitigated by explicit user click.
-- Success metrics: selected drafts create child issues and refresh progress.
-- Rollback strategy: remove apply button while keeping Q&A.
+- Objective: make main Plane shell navigable on mobile.
+- Business impact: users can enter core work-management routes on phones.
+- Technical scope: top nav, app rail, sidebars, content wrapper, modals.
+- Dependencies: viewport foundation.
+- Risks: desktop preference regression.
+- Success metrics: no document-level overflow at required viewports.
+- Rollback strategy: revert shell edits only.
 
-## Milestone 5 - Validation And Handoff
+## Milestone 5 - Admin/Auth Parity
 
-- Objective: run quality gates and document limitations.
-- Business impact: prepares deploy review.
-- Technical scope: backend contract tests, web checks, env docs, final audit.
-- Dependencies: Docker test stack and pnpm toolchain.
-- Risks: full test suite runtime and non-git workspace commit limitation.
-- Success metrics: required checks pass or blockers are documented.
-- Rollback strategy: leave changes uncommitted until applied in a real `mygogocash/plane` clone on `preview`; set `LLM_PROVIDER` back to an API-key provider or hide the Copilot UI.
+- Objective: make admin and unauthenticated surfaces usable on mobile.
+- Business impact: operators can configure Plane from tablets/phones.
+- Technical scope: admin sidebar/header/page wrapper and auth layout.
+- Dependencies: viewport foundation.
+- Risks: hidden admin controls on small screens.
+- Success metrics: admin responsive smoke passes.
+- Rollback strategy: revert admin/auth edits only.
+
+## Milestone 6 - Product Surface Expansion
+
+- Objective: extend full mobile parity through every authenticated product
+  surface.
+- Business impact: complete mobile usage for project management workflows.
+- Technical scope: work items, issue detail, cycles, modules, views, pages,
+  analytics, notifications, settings, and dense views.
+- Dependencies: authenticated QA session.
+- Risks: large blast radius across virtualized and drag/drop views.
+- Success metrics: route-by-route QA matrix passes.
+- Rollback strategy: split changes by surface and revert failing surface.
 
 # Epics
 
-## Epic 1 - Permission-Scoped Retrieval
+## Epic 1 - Responsive Foundation
 
-- User value: users receive answers grounded only in data they can already read.
-- Technical requirements: workspace permission, project membership filtering, compact evidence format.
-- Security considerations: no evidence from unreadable projects or issues.
-- Edge cases: issue context from an unreadable project, empty evidence, archived projects.
-- Data flow: Plane DB to Django evidence list to model prompt.
-- API contracts: citations mirror evidence IDs, titles, URLs, and excerpts.
-- Testing strategy: non-member and issue-context contract tests.
+- User value: every surface can make consistent mobile decisions.
+- Technical requirements: shared hook, breakpoint helpers, tests.
+- Security considerations: no persisted private state.
+- Edge cases: SSR, hydration, resize events, tablet widths.
+- Data flow: browser viewport to React state.
+- API contracts: none.
+- Testing strategy: unit tests plus typecheck.
 
-## Epic 2 - Structured Subtask Drafts
+## Epic 2 - App Shell
 
-- User value: users can review and edit proposed child work items.
-- Technical requirements: typed draft item schema, priority normalization, editable frontend state.
-- Security considerations: guests cannot draft subtasks; writes use existing issue permissions.
-- Edge cases: malformed model JSON, empty names, invalid priority, failed apply.
-- Data flow: model draft to panel state to existing issue create API.
-- API contracts: `subtask_draft.items[]` shape remains stable.
-- Testing strategy: structured draft contract test and browser apply smoke.
+- User value: workspace navigation stays reachable on phone and tablet.
+- Technical requirements: mobile sidebar overlay, app rail collapse, top nav
+  wrapping, contained scrolling.
+- Security considerations: preserve auth and permission checks.
+- Edge cases: nested sidebars, command palette, project switcher, touch targets.
+- Data flow: viewport state and existing MobX shell preferences.
+- API contracts: none.
+- Testing strategy: responsive Playwright smoke.
 
-## Epic 3 - Copilot Web Experience
+## Epic 3 - Product Surfaces
 
-- User value: users can ask from workspace context or a specific work item.
-- Technical requirements: workspace panel trigger, issue-detail trigger, citations, disabled config state.
-- Security considerations: no frontend secrets.
-- Edge cases: AI disabled, request failure, partial apply failure.
-- Data flow: panel request to Copilot endpoint, response to citations/draft UI.
-- API contracts: `AIService.sendCopilotMessage` mirrors backend payload.
-- Testing strategy: component tests plus browser smoke.
+- User value: core work-management flows remain usable on mobile.
+- Technical requirements: mobile headers, drawer filters, contained dense views,
+  modal actions.
+- Security considerations: no hidden destructive action exposure.
+- Edge cases: drag/drop, virtualization, inline editors, upload modals.
+- Data flow: existing stores and services.
+- API contracts: unchanged.
+- Testing strategy: route matrix and interaction smoke.
+
+## Epic 4 - Admin And Auth
+
+- User value: admins and unauthenticated users can complete setup and access
+  flows on mobile.
+- Technical requirements: mobile admin sidebar, wrapping breadcrumbs, forms,
+  dialogs, auth layout.
+- Security considerations: admin-only pages remain guarded.
+- Edge cases: long provider forms, secret fields, test-email modal.
+- Data flow: existing admin stores.
+- API contracts: unchanged.
+- Testing strategy: admin responsive Playwright smoke.
 
 # User Stories
 
-- As a workspace member, I want to ask questions about internal Plane data so I can find project context quickly.
-- As a work item owner, I want Copilot to draft subtasks so I can review a breakdown before creating child work.
-- As a guest, I want answers only from my readable scope so confidential project data is not exposed.
-- As an admin, I want Copilot to use existing backend LLM config so secrets are centrally managed.
-- As a reviewer, I want citations so I can inspect the source behind Copilot answers.
+- As a workspace member, I want to open project navigation on my phone so I can
+  move between projects and work items.
+- As a project member, I want work-item list and detail routes to be readable on
+  mobile so I can triage issues away from desktop.
+- As an admin, I want settings pages and provider forms to fit mobile screens so
+  I can inspect configuration quickly.
+- As an operator, I want responsive tests in CI so mobile regressions are caught
+  before deploy.
 
 # Tasks
 
-## Task 1 - Backend Contract Tests
+## Task 1 - Preserve Deployment Spec
 
-- Objective: lock permission, config, citation, and draft behavior.
-- Scope: Django contract tests.
-- Files: `apps/api/plane/tests/contract/app/test_copilot_app.py`.
-- Dependencies: Docker test stack.
+- Objective: keep prior GKE spec available.
+- Scope: docs.
+- Files: `docs/gke-plane-ce-spec-2026-06-05.md`, `spec.md`.
+- Dependencies: existing deployment spec.
 - Risk Tier: R2.
-- Acceptance Criteria: tests fail before implementation and pass after.
-- Tests: targeted pytest file.
-- Rollback: delete test file if feature is removed.
-- Assigned Model: GPT-5.5 xhigh.
-- Assigned Agent: primary.
-
-## Task 2 - Copilot Endpoint
-
-- Objective: implement validated API and retrieval.
-- Scope: Django views and URL registration.
-- Files: `apps/api/plane/app/views/copilot.py`, `apps/api/plane/app/views/__init__.py`, `apps/api/plane/app/urls/external.py`.
-- Dependencies: Task 1.
-- Risk Tier: R1.
-- Acceptance Criteria: endpoint returns answers, citations, and drafts without leaking unreadable evidence.
-- Tests: contract pytest file.
-- Rollback: remove route and view import.
-- Assigned Model: GPT-5.3-Codex-Spark.
-- Assigned Agent: primary execution.
-
-## Task 3 - Web Service And Panel
-
-- Objective: add Copilot web entry points.
-- Scope: AI service, panel component, dashboard header, issue detail.
-- Files: `apps/web/core/services/ai.service.ts`, `apps/web/core/components/copilot/*`, `apps/web/app/(all)/[workspaceSlug]/(projects)/header.tsx`, `apps/web/core/components/issues/issue-detail/main-content.tsx`.
-- Dependencies: Task 2.
-- Risk Tier: R2.
-- Acceptance Criteria: panel renders, sends prompts, shows citations, and edits draft rows.
-- Tests: `pnpm check` and browser smoke.
-- Rollback: remove trigger imports and component files.
-- Assigned Model: GPT-5.3-Codex-Spark.
-- Assigned Agent: primary execution.
-
-## Task 4 - Apply Selected Drafts
-
-- Objective: create selected child work items through existing APIs.
-- Scope: Copilot panel apply action and sub-issue refresh.
-- Files: `apps/web/core/components/copilot/panel.tsx`, `apps/web/core/components/issues/issue-detail/main-content.tsx`.
-- Dependencies: Task 3.
-- Risk Tier: R1.
-- Acceptance Criteria: selected drafts create issues with `parent_id` and refresh sub-work-items.
-- Tests: browser smoke.
-- Rollback: remove apply action.
-- Assigned Model: GPT-5.3-Codex-Spark.
-- Assigned Agent: primary execution.
-
-## Task 5 - Env Docs And Handoff
-
-- Objective: document AI configuration and validation status.
-- Scope: env examples and final report.
-- Files: `.env.example`, `apps/api/.env.example`, `spec.md`.
-- Dependencies: Tasks 1-4.
-- Risk Tier: R2.
-- Acceptance Criteria: LLM vars are documented and legacy GPT vars are marked legacy only.
+- Acceptance Criteria: old spec preserved and root spec describes responsive
+  work.
 - Tests: docs review.
-- Rollback: restore previous env comments.
+- Rollback: restore old spec.
 - Assigned Model: GPT-5.5 xhigh.
 - Assigned Agent: primary.
+
+## Task 2 - Add Responsive Tests
+
+- Objective: create failing responsive smoke gate.
+- Scope: root scripts and `tests/responsive`.
+- Files: `package.json`, `playwright.responsive.config.ts`,
+  `tests/responsive/responsive-smoke.spec.ts`.
+- Dependencies: Playwright.
+- Risk Tier: R2.
+- Acceptance Criteria: test matrix can run against web/admin URLs.
+- Tests: `pnpm test:responsive`.
+- Rollback: remove test files and dependency.
+- Assigned Model: GPT-5.3-Codex-Spark.
+- Assigned Agent: implementation.
+
+## Task 3 - Add Viewport Hook
+
+- Objective: centralize viewport breakpoint logic.
+- Scope: `packages/hooks`.
+- Files: `packages/hooks/src/use-viewport.tsx`,
+  `packages/hooks/src/use-viewport.test.ts`.
+- Dependencies: React.
+- Risk Tier: R2.
+- Acceptance Criteria: hook exports typed helpers and unit tests pass.
+- Tests: `pnpm --filter=@plane/hooks test`.
+- Rollback: remove hook and tests.
+- Assigned Model: GPT-5.3-Codex-Spark.
+- Assigned Agent: implementation.
+
+## Task 4 - Harden Web Shell
+
+- Objective: mobile-safe web shell.
+- Scope: `apps/web`.
+- Files: content wrapper, app rail, resizable sidebar, top nav, modal CSS.
+- Dependencies: Task 3.
+- Risk Tier: R2.
+- Acceptance Criteria: no document-level overflow at required viewports.
+- Tests: `pnpm test:responsive`.
+- Rollback: revert shell files.
+- Assigned Model: GPT-5.3-Codex-Spark.
+- Assigned Agent: implementation.
+
+## Task 5 - Harden Admin Shell
+
+- Objective: mobile-safe admin shell.
+- Scope: `apps/admin`.
+- Files: dashboard layout, sidebar, header, page wrapper.
+- Dependencies: Task 3.
+- Risk Tier: R2.
+- Acceptance Criteria: admin responsive smoke passes at required viewports.
+- Tests: `pnpm test:responsive`.
+- Rollback: revert admin files.
+- Assigned Model: GPT-5.3-Codex-Spark.
+- Assigned Agent: implementation.
 
 # Acceptance Criteria
 
-- `POST /api/workspaces/:slug/copilot/messages/` exists.
-- Non-members receive `403` and no model call.
-- Missing LLM config receives `400` and no model call.
-- Issue-context questions include permission-scoped citations.
-- Subtask prompts return structured draft items.
-- Workspace dashboard has a Copilot entry point.
-- Issue detail has a Copilot entry point.
-- Draft rows are selectable and editable before apply.
-- Apply creates existing Plane issues with `parent_id`.
-- Existing sub-work-items state refreshes after apply.
-- Existing `/ai-assistant/` endpoints remain unchanged.
+- Previous deployment spec is preserved.
+- Root `spec.md` describes responsive work.
+- Responsive Playwright harness is committed.
+- Viewport helpers are typed, exported, and unit-tested.
+- Web/admin shell changes reduce mobile overflow without desktop regressions.
+- Required checks are run or any blockers are reported explicitly.

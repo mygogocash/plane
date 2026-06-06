@@ -10,6 +10,7 @@ import { useParams, usePathname } from "next/navigation";
 import { SettingsIcon } from "lucide-react";
 import { ContextMenu } from "@plane/propel/context-menu";
 import { CheckIcon } from "@plane/propel/icons";
+import { useViewport } from "@plane/hooks";
 import { cn } from "@plane/utils";
 // components
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
@@ -28,10 +29,13 @@ export const AppRailRoot = observer(() => {
   // preferences
   const { preferences, updateDisplayMode } = useAppRailPreferences();
   const { isCollapsed, toggleAppRail } = useAppRailVisibility();
+  const { isMobile } = useViewport();
   // derived values
   const isWorkspaceSettingsPath = pathname.includes(`/${workspaceSlug}/settings`) && !projectId;
   const showLabel = preferences.displayMode === "icon_with_label";
   const railWidth = showLabel ? "3.75rem" : "3rem";
+
+  if (isMobile) return null;
 
   return (
     <div

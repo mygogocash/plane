@@ -15,6 +15,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
+    "test": "vitest run",
     "check:lint": "oxlint --max-warnings=4 .",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
@@ -30,6 +31,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "tsdown": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

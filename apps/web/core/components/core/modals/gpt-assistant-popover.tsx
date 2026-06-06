@@ -214,7 +214,7 @@ export function GptAssistantPopover(props: Props) {
       >
         <Popover.Panel
           as="div"
-          className={`shadow fixed z-10 flex w-full max-w-full min-w-[50rem] flex-col space-y-4 overflow-hidden rounded-[10px] border border-subtle bg-surface-1 p-4 ${className}`}
+          className={`shadow fixed z-10 flex w-[min(50rem,calc(100vw-1rem))] max-w-full min-w-0 flex-col space-y-4 overflow-hidden rounded-[10px] border border-subtle bg-surface-1 p-4 ${className}`}
           ref={setPopperElement as Ref<HTMLDivElement>}
           style={styles.popper}
           {...attributes.popper}
@@ -271,7 +271,6 @@ export function GptAssistantPopover(props: Props) {
                   prompt && prompt !== "" ? "Tell AI what action to perform on this content..." : "Ask AI anything..."
                 }`}
                 className="w-full"
-                autoFocus
               />
             )}
           />
