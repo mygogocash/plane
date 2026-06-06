@@ -8,6 +8,13 @@ Registry and rolls GKE workloads through `.github/workflows/ci-cd.yml`; do not
 wire Railway deploy hooks or Railway-specific Dockerfiles back into this
 directory.
 
+Current GoGoCash/Manut production release evidence:
+
+- Source commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
+- Image tag: `preview-0b80aadd9610`
+- CI/CD run: `Plane CI/CD` `27065884344`, success
+- Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`
+
 ## What's Included
 
 The AIO image contains the following services:

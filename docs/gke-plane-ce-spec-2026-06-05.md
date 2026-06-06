@@ -81,7 +81,8 @@ temporary `sslip.io` host backed by a reserved regional IP.
 
 - Generated `SECRET_KEY`, `LIVE_SERVER_SECRET_KEY`, Cloud SQL password,
   RabbitMQ password, and Cloud Storage HMAC secret must never be committed.
-- SMTP remains pending until a rotated Resend key is provided or generated.
+- SMTP is configured through Secret Manager and has been verified with Plane's
+  built-in test email. Do not print or commit the Resend key value.
 - IAM scope for the storage service account is limited to object administration
   on `plane-affine-495114-uploads`.
 - Use private IP for Cloud SQL and Memorystore.
@@ -427,6 +428,12 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
   live/space deployments in namespace `plane-ce`, and smoke
   `https://app.manut.xyz/api/instances/`. No Railway deploy hook or Railway AIO
   image build remains in the active workflow.
+- Final GCP CI/CD verification: commit
+  `0b80aadd9610d2446f835d06c872c4283b6ddd83` deployed through `Plane CI/CD` run
+  `27065884344`. CodeQL run `27065883913` also passed. The live GKE workloads
+  API, worker, beat-worker, web, admin, live, and space are all `1/1` ready on
+  Artifact Registry tag `preview-0b80aadd9610`, and
+  `GET https://app.manut.xyz/api/instances/` returns `200`.
 - CI cleanup: removed `.github/workflows/codeql.yml` because GitHub default
   CodeQL setup is already enabled for this repository. Keeping both the advanced
   workflow and default setup caused the push-triggered CodeQL run to fail with

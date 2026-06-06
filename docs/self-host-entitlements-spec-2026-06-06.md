@@ -2,6 +2,17 @@
 
 Enable self-host entitlement behavior for this Plane CE deployment so the GoGoCash workspace no longer sees paid-plan upsells for features available in this codebase.
 
+# Current Rollout Evidence
+
+- Entitlement and CI/CD changes are included in deployed commit
+  `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
+- Production image tag: `preview-0b80aadd9610`.
+- `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
+  successfully.
+- Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
+- GKE workloads API, worker, beat-worker, web, admin, live, and space are ready
+  on the same tag.
+
 # Business Goals
 
 - Let self-hosted users work without Plane SaaS upgrade prompts.

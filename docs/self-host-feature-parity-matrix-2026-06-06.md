@@ -4,6 +4,11 @@ Date: 2026-06-06
 
 Target: GoGoCash/Manut self-hosted Plane on `mygogocash/plane` `preview`.
 
+Current production tag: `preview-0b80aadd9610`
+
+Last verified rollout: `Plane CI/CD` run `27065884344`, CodeQL run
+`27065883913`, and live `GET https://app.manut.xyz/api/instances/ 200`.
+
 ## Legend
 
 - `Live`: functional in the current fork/deployment.

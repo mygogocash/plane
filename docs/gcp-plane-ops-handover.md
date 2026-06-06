@@ -11,9 +11,22 @@
 - Helm chart/app: `plane-ce-1.5.1` / `1.3.1`
 - Static IP: `34.143.231.225`
 - DNS: Cloudflare `A app 34.143.231.225`, DNS-only
+- Current source commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
+- Current image tag: `preview-0b80aadd9610`
+- Last verified CI/CD run: `Plane CI/CD` `27065884344`, success
+- Last verified CodeQL run: `27065883913`, success
 
 The live runtime is the GKE Helm deployment, not Railway. Railway project
 `grateful-celebration` has been deleted and must not be used as rollback.
+
+## Current Release Verification
+
+- API, worker, beat-worker, web, admin, live, and space deployments are `1/1`
+  ready on `preview-0b80aadd9610`.
+- The CI/CD migration job `plane-app-api-migrate-0b80aadd9610` completed.
+- `GET https://app.manut.xyz/api/instances/` returns `200`.
+- `HEAD https://app.manut.xyz` returns `200` with the app served over HTTPS.
+- The active workflow has no Railway deploy hook or Railway AIO image build.
 
 ## Managed Services
 

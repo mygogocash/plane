@@ -2,6 +2,17 @@
 
 Expand Plane Copilot into a Vertex Gemini-first workspace assistant. V1 supports grounded answers, issue-context subtask drafts, permission-scoped workspace evidence, persistent conversation history, and allowlisted auto-applied issue actions.
 
+# Current Rollout Evidence
+
+- Copilot database migrations are already applied in production; the latest GCP
+  CI/CD migration job for `preview-0b80aadd9610` reported no pending migrations.
+- The deployed source commit is
+  `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
+- `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
+  successfully.
+- Live instance config reports `has_llm_configured=true` from
+  `GET https://app.manut.xyz/api/instances/`.
+
 # Business Goals
 
 - Let Manut workspace users ask operational questions without manually searching projects, comments, pages, and activity.

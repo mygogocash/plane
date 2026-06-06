@@ -28,6 +28,23 @@ Meet [Plane](https://plane.so/), an open-source project management tool to track
 
 > Plane is evolving every day. Your suggestions, ideas, and reported bugs help us immensely. Do not hesitate to join in the conversation on [Forum](https://forum.plane.so) or raise a GitHub issue. We read everything and respond to most.
 
+## GoGoCash/Manut deployment
+
+This fork deploys the `preview` branch to the GoGoCash/Manut self-hosted Plane
+runtime on GCP, not Railway. The active path is GitHub Actions -> Google
+Artifact Registry -> GKE namespace `plane-ce`.
+
+Current verified production state:
+
+- Source commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
+- Image tag: `preview-0b80aadd9610`
+- `Plane CI/CD` run `27065884344`: success
+- CodeQL run `27065883913`: success
+- Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`
+
+Operational details live in `docs/gcp-plane-ops-handover.md` and
+`docs/cicd-spec-2026-06-06.md`.
+
 ## 🚀 Installation
 
 Getting started with Plane is simple. Choose the setup that works best for you:

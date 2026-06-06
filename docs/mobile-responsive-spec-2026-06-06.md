@@ -6,6 +6,15 @@ responsive foundation plus shell-level parity: viewport-aware hooks, mobile-safe
 navigation, app/admin shell overflow guards, and reproducible responsive smoke
 tests.
 
+# Current Deployment Note
+
+- The production GCP deploy path is active and verified through `Plane CI/CD`
+  run `27065884344`.
+- Current live tag: `preview-0b80aadd9610`.
+- Live HTTPS smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
+- Responsiveness work still should avoid Kubernetes, Cloudflare, and GCP runtime
+  changes unless a separate deployment task explicitly requires them.
+
 The previous GKE deployment spec was preserved at
 `docs/gke-plane-ce-spec-2026-06-05.md`.
 
