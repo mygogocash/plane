@@ -37,6 +37,10 @@ on:
         required: false
         default: false
         type: boolean
+
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -395,6 +399,8 @@ jobs:
     if: ${{ needs.branch_build_setup.outputs.build_type == 'Release' }}
     name: Build Release
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     needs:
       [
         branch_build_setup,

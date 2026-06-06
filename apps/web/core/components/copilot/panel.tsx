@@ -24,6 +24,8 @@ import {
   type TCopilotMode,
   type TCopilotSubtaskDraftItem,
 } from "@/services/ai.service";
+// local imports
+import { htmlToText, textToHtml } from "./copilot-text.utils";
 
 type TEditableDraftItem = TCopilotSubtaskDraftItem & {
   client_key: string;
@@ -477,30 +479,6 @@ function toEditableDraftItem(item: TCopilotSubtaskDraftItem, index: number): TEd
     assignee_ids_text: item.assignee_ids.join(", "),
     label_ids_text: item.label_ids.join(", "),
   };
-}
-
-function htmlToText(value: string) {
-  return (value || "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function textToHtml(value: string) {
-  const text = value.trim();
-  if (!text) return "<p></p>";
-  return `<p>${escapeHtml(text).replace(/\n/g, "<br/>")}</p>`;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 function csvToList(value: string) {

@@ -5,6 +5,8 @@
  */
 
 import { strFromU8, unzipSync } from "fflate";
+// plane imports
+import { sanitizeHTML, sanitizeRichHTML } from "@plane/utils";
 
 export type TPageImportSource = "html" | "markdown" | "notion";
 
@@ -43,6 +45,55 @@ const MAX_IMPORT_FILES = 50;
 const MAX_IMPORT_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 const EMPTY_DOCUMENT_HTML = "<p></p>";
+const URL_PARSE_BASE = "https://plane.local";
+const SAFE_MARKDOWN_LINK_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
+const IMPORT_ALLOWED_TAGS = [
+  "a",
+  "blockquote",
+  "br",
+  "code",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "image-component",
+  "img",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "span",
+  "strong",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "ul",
+];
+const IMPORT_HTML_SANITIZER_OPTIONS = {
+  allowedTags: IMPORT_ALLOWED_TAGS,
+  allowedAttributes: {
+    a: ["href", "title"],
+    img: ["src", "alt", "title", "width", "height"],
+    "image-component": ["src", "alt", "title", "width", "height"],
+  },
+  allowedSchemes: ["http", "https", "mailto", "tel"],
+  allowedSchemesByTag: {
+    img: ["http", "https", "data"],
+    "image-component": ["http", "https", "data"],
+  },
+  allowedSchemesAppliedToAttributes: ["href", "src"],
+  allowProtocolRelative: false,
+  disallowedTagsMode: "discard" as const,
+  nonTextTags: ["script", "style", "textarea", "title"],
+  parseStyleAttributes: false,
+};
 
 const getExtension = (path: string): string => {
   const cleanPath = path.split("?")[0]?.split("#")[0] ?? path;
@@ -102,8 +153,33 @@ const resolveRelativePath = (fromPath: string, relativePath: string): string => 
   return baseParts.join("/");
 };
 
-const isRemoteOrDataSource = (value: string): boolean =>
-  /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(value.trim()) || value.trim().startsWith("data:");
+const getExplicitProtocol = (value: string): string | undefined => {
+  try {
+    return new URL(value.trim()).protocol;
+  } catch {
+    return undefined;
+  }
+};
+
+const isRemoteOrDataSource = (value: string): boolean => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return false;
+  if (trimmedValue.startsWith("#") || trimmedValue.startsWith("//")) return true;
+  return getExplicitProtocol(trimmedValue) !== undefined;
+};
+
+const isSafeMarkdownHref = (value: string): boolean => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue || trimmedValue.startsWith("//")) return false;
+
+  try {
+    const explicitProtocol = getExplicitProtocol(trimmedValue);
+    const parsedUrl = new URL(trimmedValue, URL_PARSE_BASE);
+    return explicitProtocol === undefined || SAFE_MARKDOWN_LINK_PROTOCOLS.has(parsedUrl.protocol);
+  } catch {
+    return false;
+  }
+};
 
 const escapeHtml = (value: string): string =>
   value
@@ -112,8 +188,6 @@ const escapeHtml = (value: string): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-
-const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const stableHash = (input: string): string => {
   let hash = 2166136261;
@@ -134,71 +208,42 @@ const assertNonEmptyText = (text: string, sourcePath: string) => {
   if (!text.trim()) throw new PageImportValidationError(`${sourcePath} is empty.`);
 };
 
-const sanitizeWithDomParser = (html: string): string | undefined => {
-  if (typeof DOMParser === "undefined") return undefined;
-
-  const parser = new DOMParser();
-  const document = parser.parseFromString(html, "text/html");
-  document.querySelectorAll("script, style, iframe, object, embed, link, meta").forEach((node) => node.remove());
-
-  document.querySelectorAll("*").forEach((element) => {
-    for (const attribute of Array.from(element.attributes)) {
-      const attributeName = attribute.name.toLowerCase();
-      const attributeValue = attribute.value.trim().toLowerCase();
-      if (attributeName.startsWith("on") || attributeValue.startsWith("javascript:")) {
-        element.removeAttribute(attribute.name);
-      }
-    }
-  });
-
-  return document.body.innerHTML.trim() || EMPTY_DOCUMENT_HTML;
-};
-
 export const sanitizeImportHtml = (html: string): string => {
-  const parsedHtml = sanitizeWithDomParser(html);
-  if (parsedHtml !== undefined) return parsedHtml;
-
-  const htmlWithoutUnsafeElements = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<(?:iframe|object|embed|link|meta)\b[^>]*>[\s\S]*?(?:<\/(?:iframe|object|embed|link|meta)>)?/gi, "");
-
-  const withoutUnsafeAttributes = htmlWithoutUnsafeElements
-    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/\s(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, "");
-
-  return withoutUnsafeAttributes.trim() || EMPTY_DOCUMENT_HTML;
+  const sanitizedHtml = sanitizeRichHTML(html, IMPORT_HTML_SANITIZER_OPTIONS);
+  return sanitizedHtml || EMPTY_DOCUMENT_HTML;
 };
 
 const extractHtmlTitle = (html: string, sourcePath: string): string => {
-  if (typeof DOMParser !== "undefined") {
-    const parser = new DOMParser();
-    const document = parser.parseFromString(html, "text/html");
-    const title =
-      document.querySelector("title")?.textContent?.trim() || document.querySelector("h1")?.textContent?.trim();
-    if (title) return title;
-  }
+  const titleParts: string[] = [];
+  const headingParts: string[] = [];
+  const activeTags: string[] = [];
 
-  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-  const title = (titleMatch?.[1] || h1Match?.[1] || "")
-    .replace(/<[^>]*>/g, "")
+  sanitizeRichHTML(html, {
+    allowedTags: ["title", "h1"],
+    allowedAttributes: {},
+    disallowedTagsMode: "discard",
+    nonTextTags: ["script", "style", "textarea"],
+    onOpenTag: (name) => {
+      if (name === "title" || name === "h1") activeTags.push(name);
+    },
+    onCloseTag: (name) => {
+      if (name === "title" || name === "h1") activeTags.pop();
+    },
+    textFilter: (text) => {
+      const activeTag = activeTags.at(-1);
+      if (activeTag === "title") titleParts.push(text);
+      if (activeTag === "h1") headingParts.push(text);
+      return text;
+    },
+  });
+
+  const title = sanitizeHTML(titleParts.join(" ") || headingParts.join(" "))
     .replace(/\s+/g, " ")
     .trim();
-
   return title || stripExtension(getFileName(sourcePath)) || "Imported page";
 };
 
-const extractBodyHtml = (html: string): string => {
-  if (typeof DOMParser !== "undefined") {
-    const parser = new DOMParser();
-    const document = parser.parseFromString(html, "text/html");
-    return document.body.innerHTML.trim() || EMPTY_DOCUMENT_HTML;
-  }
-
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  return (bodyMatch?.[1] ?? html).trim() || EMPTY_DOCUMENT_HTML;
-};
+const extractBodyHtml = (html: string): string => html.trim() || EMPTY_DOCUMENT_HTML;
 
 const applyInlineMarkdown = (value: string): string =>
   escapeHtml(value)
@@ -206,7 +251,7 @@ const applyInlineMarkdown = (value: string): string =>
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, href: string) => {
-      const safeHref = href.trim().toLowerCase().startsWith("javascript:") ? "" : escapeHtml(href.trim());
+      const safeHref = isSafeMarkdownHref(href) ? escapeHtml(href.trim()) : "";
       return safeHref ? `<a href="${safeHref}">${label}</a>` : label;
     });
 
@@ -302,22 +347,15 @@ const extractMarkdownTitle = (markdown: string, sourcePath: string): string => {
 const collectAssetSources = (html: string): string[] => {
   const sources = new Set<string>();
 
-  if (typeof DOMParser !== "undefined") {
-    const parser = new DOMParser();
-    const document = parser.parseFromString(html, "text/html");
-    document.querySelectorAll("img, image-component").forEach((element) => {
-      const source = element.getAttribute("src")?.trim();
+  sanitizeRichHTML(html, {
+    ...IMPORT_HTML_SANITIZER_OPTIONS,
+    allowedTags: ["img", "image-component"],
+    onOpenTag: (name, attributes) => {
+      if (name !== "img" && name !== "image-component") return;
+      const source = attributes.src?.trim();
       if (source && !isRemoteOrDataSource(source)) sources.add(source);
-    });
-    return Array.from(sources);
-  }
-
-  const srcPattern = /<(?:img|image-component)\b[^>]*\ssrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/gi;
-  let match: RegExpExecArray | null;
-  while ((match = srcPattern.exec(html))) {
-    const source = (match[1] || match[2] || match[3] || "").trim();
-    if (source && !isRemoteOrDataSource(source)) sources.add(source);
-  }
+    },
+  });
 
   return Array.from(sources);
 };
@@ -476,25 +514,27 @@ const parseZipFile = async (file: File): Promise<TPageImportParseResult> => {
 };
 
 export const rewriteHtmlAssetSources = (html: string, assetMap: Record<string, string>): string => {
-  if (Object.keys(assetMap).length === 0) return html;
+  const rewriteSource = (tagName: string, attributes: Record<string, string>) => {
+    const source = attributes.src?.trim();
+    if (!source || !assetMap[source]) return { tagName, attribs: attributes };
+    return {
+      tagName,
+      attribs: {
+        ...attributes,
+        src: assetMap[source],
+      },
+    };
+  };
 
-  if (typeof DOMParser !== "undefined") {
-    const parser = new DOMParser();
-    const document = parser.parseFromString(html, "text/html");
-    document.querySelectorAll("img, image-component").forEach((element) => {
-      const source = element.getAttribute("src")?.trim();
-      if (source && assetMap[source]) element.setAttribute("src", assetMap[source]);
-    });
-    return document.body.innerHTML.trim() || EMPTY_DOCUMENT_HTML;
-  }
+  const rewrittenHtml = sanitizeRichHTML(html, {
+    ...IMPORT_HTML_SANITIZER_OPTIONS,
+    transformTags: {
+      img: rewriteSource,
+      "image-component": rewriteSource,
+    },
+  });
 
-  return Object.entries(assetMap).reduce((updatedHtml, [source, replacement]) => {
-    const sourcePattern = escapeRegExp(source);
-    return updatedHtml.replace(
-      new RegExp(`(<(?:img|image-component)\\b[^>]*\\ssrc\\s*=\\s*)(["'])${sourcePattern}\\2`, "gi"),
-      `$1"${replacement.replace(/\\/g, "\\\\").replace(/\$/g, "$$$$").replace(/"/g, "&quot;")}"`
-    );
-  }, html);
+  return rewrittenHtml || EMPTY_DOCUMENT_HTML;
 };
 
 const parsePageImportFile = async (file: File): Promise<TPageImportParseResult> => {
