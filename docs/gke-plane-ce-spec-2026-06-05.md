@@ -421,6 +421,11 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
   `.github/workflows/railway-aio-ghcr.yml`,
   `deployments/aio/community/Dockerfile.railway`, and
   `docs/railway-plane.md`.
+- CI cleanup: removed `.github/workflows/codeql.yml` because GitHub default
+  CodeQL setup is already enabled for this repository. Keeping both the advanced
+  workflow and default setup caused the push-triggered CodeQL run to fail with
+  `CodeQL analyses from advanced configurations cannot be processed when the
+default setup is enabled`, while the dynamic default CodeQL run succeeded.
 
 # Remaining Gaps
 
