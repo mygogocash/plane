@@ -1,0 +1,22 @@
+[
+  {
+    "origin": [
+      "http://plane.34.143.231.225.sslip.io",
+      "https://plane.34.143.231.225.sslip.io",
+      "http://app.manut.xyz",
+      "https://app.manut.xyz"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "ETag",
+      "x-goog-resumable",
+      "x-amz-acl",
+      "x-amz-date",
+      "x-amz-content-sha256",
+      "authorization"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

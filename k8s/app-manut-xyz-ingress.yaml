@@ -1,0 +1,87 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: plane-app-manut-xyz-ingress
+  namespace: plane-ce
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.manut.xyz
+      secretName: app-manut-xyz-tls
+  rules:
+    - host: app.manut.xyz
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: plane-app-web
+                port:
+                  number: 3000
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: plane-app-api
+                port:
+                  number: 8000
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: plane-app-api
+                port:
+                  number: 8000
+          - path: /live/
+            pathType: Prefix
+            backend:
+              service:
+                name: plane-app-live
+                port:
+                  number: 3000
+          - path: /spaces
+            pathType: Prefix
+            backend:
+              service:
+                name: plane-app-space
+                port:
+                  number: 3000
+          - path: /god-mode
+            pathType: Prefix
+            backend:
+              service:
+                name: plane-app-admin
+                port:
+                  number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: plane-uploads-manut-xyz-ingress
+  namespace: plane-ce
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/rewrite-target: /plane-affine-495114-uploads/uploads/$2
+    nginx.ingress.kubernetes.io/upstream-vhost: storage.googleapis.com
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.manut.xyz
+      secretName: app-manut-xyz-tls
+  rules:
+    - host: app.manut.xyz
+      http:
+        paths:
+          - path: /uploads(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: plane-gcs-uploads
+                port:
+                  number: 443

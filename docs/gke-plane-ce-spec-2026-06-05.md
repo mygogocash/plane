@@ -426,6 +426,18 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
   workflow and default setup caused the push-triggered CodeQL run to fail with
   `CodeQL analyses from advanced configurations cannot be processed when the
 default setup is enabled`, while the dynamic default CodeQL run succeeded.
+- Ops hardening: enabled Cloud SQL PITR for `plane-pg`, kept
+  `transactionLogRetentionDays=7`, enabled Cloud SQL deletion protection, and
+  enabled backup retention after delete. The patch completed successfully and
+  triggered a successful backup-volume operation.
+- Upload bucket hardening: added `docs/gcs-plane-uploads-lifecycle.json` and
+  applied it to `plane-affine-495114-uploads`. The lifecycle policy aborts
+  incomplete multipart uploads after 7 days and does not delete completed Plane
+  uploads. The bucket still has 7-day soft delete and the app/GCS CORS policy.
+- Ops handover: added `docs/gcp-plane-ops-handover.md` with current state,
+  deploy/reconcile commands, smoke checks, rollback, recovery, DNS, and secret
+  handling guidance. Tracked live-supporting Kubernetes/GCS artifacts were added
+  under `k8s/`.
 
 # Remaining Gaps
 
