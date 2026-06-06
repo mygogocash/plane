@@ -127,14 +127,27 @@ class PageViewSet(BaseViewSet):
         )
 
     def create(self, request, slug, project_id):
+        description_payload = {
+            "description_json": request.data.get("description_json", {}),
+            "description_html": request.data.get("description_html", "<p></p>"),
+        }
+        if request.data.get("description_binary", None) is not None:
+            description_payload["description_binary"] = request.data.get("description_binary")
+
+        description_serializer = PageBinaryUpdateSerializer(data=description_payload)
+        if not description_serializer.is_valid():
+            return Response(description_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        description_data = description_serializer.validated_data
+
         serializer = PageSerializer(
             data=request.data,
             context={
                 "project_id": project_id,
                 "owned_by_id": request.user.id,
-                "description_json": request.data.get("description_json", {}),
-                "description_binary": request.data.get("description_binary", None),
-                "description_html": request.data.get("description_html", "<p></p>"),
+                "description_json": description_data.get("description_json", {}),
+                "description_binary": description_data.get("description_binary", None),
+                "description_html": description_data.get("description_html", "<p></p>"),
             },
         )
 
@@ -142,7 +155,7 @@ class PageViewSet(BaseViewSet):
             serializer.save()
             # capture the page transaction
             page_transaction.delay(
-                new_description_html=request.data.get("description_html", "<p></p>"),
+                new_description_html=description_data.get("description_html", "<p></p>"),
                 old_description_html=None,
                 page_id=serializer.data["id"],
             )

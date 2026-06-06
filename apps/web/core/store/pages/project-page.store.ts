@@ -9,7 +9,7 @@ import { makeObservable, observable, runInAction, action, reaction, computed } f
 import { computedFn } from "mobx-utils";
 // types
 import { EUserPermissions } from "@plane/constants";
-import type { TPage, TPageFilters, TPageNavigationTabs } from "@plane/types";
+import type { TPage, TPageCreatePayload, TPageFilters, TPageNavigationTabs } from "@plane/types";
 import { EUserProjectRoles } from "@plane/types";
 // helpers
 import { filterPagesByPageType, getPageName, orderPages, shouldFilterPage } from "@plane/utils";
@@ -62,7 +62,7 @@ export interface IProjectPageStore {
     pageId: string,
     options?: { trackVisit?: boolean }
   ) => Promise<TPage | undefined>;
-  createPage: (pageData: Partial<TPage>) => Promise<TPage | undefined>;
+  createPage: (pageData: TPageCreatePayload) => Promise<TPage | undefined>;
   removePage: (params: { pageId: string; shouldSync?: boolean }) => Promise<void>;
   movePage: (workspaceSlug: string, projectId: string, pageId: string, newProjectId: string) => Promise<void>;
 }
@@ -293,9 +293,9 @@ export class ProjectPageStore implements IProjectPageStore {
 
   /**
    * @description create a page
-   * @param {Partial<TPage>} pageData
+   * @param {TPageCreatePayload} pageData
    */
-  createPage = async (pageData: Partial<TPage>) => {
+  createPage = async (pageData: TPageCreatePayload) => {
     try {
       const { workspaceSlug, projectId } = this.store.router;
       if (!workspaceSlug || !projectId) return undefined;

@@ -13,20 +13,33 @@ import { EPageAccess } from "@plane/constants";
 import { Button } from "@plane/propel/button";
 import { PageIcon } from "@plane/propel/icons";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TPage } from "@plane/types";
+import type { TPageCreatePayload } from "@plane/types";
 // plane ui
 import { Breadcrumbs, Header } from "@plane/ui";
 // helpers
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
+import { ImportPagesModal } from "@/components/pages/import/import-pages-modal";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/plane-web/components/breadcrumbs/common";
 import { EPageStoreType, usePageStore } from "@/plane-web/hooks/store";
 
+const getCreatePageErrorMessage = (error: unknown): string => {
+  if (typeof error !== "object" || error === null || !("data" in error)) {
+    return "Page could not be created. Please try again.";
+  }
+  const { data } = error;
+  if (typeof data !== "object" || data === null || !("error" in data)) {
+    return "Page could not be created. Please try again.";
+  }
+  return String(data.error);
+};
+
 export const PagesListHeader = observer(function PagesListHeader() {
   // states
   const [isCreatingPage, setIsCreatingPage] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   // router
   const router = useRouter();
   const { workspaceSlug, projectId } = useParams();
@@ -39,23 +52,23 @@ export const PagesListHeader = observer(function PagesListHeader() {
   const handleCreatePage = async () => {
     setIsCreatingPage(true);
 
-    const payload: Partial<TPage> = {
+    const payload: TPageCreatePayload = {
       access: pageType === "private" ? EPageAccess.PRIVATE : EPageAccess.PUBLIC,
     };
 
-    await createPage(payload)
-      .then((res) => {
-        const pageId = `/${workspaceSlug}/projects/${currentProjectDetails?.id}/pages/${res?.id}`;
-        router.push(pageId);
-      })
-      .catch((err) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: err?.data?.error || "Page could not be created. Please try again.",
-        });
-      })
-      .finally(() => setIsCreatingPage(false));
+    try {
+      const res = await createPage(payload);
+      const pageId = `/${workspaceSlug}/projects/${currentProjectDetails?.id}/pages/${res?.id}`;
+      router.push(pageId);
+    } catch (err) {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: getCreatePageErrorMessage(err),
+      });
+    } finally {
+      setIsCreatingPage(false);
+    }
   };
 
   return (
@@ -78,11 +91,21 @@ export const PagesListHeader = observer(function PagesListHeader() {
       </Header.LeftItem>
       {canCurrentUserCreatePage && (
         <Header.RightItem>
-          <Button variant="primary" size="lg" onClick={handleCreatePage} loading={isCreatingPage}>
-            {isCreatingPage ? "Adding" : "Add page"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="lg" onClick={() => setIsImportModalOpen(true)}>
+              Import
+            </Button>
+            <Button variant="primary" size="lg" onClick={handleCreatePage} loading={isCreatingPage}>
+              {isCreatingPage ? "Adding" : "Add page"}
+            </Button>
+          </div>
         </Header.RightItem>
       )}
+      <ImportPagesModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        defaultAccess={pageType === "private" ? EPageAccess.PRIVATE : EPageAccess.PUBLIC}
+      />
     </Header>
   );
 });

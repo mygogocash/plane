@@ -321,6 +321,9 @@ catalogs:
     express-ws:
       specifier: ^5.0.2
       version: 5.0.2
+    fflate:
+      specifier: ^0.8.2
+      version: 0.8.3
     file-type:
       specifier: ^21.3.1
       version: 21.3.3
@@ -1121,6 +1124,9 @@ importers:
       export-to-csv:
         specifier: 'catalog:'
         version: 1.4.0
+      fflate:
+        specifier: 'catalog:'
+        version: 0.8.3
       isbot:
         specifier: 'catalog:'
         version: 5.1.31
@@ -1239,6 +1245,9 @@ importers:
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 5.1.4(typescript@5.8.3)(vite@7.3.2(@types/node@22.12.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.20.6)(yaml@2.8.3))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@22.12.0)(@vitest/coverage-v8@4.0.17)(vite@7.3.2(@types/node@22.12.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.43.1)(tsx@4.20.6)(yaml@2.8.3))
 
   packages/codemods:
     devDependencies:
@@ -5967,6 +5976,9 @@ packages:
 
   fecha@4.2.3:
     resolution: {integrity: sha512-OP2IUU6HeYKJi3i0z4A19kHMQoLVs4Hc+DPqqxI2h/DPZHTm/vjsfC6P0b4jCMy14XizLBqvndQ+UilD7707Jw==}
+
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   file-selector@2.1.2:
     resolution: {integrity: sha512-QgXo+mXTe8ljeqUFaX3QVHc5osSItJ/Km+xpocx0aSqWGMSCf6qYs/VnzZgS864Pjn5iceMRFigeAV7AfTlaig==}
@@ -11775,7 +11787,7 @@ snapshots:
 
   '@vitest/pretty-format@4.0.17':
     dependencies:
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
 
   '@vitest/pretty-format@4.1.8':
     dependencies:
@@ -11825,7 +11837,7 @@ snapshots:
   '@vitest/utils@4.0.17':
     dependencies:
       '@vitest/pretty-format': 4.0.17
-      tinyrainbow: 3.0.3
+      tinyrainbow: 3.1.0
 
   '@vitest/utils@4.1.8':
     dependencies:
@@ -12945,6 +12957,8 @@ snapshots:
       picomatch: 2.3.2
 
   fecha@4.2.3: {}
+
+  fflate@0.8.3: {}
 
   file-selector@2.1.2:
     dependencies:

@@ -53,6 +53,8 @@ class PageSerializer(BaseSerializer):
             "updated_by",
             "view_props",
             "logo_props",
+            "external_id",
+            "external_source",
             "label_ids",
             "project_ids",
         ]
@@ -184,7 +186,7 @@ class PageBinaryUpdateSerializer(serializers.Serializer):
 
         try:
             # Decode the base64 data
-            binary_data = base64.b64decode(value)
+            binary_data = base64.b64decode(value, validate=True)
 
             # Validate the binary data
             is_valid, error_message = validate_binary_data(binary_data)

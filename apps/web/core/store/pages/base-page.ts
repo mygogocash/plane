@@ -88,6 +88,9 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
   logo_props: TLogoProps | undefined;
   description_json: object | undefined;
   description_html: string | undefined;
+  description_binary: string | undefined;
+  external_id: string | null | undefined;
+  external_source: string | null | undefined;
   color: string | undefined;
   label_ids: string[] | undefined;
   owned_by: string | undefined;
@@ -125,6 +128,9 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
     this.logo_props = page?.logo_props || undefined;
     this.description_json = page?.description_json || undefined;
     this.description_html = page?.description_html || undefined;
+    this.description_binary = page?.description_binary || undefined;
+    this.external_id = page?.external_id || undefined;
+    this.external_source = page?.external_source || undefined;
     this.color = page?.color || undefined;
     this.label_ids = page?.label_ids || undefined;
     this.owned_by = page?.owned_by || undefined;
@@ -150,6 +156,9 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       logo_props: observable.ref,
       description_json: observable.ref,
       description_html: observable.ref,
+      description_binary: observable.ref,
+      external_id: observable.ref,
+      external_source: observable.ref,
       color: observable.ref,
       label_ids: observable,
       owned_by: observable.ref,
@@ -225,6 +234,9 @@ export class BasePage extends ExtendedBasePage implements TBasePage {
       name: this.name,
       description_json: this.description_json,
       description_html: this.description_html,
+      description_binary: this.description_binary,
+      external_id: this.external_id,
+      external_source: this.external_source,
       color: this.color,
       label_ids: this.label_ids,
       owned_by: this.owned_by,

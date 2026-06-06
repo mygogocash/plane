@@ -6,7 +6,7 @@
 
 // types
 import { API_BASE_URL } from "@plane/constants";
-import type { TDocumentPayload, TPage } from "@plane/types";
+import type { TDocumentPayload, TPage, TPageCreatePayload } from "@plane/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";
@@ -41,7 +41,7 @@ export class ProjectPageService extends APIService {
       });
   }
 
-  async create(workspaceSlug: string, projectId: string, data: Partial<TPage>): Promise<TPage> {
+  async create(workspaceSlug: string, projectId: string, data: TPageCreatePayload): Promise<TPage> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/`, data)
       .then((response) => response?.data)
       .catch((error) => {

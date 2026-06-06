@@ -16,6 +16,9 @@ export type TPage = {
   created_by: string | undefined;
   description_json: object | undefined;
   description_html: string | undefined;
+  description_binary?: string | undefined;
+  external_id?: string | null;
+  external_source?: string | null;
   id: string | undefined;
   is_favorite: boolean;
   is_locked: boolean;
@@ -74,6 +77,8 @@ export type TDocumentPayload = {
   description_html: string;
   description_json: object;
 };
+
+export type TPageCreatePayload = Partial<TPage> & Partial<TDocumentPayload>;
 
 export type TWebhookConnectionQueryParams = {
   documentType: "project_page" | "team_page" | "workspace_page";
