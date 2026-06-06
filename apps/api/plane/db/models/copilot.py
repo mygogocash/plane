@@ -32,7 +32,7 @@ class CopilotConversation(BaseModel):
         db_table = "copilot_conversations"
         ordering = ("-last_message_at", "-created_at")
         indexes = [
-            models.Index(fields=["workspace", "user", "-last_message_at"], name="copilot_conv_workspace_user_idx"),
+            models.Index(fields=["workspace", "user", "-last_message_at"], name="copilot_conv_ws_user_idx"),
         ]
 
     def __str__(self):

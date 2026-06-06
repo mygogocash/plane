@@ -160,7 +160,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="copilotconversation",
-            index=models.Index(fields=["workspace", "user", "-last_message_at"], name="copilot_conv_workspace_user_idx"),
+            index=models.Index(fields=["workspace", "user", "-last_message_at"], name="copilot_conv_ws_user_idx"),
         ),
         migrations.AddIndex(
             model_name="copilotmessage",
