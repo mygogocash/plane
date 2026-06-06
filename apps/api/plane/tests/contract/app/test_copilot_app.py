@@ -10,7 +10,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from plane.app.views.copilot import call_copilot_llm
-from plane.db.models import Issue, Project, ProjectMember, State, User
+from plane.db.models import Issue, Project, ProjectMember, State, User, WorkspaceMember
 from plane.db.models.state import StateGroup
 from plane.license.models import Instance
 
@@ -204,6 +204,94 @@ class TestCopilotMessagesEndpoint:
         assert response.data["subtask_draft"]["items"][0]["priority"] == "high"
         assert response.data["subtask_draft"]["items"][0]["assignee_ids"] == []
         assert response.data["subtask_draft"]["items"][0]["label_ids"] == []
+
+    @pytest.mark.django_db
+    def test_copilot__given_create_issue_command__then_applies_action_and_persists_conversation(
+        self, session_client, workspace, create_user
+    ):
+        project, issue = _create_project_with_issue(workspace, create_user, issue_name="Launch Plane workspace")
+        action = {
+            "type": "create_issue",
+            "project_id": str(project.id),
+            "name": "Verify landing handoff",
+            "description_html": "<p>Confirm CTA links point to the app domain.</p>",
+            "priority": "high",
+            "parent_id": str(issue.id),
+        }
+
+        with (
+            patch("plane.app.views.copilot.get_llm_config", return_value=("", "gemini-2.5-flash", "vertexai")),
+            patch.dict(
+                "os.environ",
+                {
+                    "LLM_VERTEX_PROJECT": "plane-test-project",
+                    "LLM_VERTEX_LOCATION": "us-central1",
+                },
+            ),
+            patch(
+                "plane.app.views.copilot.call_copilot_llm",
+                return_value={
+                    "answer": "I created a child work item for the landing handoff check.",
+                    "subtask_draft": None,
+                    "actions": [action],
+                },
+            ),
+        ):
+            response = session_client.post(
+                _copilot_url(workspace.slug),
+                {
+                    "message": "Create a child work item to verify the landing handoff.",
+                    "mode": "command",
+                    "project_id": str(project.id),
+                    "issue_id": str(issue.id),
+                },
+                format="json",
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["conversation_id"]
+        assert response.data["mode"] == "command"
+        assert response.data["actions"][0]["status"] == "applied"
+        assert response.data["action_results"][0]["status"] == "applied"
+
+        created_issue = Issue.issue_objects.get(name="Verify landing handoff")
+        assert created_issue.project_id == project.id
+        assert created_issue.parent_id == issue.id
+        assert created_issue.priority == "high"
+
+        from plane.db.models import CopilotConversation, CopilotMessage
+
+        conversation = CopilotConversation.objects.get(pk=response.data["conversation_id"])
+        assert conversation.workspace_id == workspace.id
+        assert conversation.user_id == create_user.id
+        message = CopilotMessage.objects.get(conversation=conversation)
+        assert message.actions[0]["type"] == "create_issue"
+        assert message.action_results[0]["entity_id"] == str(created_issue.id)
+
+    @pytest.mark.django_db
+    def test_copilot__given_guest_write_command__then_rejects_without_querying_model(
+        self, api_client, workspace, create_user
+    ):
+        project, issue = _create_project_with_issue(workspace, create_user, issue_name="Guest visible work")
+        guest = User.objects.create_user(email="guest-copilot@example.com", username="guest-copilot")
+        WorkspaceMember.objects.create(workspace=workspace, member=guest, role=5)
+        ProjectMember.objects.create(project=project, member=guest, role=5)
+        api_client.force_authenticate(user=guest)
+
+        with patch("plane.app.views.copilot.call_copilot_llm") as mocked_llm:
+            response = api_client.post(
+                _copilot_url(workspace.slug),
+                {
+                    "message": "Set this work item to high priority.",
+                    "mode": "command",
+                    "project_id": str(project.id),
+                    "issue_id": str(issue.id),
+                },
+                format="json",
+            )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        mocked_llm.assert_not_called()
 
     def test_call_copilot_llm__given_vertex_provider__then_uses_vertex_adapter(self):
         with patch(

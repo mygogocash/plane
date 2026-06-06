@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ExternalLink, Loader2, Send, Sparkles, X } from "lucide-react";
+import { Check, Clock, ExternalLink, Loader2, Send, Sparkles, X } from "lucide-react";
 // plane imports
 import { Button } from "@plane/propel/button";
 import { EPortalPosition, EPortalWidth, ModalPortal } from "@plane/propel/portal";
@@ -19,6 +19,7 @@ import { useInstance } from "@/hooks/store/use-instance";
 import { IssueService } from "@/services/issue";
 import {
   AIService,
+  type TCopilotConversation,
   type TCopilotMessageResponse,
   type TCopilotMode,
   type TCopilotSubtaskDraftItem,
@@ -54,6 +55,9 @@ export function CopilotPanel(props: Props) {
   const [mode, setMode] = useState<TCopilotMode>("auto");
   const [isSending, setIsSending] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<TCopilotConversation[]>([]);
   const [response, setResponse] = useState<TCopilotMessageResponse | null>(null);
   const [draftItems, setDraftItems] = useState<TEditableDraftItem[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -69,11 +73,55 @@ export function CopilotPanel(props: Props) {
     if (!isOpen) {
       setMessage("");
       setMode("auto");
+      setConversationId(null);
       setResponse(null);
       setDraftItems([]);
       setErrorMessage(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !workspaceSlug) return;
+
+    let isMounted = true;
+    setIsLoadingHistory(true);
+    const loadConversations = async () => {
+      try {
+        const items = await aiService.listCopilotConversations(workspaceSlug);
+        if (isMounted) setConversations(items);
+      } catch {
+        if (isMounted) setConversations([]);
+      } finally {
+        if (isMounted) setIsLoadingHistory(false);
+      }
+    };
+    loadConversations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, workspaceSlug]);
+
+  const loadConversation = (conversation: TCopilotConversation) => {
+    const latestMessage = conversation.messages.at(-1);
+    setConversationId(conversation.id);
+    setMessage("");
+    setDraftItems([]);
+    setErrorMessage(null);
+    if (!latestMessage) {
+      setResponse(null);
+      return;
+    }
+    setResponse({
+      conversation_id: conversation.id,
+      mode: latestMessage.mode,
+      answer: latestMessage.answer,
+      citations: latestMessage.citations,
+      actions: latestMessage.actions,
+      action_results: latestMessage.action_results,
+      subtask_draft: null,
+    });
+  };
 
   const submitMessage = async (nextMode: TCopilotMode = mode) => {
     const trimmedMessage = message.trim();
@@ -84,16 +132,26 @@ export function CopilotPanel(props: Props) {
 
     try {
       const result = await aiService.sendCopilotMessage(workspaceSlug, {
+        conversation_id: conversationId,
         message: trimmedMessage,
         mode: nextMode,
         project_id: projectId,
         issue_id: issueId,
       });
 
+      setConversationId(result.conversation_id);
       setResponse(result);
       setDraftItems((result.subtask_draft?.items ?? []).map(toEditableDraftItem));
+      setMessage("");
+      if (result.action_results.length > 0) {
+        await onSubtasksCreated?.();
+      }
+      aiService
+        .listCopilotConversations(workspaceSlug)
+        .then(setConversations)
+        .catch(() => {});
     } catch (error: any) {
-      setErrorMessage(error?.error ?? "Copilot request failed.");
+      setErrorMessage(getErrorMessage(error, "Copilot request failed."));
     } finally {
       setIsSending(false);
     }
@@ -134,11 +192,12 @@ export function CopilotPanel(props: Props) {
       });
       onClose();
     } catch (error: any) {
-      setErrorMessage(error?.error ?? "Subtask creation failed.");
+      const toastMessage = getErrorMessage(error, "Subtask creation failed.");
+      setErrorMessage(toastMessage);
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Subtask creation failed",
-        message: error?.error ?? "Review the draft and try again.",
+        message: toastMessage,
       });
     } finally {
       setIsApplying(false);
@@ -170,6 +229,36 @@ export function CopilotPanel(props: Props) {
         </header>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          {(isLoadingHistory || conversations.length > 0) && (
+            <section className="space-y-2">
+              <div className="text-xs flex items-center gap-2 font-medium text-tertiary uppercase">
+                <Clock className="size-3" />
+                Recent
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {isLoadingHistory ? (
+                  <span className="text-xs rounded border border-subtle px-3 py-1.5 text-tertiary">Loading</span>
+                ) : (
+                  conversations.slice(0, 6).map((conversation) => (
+                    <button
+                      type="button"
+                      key={conversation.id}
+                      className={cn(
+                        "text-xs max-w-48 flex-shrink-0 truncate rounded border px-3 py-1.5 text-left",
+                        conversation.id === conversationId
+                          ? "border-accent-primary text-primary"
+                          : "border-subtle text-secondary hover:bg-surface-2"
+                      )}
+                      onClick={() => loadConversation(conversation)}
+                    >
+                      {conversation.title || "Copilot conversation"}
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+          )}
+
           {!isAiConfigured && (
             <div className="text-sm rounded border border-subtle bg-surface-2 px-3 py-2 text-secondary">
               AI is not configured.
@@ -202,6 +291,26 @@ export function CopilotPanel(props: Props) {
                         {citation.excerpt && (
                           <span className="mt-1 line-clamp-2 text-tertiary">{citation.excerpt}</span>
                         )}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {response.action_results.length > 0 && (
+                <div className="space-y-2 border-t border-subtle pt-3">
+                  <h3 className="text-xs font-medium text-tertiary uppercase">Applied actions</h3>
+                  <div className="space-y-2">
+                    {response.action_results.map((result) => (
+                      <a
+                        key={`${result.type}-${result.entity_id}`}
+                        href={result.url}
+                        className="text-xs block rounded border border-subtle px-3 py-2 hover:bg-surface-1"
+                      >
+                        <span className="flex items-center justify-between gap-2 font-medium text-primary">
+                          <span className="truncate">{result.title || result.type}</span>
+                          <ExternalLink className="size-3 flex-shrink-0 text-tertiary" />
+                        </span>
+                        <span className="mt-1 block text-tertiary">{result.type.replace(/_/g, " ")}</span>
                       </a>
                     ))}
                   </div>
@@ -319,6 +428,16 @@ export function CopilotPanel(props: Props) {
                   Draft subtasks
                 </button>
               )}
+              <button
+                type="button"
+                className={cn(
+                  "text-xs rounded border px-3 py-1.5",
+                  mode === "command" ? "border-accent-primary text-primary" : "border-subtle text-secondary"
+                )}
+                onClick={() => setMode("command")}
+              >
+                Command
+              </button>
             </div>
             <div className="flex items-center gap-2">
               {hasIssueContext && draftItems.length > 0 && (
@@ -389,4 +508,11 @@ function csvToList(value: string) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function getErrorMessage(error: any, fallback: string) {
+  const detail = error?.error ?? error?.detail ?? error?.message;
+  if (!detail) return fallback;
+  if (typeof detail === "string") return detail;
+  return JSON.stringify(detail);
 }
