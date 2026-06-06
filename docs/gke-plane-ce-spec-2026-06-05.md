@@ -7,9 +7,9 @@ temporary `sslip.io` host backed by a reserved regional IP.
 
 # Business Goals
 
-- Move the current Plane evaluation path from Railway instability to a managed
-  Google Cloud baseline.
-- Keep GoGoCash workspace setup reproducible and rollback-friendly.
+- Move the Plane production path from Railway instability to a managed Google
+  Cloud baseline.
+- Keep GoGoCash workspace setup reproducible and rollback-friendly within GCP.
 - Preserve a clean path to later custom domain and TLS rollout.
 - Keep invite email delivery enabled only after the previously exposed Resend
   key has been rotated.
@@ -41,10 +41,10 @@ temporary `sslip.io` host backed by a reserved regional IP.
 
 # Non-Goals
 
-- No Railway data migration.
+- No Railway data migration after the GKE instance is accepted as canonical.
 - No patched fork image in the first GKE release.
 - No custom domain, DNS cutover, or managed TLS in this release.
-- No production traffic migration from Railway until GKE smoke checks pass.
+- No Railway rollback path after the Railway project is decommissioned.
 
 # Architecture
 
@@ -123,7 +123,9 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
 - Helm rollback: `helm rollback plane-app <revision> -n plane-ce`.
 - Fresh install removal: `helm uninstall plane-app -n plane-ce`.
 - Ingress rollback: remove or leave the temporary `sslip.io` host unused.
-- DNS rollback, if a later cutover occurs: point the domain back to Railway.
+- DNS rollback after decommission: point `app.manut.xyz` only to a validated
+  GCP rollback endpoint or maintenance page. Railway is no longer an available
+  rollback target.
 - Data rollback for this fresh install: delete test-only records through the app
   or retain Cloud SQL/Cloud Storage for investigation before teardown.
 
@@ -301,6 +303,7 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
 - Workspace `GoGoCash` and project `GCP-SMOKE-PROJECT` can be created.
 - Cover image and attachment uploads persist through pod restarts.
 - Invite delivery is verified only after a rotated Resend key is stored.
+- Railway project `grateful-celebration` is deleted after GCP smoke passes.
 
 # Execution Evidence
 
@@ -405,13 +408,24 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
   `Ethernet` and `Wi-Fi` were temporarily set to `1.1.1.1 8.8.8.8`. Rollback
   commands are `networksetup -setdnsservers Ethernet Empty` and
   `networksetup -setdnsservers Wi-Fi Empty`.
+- TLS rollout: `https://app.manut.xyz/api/instances/` returned `200`,
+  `https://app.manut.xyz/uploads` returned `403 application/xml; charset=UTF-8`,
+  and Kubernetes certificate `app-manut-xyz-tls` was `Ready=True`.
+- Railway decommission: project `grateful-celebration`
+  (`3656b0db-526d-4a75-980b-6296c1f7eb1d`) was deleted after GCP smoke passed.
+  The deleted project contained Plane, Postgres, Redis, MinIO, and RabbitMQ in
+  the `production` environment. Railway reported deletion marker
+  `2026-06-08T08:54:40.379Z`; this workspace was then unlinked from Railway.
+- Source cleanup: removed Railway-only deploy artifacts from the `preview`
+  branch working tree: `railway.json`,
+  `.github/workflows/railway-aio-ghcr.yml`,
+  `deployments/aio/community/Dockerfile.railway`, and
+  `docs/railway-plane.md`.
 
 # Remaining Gaps
 
 - Teammate invite delivery has not been resent from the GKE workspace yet; SMTP
   itself is configured and verified with Plane's built-in test email.
-- TLS for `https://app.manut.xyz` remains a follow-up step; until then the
-  prepared app URL is HTTP.
 - The hyphenated project-name criterion is not met by Plane `v1.3.1` validation;
   either adjust the test naming convention or patch/verify project-name
   validation before requiring names like `GCP-SMOKE-PROJECT`.
