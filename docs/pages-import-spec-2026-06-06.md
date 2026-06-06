@@ -37,7 +37,7 @@ Add a Pages import flow that creates Plane project pages from Notion exports. V1
 - No perfect Notion database/table fidelity beyond the editor's supported HTML/Markdown features.
 - No server-side long-running import jobs in V1.
 - No workspace-wide page model change; imports still create project pages.
-- No migration of existing Railway/GKE data.
+- No migration of existing production GKE data.
 
 # Architecture
 

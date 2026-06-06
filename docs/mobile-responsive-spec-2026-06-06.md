@@ -46,7 +46,7 @@ The previous GKE deployment spec was preserved at
 
 - No backend API changes.
 - No database schema changes.
-- No Kubernetes, Railway, Cloudflare, or GCP changes for responsiveness.
+- No Kubernetes, Cloudflare, or GCP runtime changes for responsiveness.
 - No visual redesign beyond responsive layout and touch ergonomics.
 - No forced replacement of existing dense desktop views when contained
   horizontal scrolling is the only practical mobile contract.

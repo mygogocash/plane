@@ -23,6 +23,8 @@ Target: GoGoCash/Manut self-hosted Plane on `mygogocash/plane` `preview`.
 - Current self-host entitlement helper is
   `apps/web/ce/lib/self-host-entitlements.ts`.
 - GCP is the active deployment path; Railway is not the target.
+- CI/CD publishes split Plane component images to Google Artifact Registry and
+  rolls the `plane-ce` GKE workloads from `.github/workflows/ci-cd.yml`.
 
 ## Feature Matrix
 

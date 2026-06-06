@@ -48,6 +48,8 @@ strategy is not a one-line license bypass. The safe path is:
   Plane Cloud.
 - All feature work must be covered by focused tests before implementation.
 - All deploys must use the GCP/GKE path, not Railway.
+- Pushes to `preview` must release through GitHub Actions to Artifact Registry
+  and GKE; no legacy Railway deploy hooks are valid rollback paths.
 
 # Non-Goals
 
@@ -74,8 +76,11 @@ strategy is not a one-line license bypass. The safe path is:
     and `packages/services`
 - Feature flags should default on for this self-host instance only when the
   feature is fully functional.
-- Deploy artifacts remain split backend/frontend images published to Artifact
-  Registry and rolled out through GKE.
+- Deploy artifacts remain split Plane component images published to Artifact
+  Registry and rolled out through GKE by `.github/workflows/ci-cd.yml`.
+- GitHub Actions deploys authenticate through GCP Workload Identity Federation
+  and use namespace-scoped Kubernetes rollout permissions tracked in
+  `k8s/github-actions-deployer-rbac.yaml`.
 
 # Data Models
 
@@ -135,7 +140,8 @@ Expected new or extended model areas:
 - Frontend tests for gating, empty states, and critical forms.
 - Migration checks with the Docker test stack.
 - Type/lint/format checks for touched packages.
-- Deployment smoke checks on `https://app.manut.xyz/` after GKE rollout.
+- Deployment smoke checks on `https://app.manut.xyz/api/instances/` after the
+  GitHub Actions GKE rollout.
 
 # Rollback Plan
 
@@ -147,6 +153,8 @@ Expected new or extended model areas:
   back worker code.
 - AI features must fail closed to normal non-AI workflows when provider config is
   unavailable.
+- Production code rollback uses a prior immutable Artifact Registry
+  `preview-<short_sha>` tag or Kubernetes rollout history on the GKE workloads.
 
 # Milestones
 
@@ -433,7 +441,8 @@ All features work on the live self-hosted domain.
 
 ## Technical Requirements
 
-Build images, apply migrations, roll GKE workloads, smoke public endpoints.
+GitHub Actions builds component images, applies migrations, rolls GKE
+workloads, and smokes public endpoints.
 
 ## Security Considerations
 
@@ -445,7 +454,7 @@ Worker and web versions during rolling deploy.
 
 ## Data Flow
 
-GitHub preview branch -> Artifact Registry -> GKE rollout -> live smoke.
+GitHub `preview` branch -> Artifact Registry -> GKE rollout -> live smoke.
 
 ## API Contracts
 

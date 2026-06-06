@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       publish_images:
-        description: "Build and publish GHCR images"
+        description: "Build and publish GCP Artifact Registry images"
         required: true
         default: true
         type: boolean
-      deploy_railway:
-        description: "Trigger Railway deploy hook after images are published"
+      deploy_gcp:
+        description: "Deploy to GKE after images are published"
         required: true
         default: true
         type: boolean
@@ -33,6 +33,12 @@ permissions:
   contents: read
 
 env:
+  GCP_APP_URL: ${{ vars.GCP_APP_URL || 'https://app.manut.xyz' }}
+  GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY || 'affine' }}
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'affine-495114' }}
+  GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
+  GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'plane-ce-gke' }}
+  GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'plane-ce' }}
   DOCKER_PLATFORMS: linux/amd64
   NODE_VERSION: "22.18.0"
 
@@ -64,12 +70,12 @@ jobs:
           fi
 
           short_sha="${GITHUB_SHA:0:12}"
-          image_namespace="$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+          image_namespace="${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPOSITORY}"
 
           {
             echo "branch_tag=$branch_tag"
             echo "image_namespace=$image_namespace"
-            echo "image_registry=ghcr.io"
+            echo "image_registry=${GCP_REGION}-docker.pkg.dev"
             echo "short_sha=$short_sha"
             echo "version_tag=${branch_tag}-${short_sha}"
           } >> "$GITHUB_OUTPUT"
@@ -165,7 +171,7 @@ jobs:
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images) }}
     permissions:
       contents: read
-      packages: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -192,15 +198,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Validate GCP auth configuration
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '' }}
+        run: |
+          echo "GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT repository variables are required for GCP image publishing." >&2
+          exit 1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ needs.metadata.outputs.image_registry }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure Artifact Registry Docker auth
+        run: gcloud auth configure-docker "${{ needs.metadata.outputs.image_registry }}" --quiet
 
       - name: Build and publish component image
         uses: docker/build-push-action@v7.0.0
@@ -215,107 +235,150 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-  build-aio:
-    name: Build Railway AIO image
-    runs-on: ubuntu-22.04
-    timeout-minutes: 45
+  deploy-gcp:
+    name: Deploy to GKE
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs:
       - metadata
       - build-components
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images) }}
+    if: ${{ (github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_gcp) }}
     permissions:
       contents: read
-      packages: write
-    outputs:
-      image: ${{ steps.image.outputs.image }}
+      id-token: write
+    environment:
+      name: production
+      url: https://app.manut.xyz
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up yq for AIO asset generation
+      - name: Validate GCP auth configuration
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '' }}
         run: |
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
+          echo "GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT repository variables are required for GKE deployment." >&2
+          exit 1
 
-      - name: Prepare AIO runtime assets
-        run: |
-          cd deployments/aio/community
-          bash ./build.sh --release "${{ needs.metadata.outputs.version_tag }}"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
         with:
-          registry: ${{ needs.metadata.outputs.image_registry }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
-      - name: Set AIO image output
-        id: image
-        run: |
-          echo "image=${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-aio-community:${{ needs.metadata.outputs.version_tag }}" >> "$GITHUB_OUTPUT"
-
-      - name: Build and publish AIO image
-        uses: docker/build-push-action@v7.0.0
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
         with:
-          context: ./deployments/aio/community
-          file: ./deployments/aio/community/Dockerfile.railway
-          platforms: ${{ env.DOCKER_PLATFORMS }}
-          push: true
-          tags: |
-            ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-aio-community:${{ needs.metadata.outputs.branch_tag }}
-            ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-aio-community:${{ needs.metadata.outputs.version_tag }}
-          build-args: |
-            COMPONENT_IMAGE_REGISTRY=${{ needs.metadata.outputs.image_registry }}
-            COMPONENT_IMAGE_NAMESPACE=${{ needs.metadata.outputs.image_namespace }}
-            COMPONENT_IMAGE_TAG=${{ needs.metadata.outputs.version_tag }}
-          cache-from: type=gha,scope=plane-aio-community
-          cache-to: type=gha,mode=max,scope=plane-aio-community
+          project_id: ${{ env.GCP_PROJECT_ID }}
 
-      - name: Write deployment summary
-        run: |
-          {
-            echo "### Published image"
-            echo ""
-            echo "\`${{ steps.image.outputs.image }}\`"
-            echo ""
-            echo "Stable branch tag: \`${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-aio-community:${{ needs.metadata.outputs.branch_tag }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v3
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GCP_REGION }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
 
-  deploy-railway:
-    name: Trigger Railway deployment
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs:
-      - metadata
-      - build-aio
-    if: ${{ (github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_railway) }}
-    environment: preview
-    steps:
-      - name: Trigger Railway deploy hook
-        env:
-          AIO_IMAGE: ${{ needs.build-aio.outputs.image }}
-          RAILWAY_DEPLOY_HOOK_URL: ${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}
+      - name: Run database migrations
+        shell: bash
         run: |
           set -euo pipefail
 
-          if [ -z "${RAILWAY_DEPLOY_HOOK_URL:-}" ]; then
-            echo "RAILWAY_DEPLOY_HOOK_URL is not configured. GHCR image is ready: ${AIO_IMAGE}"
-            exit 0
+          backend_image="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-backend:${{ needs.metadata.outputs.version_tag }}"
+          migrate_job="plane-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+
+          kubectl -n "${GKE_NAMESPACE}" delete job "${migrate_job}" --ignore-not-found
+
+          cat <<EOF | kubectl -n "${GKE_NAMESPACE}" apply -f -
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: ${migrate_job}
+            labels:
+              app.name: plane-ce-plane-app-api-migrate
+          spec:
+            backoffLimit: 3
+            template:
+              metadata:
+                labels:
+                  app.name: plane-ce-plane-app-api-migrate
+              spec:
+                containers:
+                  - name: plane-app-api-migrate
+                    image: ${backend_image}
+                    imagePullPolicy: Always
+                    command:
+                      - ./bin/docker-entrypoint-migrator.sh
+                    envFrom:
+                      - configMapRef:
+                          name: plane-app-app-vars
+                          optional: false
+                      - secretRef:
+                          name: plane-app-env
+                          optional: false
+                      - secretRef:
+                          name: plane-doc-store
+                          optional: false
+                    resources:
+                      limits:
+                        ephemeral-storage: 1Gi
+                      requests:
+                        cpu: 500m
+                        ephemeral-storage: 1Gi
+                        memory: 2Gi
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - NET_RAW
+                restartPolicy: OnFailure
+                securityContext:
+                  seccompProfile:
+                    type: RuntimeDefault
+                serviceAccountName: plane-app-srv-account
+                tolerations:
+                  - effect: NoSchedule
+                    key: kubernetes.io/arch
+                    operator: Equal
+                    value: amd64
+          EOF
+
+          if ! kubectl -n "${GKE_NAMESPACE}" wait --for=condition=complete "job/${migrate_job}" --timeout=600s; then
+            kubectl -n "${GKE_NAMESPACE}" describe "job/${migrate_job}" || true
+            kubectl -n "${GKE_NAMESPACE}" logs "job/${migrate_job}" --all-containers=true || true
+            exit 1
           fi
 
-          curl -fsS -X POST "$RAILWAY_DEPLOY_HOOK_URL"
-          echo "Triggered Railway deployment for ${AIO_IMAGE}"
+      - name: Roll out GKE images
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Write Railway summary
+          image_base="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}"
+          tag="${{ needs.metadata.outputs.version_tag }}"
+
+          backend_image="${image_base}/plane-backend:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-api-wl plane-app-api="${backend_image}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-worker-wl plane-app-worker="${backend_image}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-beat-worker-wl plane-app-beat-worker="${backend_image}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-web-wl plane-app-web="${image_base}/plane-frontend:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-admin-wl plane-app-admin="${image_base}/plane-admin:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-live-wl plane-app-live="${image_base}/plane-live:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-space-wl plane-app-space="${image_base}/plane-space:${tag}"
+
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-api-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-worker-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-beat-worker-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-web-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-admin-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-live-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-space-wl --timeout=600s
+
+      - name: Smoke production endpoint
+        run: curl -fsS --retry 5 --retry-delay 5 "${GCP_APP_URL}/api/instances/" >/tmp/plane-instance.json
+
+      - name: Write GCP deployment summary
         run: |
           {
-            echo "### Railway deployment"
+            echo "### GCP deployment"
             echo ""
-            echo "AIO image: \`${{ needs.build-aio.outputs.image }}\`"
-            echo ""
-            echo "Configure Railway to pull the stable branch tag when using deploy hooks:"
-            echo "\`${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-aio-community:${{ needs.metadata.outputs.branch_tag }}\`"
+            echo "GKE cluster: \`${GKE_CLUSTER}\`"
+            echo "Namespace: \`${GKE_NAMESPACE}\`"
+            echo "Image tag: \`${{ needs.metadata.outputs.version_tag }}\`"
+            echo "Smoke URL: \`${GCP_APP_URL}/api/instances/\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -421,6 +421,12 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
   `.github/workflows/railway-aio-ghcr.yml`,
   `deployments/aio/community/Dockerfile.railway`, and
   `docs/railway-plane.md`.
+- CI/CD cleanup follow-up: `.github/workflows/ci-cd.yml` is now the GCP release
+  path. Pushes to `preview` build split component images in Artifact Registry,
+  run the backend migrator as a Kubernetes Job, roll API/worker/beat/web/admin/
+  live/space deployments in namespace `plane-ce`, and smoke
+  `https://app.manut.xyz/api/instances/`. No Railway deploy hook or Railway AIO
+  image build remains in the active workflow.
 - CI cleanup: removed `.github/workflows/codeql.yml` because GitHub default
   CodeQL setup is already enabled for this repository. Keeping both the advanced
   workflow and default setup caused the push-triggered CodeQL run to fail with

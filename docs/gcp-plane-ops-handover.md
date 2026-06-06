@@ -61,6 +61,8 @@ secret and restart affected Plane deployments.
 
 - `k8s/app-manut-xyz-ingress.yaml`: `app.manut.xyz` and `/uploads` ingress.
 - `k8s/cert-manager-letsencrypt.yaml`: `letsencrypt-prod` issuer and app cert.
+- `k8s/github-actions-deployer-rbac.yaml`: namespace-scoped Kubernetes deploy
+  permissions for the GitHub Actions GCP deployer.
 - `k8s/plane-uploads-cors.json`: Cloud Storage CORS policy.
 - `docs/gcs-plane-uploads-lifecycle.json`: non-destructive bucket lifecycle.
 - `docs/gke-plane-ce-spec-2026-06-05.md`: rollout evidence and remaining gaps.
@@ -116,10 +118,33 @@ kubectl rollout status deployment/plane-app-api-wl -n plane-ce
 kubectl rollout status deployment/plane-app-web-wl -n plane-ce
 ```
 
-Current source commits on `preview` do not automatically deploy custom Plane
-images to GKE. The current GKE runtime is the official Helm chart deployment.
-Add an Artifact Registry plus Helm image override flow before treating fork
-commits as deployable app releases.
+Pushes to `preview` now deploy through `.github/workflows/ci-cd.yml`:
+
+1. Run web and API checks.
+2. Publish fork-built component images to Artifact Registry:
+   `asia-southeast1-docker.pkg.dev/affine-495114/affine`.
+3. Run the backend migrator image as a Kubernetes Job.
+4. Set GKE deployment images for API, worker, beat-worker, web, admin, live,
+   and space.
+5. Wait for rollout status and smoke `https://app.manut.xyz/api/instances/`.
+
+GitHub Actions authenticates with Workload Identity Federation. Required
+repository variables:
+
+- `GCP_WORKLOAD_IDENTITY_PROVIDER`
+- `GCP_SERVICE_ACCOUNT`
+
+Defaulted repository variables may be overridden when the GCP topology changes:
+
+- `GCP_APP_URL`
+- `GCP_ARTIFACT_REPOSITORY`
+- `GCP_PROJECT_ID`
+- `GCP_REGION`
+- `GKE_CLUSTER`
+- `GKE_NAMESPACE`
+
+The deployer Kubernetes permissions are tracked in
+`k8s/github-actions-deployer-rbac.yaml`.
 
 ## Smoke Checks
 
@@ -192,6 +217,19 @@ helm rollback plane-app REVISION -n plane-ce
 kubectl rollout status deployment/plane-app-api-wl -n plane-ce
 kubectl rollout status deployment/plane-app-web-wl -n plane-ce
 ```
+
+Image-level rollback:
+
+```bash
+kubectl set image deployment/plane-app-api-wl \
+  plane-app-api=asia-southeast1-docker.pkg.dev/affine-495114/affine/plane-backend:preview-OLD_SHA \
+  -n plane-ce
+kubectl rollout status deployment/plane-app-api-wl -n plane-ce
+```
+
+Repeat for `plane-app-worker-wl`, `plane-app-beat-worker-wl`,
+`plane-app-web-wl`, `plane-app-admin-wl`, `plane-app-live-wl`, and
+`plane-app-space-wl` with the matching component image.
 
 Ingress rollback:
 

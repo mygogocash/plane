@@ -25,7 +25,7 @@ Enable self-host entitlement behavior for this Plane CE deployment so the GoGoCa
 
 - Reconstruct missing EE-only product implementations not present in this repository.
 - Add Stripe, Plane SaaS license, or external entitlement calls.
-- Change GCP infrastructure outside the image rollout needed for this patch.
+- Change GCP infrastructure outside the CI/CD image rollout needed for this patch.
 
 # Architecture
 
@@ -59,14 +59,14 @@ Enable self-host entitlement behavior for this Plane CE deployment so the GoGoCa
 
 - Unit test the self-host entitlement constant.
 - Run targeted formatter/linter checks on changed frontend files.
-- Build frontend/backend container images before rollout.
-- Verify Kubernetes rollout status and live HTTPS responses.
+- Let the `preview` branch CI/CD build component images to Artifact Registry.
+- Verify the GitHub Actions GKE rollout status and live HTTPS responses.
 
 # Rollback Plan
 
 - Revert the entitlement commit.
-- Rebuild frontend/backend images from the previous commit.
-- Set GKE deployments back to the prior image tags.
+- Re-run the GCP deploy workflow from the previous known-good commit or set GKE
+  deployments back to the prior `preview-<short_sha>` Artifact Registry tags.
 
 # Milestones
 
@@ -78,7 +78,8 @@ Enable self-host entitlement behavior for this Plane CE deployment so the GoGoCa
 
 - Self-host entitlement UI: suppress SaaS pricing prompts and show self-host status.
 - Estimate feature enablement: allow time estimate selection where supported.
-- Production rollout: publish images and update GKE deployments.
+- Production rollout: push to `preview`, publish Artifact Registry images, run
+  migrations, and update GKE deployments through GitHub Actions.
 
 # User Stories
 
@@ -99,4 +100,5 @@ Enable self-host entitlement behavior for this Plane CE deployment so the GoGoCa
 - Clicking gated UI no longer opens the paid-plan modal.
 - Billing no longer shows Plane Pro/Business/Enterprise comparison cards while self-host entitlement is enabled.
 - Existing CE-supported feature paths do not show Plane SaaS upgrade CTAs.
-- GKE rollout finishes successfully and the live domain responds over HTTPS.
+- The GCP CI/CD rollout finishes successfully and the live domain responds over
+  HTTPS.
