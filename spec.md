@@ -1,329 +1,665 @@
 # Executive Summary
 
-Make Plane CE mobile responsive across the web app, admin app, and shared UI
-surfaces without changing backend contracts. The first implementation path is a
-responsive foundation plus shell-level parity: viewport-aware hooks, mobile-safe
-navigation, app/admin shell overflow guards, and reproducible responsive smoke
-tests.
+Make the GoGoCash/Manut self-hosted Plane instance expose every product feature
+family available in the self-hosted positioning: project management, wiki,
+intake, dashboards, analytics, active cycles, work item types, templates,
+recurring work, worklogs, workflows, approvals, integrations, AI, enterprise
+access controls, auditability, and mobile/self-host support.
 
-The previous GKE deployment spec was preserved at
-`docs/gke-plane-ce-spec-2026-06-05.md`.
+This fork is based on the public Community Edition source. It does not contain
+Plane's private Commercial Edition module tree. Therefore the implementation
+strategy is not a one-line license bypass. The safe path is:
+
+1. Unlock and polish every feature already present in CE.
+2. Replace every remaining paid upsell with a self-host entitlement state.
+3. Build open, first-party equivalents for missing Commercial features.
+4. Deploy each feature family to GCP only after tests and rollback paths are
+   proven.
 
 # Business Goals
 
-- Allow GoGoCash and Manut users to navigate Plane from phones and tablets.
-- Keep the existing desktop product experience intact.
-- Add a repeatable responsive QA gate before further visual/product changes.
-- Keep the preview branch deployable and rollback-friendly.
+- Give GoGoCash and Manut a full self-hosted project-management platform without
+  paid-plan interruptions.
+- Keep all workspace data and AI traffic under our controlled infrastructure.
+- Avoid dependence on Railway or external Plane Cloud checkout flows.
+- Match the current Plane product promise as closely as practical from our fork.
+- Preserve a deployable `preview` branch with reversible, tested milestones.
 
 # Technical Goals
 
-- Base responsive behavior on viewport measurements, not user-agent checks.
-- Prevent page-level horizontal overflow at common mobile, tablet, laptop, and
-  desktop sizes.
-- Convert fixed shell surfaces into mobile-safe overlays, drawers, or collapsed
-  controls where needed.
-- Keep dense work-management views reachable on mobile even when content needs
-  local horizontal scrolling.
-- Add a committed responsive smoke harness for local and CI use.
+- Make self-host entitlement the default product state for this deployment.
+- Remove remaining CE-paid upgrade surfaces from reachable workflows.
+- Inventory all feature families against current source availability.
+- Implement missing features incrementally with open data models, services, UI,
+  and tests.
+- Keep GCP deployment compatibility: GKE, Cloud SQL Postgres, Memorystore/GCS,
+  in-cluster RabbitMQ, and Vertex AI/Gemini copilot.
+- Keep CodeQL/security remediation compatible with the feature work.
 
 # Requirements
 
-- Validate at `360x740`, `390x844`, `430x932`, `768x1024`, `1024x768`, and
-  `1440x900`.
-- Shared hooks must expose stable breakpoint helpers and SSR-safe viewport
-  state.
-- Main web shell must keep sidebar, app rail, top navigation, and extended
-  sidebar usable under `768px`.
-- Admin shell must keep sidebar, header breadcrumbs, page wrappers, and forms
-  usable under `768px`.
-- Global dialogs and modal panels must fit mobile viewports and remain
-  scrollable.
-- New tests must fail on document-level horizontal overflow and relevant console
-  errors.
+- Self-host users must not see “Upgrade to paid plan” modals for features that
+  exist in this fork.
+- Feature navigation must show self-host status rather than Free/Pro/Business
+  subscription prompts.
+- Any newly built feature must have server-side authorization checks.
+- Any new schema must have forward and rollback migration notes.
+- Any new AI capability must run through configured self-host providers, not
+  Plane Cloud.
+- All feature work must be covered by focused tests before implementation.
+- All deploys must use the GCP/GKE path, not Railway.
 
 # Non-Goals
 
-- No backend API changes.
-- No database schema changes.
-- No Kubernetes, Railway, Cloudflare, or GCP changes for responsiveness.
-- No visual redesign beyond responsive layout and touch ergonomics.
-- No forced replacement of existing dense desktop views when contained
-  horizontal scrolling is the only practical mobile contract.
+- Do not copy proprietary Plane Commercial source that is not present in this
+  repository.
+- Do not fake feature completion with static UI that has no backend behavior.
+- Do not disable auth, permissions, validation, or audit trails to make features
+  appear unlocked.
+- Do not introduce external billing or Plane Cloud checkout dependencies.
+- Do not ship broad refactors unrelated to the current feature milestone.
 
 # Architecture
 
-- `packages/hooks` owns viewport primitives shared across apps.
-- `apps/web/core` and `apps/admin` consume viewport primitives for shell state
-  and mobile behavior.
-- CSS remains the first line of defense: responsive utilities, safe min-widths,
-  `min-w-0`, contained scroll regions, and mobile padding rules.
-- JavaScript behavior is reserved for stateful shell changes such as sidebar
-  auto-collapse and drawer close behavior.
-- Playwright responsive smoke tests run against supplied local or preview URLs.
+- `apps/web/ce/lib/self-host-entitlements.ts` remains the central frontend
+  entitlement source for this fork.
+- CE-present features should read from entitlement helpers instead of subscription
+  plan names.
+- Missing feature families get open replacements under existing ownership
+  boundaries:
+  - backend models and APIs in `apps/api/plane/db`, `apps/api/plane/app`, and
+    `apps/api/plane/api`
+  - frontend routes/components in `apps/web/core` and `apps/web/ce`
+  - shared types/constants/services in `packages/types`, `packages/constants`,
+    and `packages/services`
+- Feature flags should default on for this self-host instance only when the
+  feature is fully functional.
+- Deploy artifacts remain split backend/frontend images published to Artifact
+  Registry and rolled out through GKE.
 
 # Data Models
 
-- No application data model changes.
-- Local storage keys used for shell preferences remain compatible. New mobile
-  behavior must not overwrite desktop width/display preferences.
+Expected new or extended model areas:
+
+- Worklogs: issue, actor, duration, date, description, source, permissions.
+- Templates: project templates, work item templates, page templates, visibility,
+  ownership, cloned payload.
+- Recurring work: schedule, timezone, next run, generation history, owner,
+  project, target work item payload.
+- Workflows: workflow, workflow states, allowed transitions, movers, default
+  creation rules, work item type binding.
+- Approvals: transition approval policy, approvers, approval decisions, audit
+  history.
+- Teamspaces: workspace grouping, membership/visibility, project/page binding.
+- Audit logs: actor, target, event type, diff, request metadata, retention.
+- AI usage: provider, action, token/credit metadata if available, local logs.
 
 # API Contracts
 
-- Existing routes and API calls remain unchanged.
-- The responsive smoke harness accepts:
-  - `RESPONSIVE_WEB_URL`, default `http://127.0.0.1:3000`
-  - `RESPONSIVE_ADMIN_URL`, default `http://127.0.0.1:3001`
-  - `RESPONSIVE_AUTH_URLS`, optional comma-separated authenticated route list
-- Tests should tolerate expected unauthenticated `401` API calls but fail on
-  framework/runtime errors.
+- Existing CE API routes must remain backward compatible.
+- New APIs must be versionless under the existing Plane route style.
+- APIs must consistently scope by `workspaceSlug`, `projectId`, and object IDs.
+- Mutating routes must enforce workspace/project role checks server-side.
+- Public/Space APIs must not expose private teamspace, audit, workflow, or
+  internal AI data unless explicitly designed for public access.
+- AI routes must not require Plane Cloud credentials.
 
 # Security
 
-- Do not print or commit secrets, cookies, tokens, upload URLs, or environment
-  values.
-- Authenticated responsive QA must use an already-approved local or browser
-  session.
-- Mobile changes must not bypass permission checks or expose hidden admin
-  actions.
-- New scripts must not scrape or persist private user data.
+- Treat every new feature as multi-tenant within a workspace.
+- Enforce least-privilege workspace/project roles on all reads and writes.
+- Keep uploaded files private with signed URLs.
+- Sanitize user-provided rich text and imported content.
+- Do not log raw API keys, session tokens, AI prompts containing secrets, or
+  sensitive headers.
+- Keep GCP secrets in Secret Manager/Kubernetes secrets; never commit them.
+- Run CodeQL and local tests before deploy.
 
 # Edge Cases
 
-- The app can be served under custom base paths.
-- A running local port may belong to another project; verify page identity before
-  using browser evidence.
-- Mobile devices can report desktop-like user agents; viewport width is the
-  source of truth for layout.
-- Dense tables, kanban boards, calendars, gantt views, and spreadsheet views may
-  need contained horizontal scroll rather than collapsed cards.
-- Virtualized lists and drag/drop regions can mis-measure when parent panes use
-  `overflow-hidden`.
-- Modals with fixed widths can clip actions on short mobile screens.
-- Breadcrumbs and command controls can overflow before content panes do.
+- Mixed workspaces with old Free-plan metadata after self-host entitlement is on.
+- Existing projects with `is_time_tracking_enabled=false`.
+- Template cloning across projects with missing labels/states/members.
+- Recurring work generation during worker downtime.
+- Workflow transition conflicts with bulk operations.
+- Approval policies when approvers are removed from a workspace.
+- Teamspace membership changes while pages/projects are open in other sessions.
+- AI provider outage or Vertex quota exhaustion.
+- Public views/pages under private or secret projects.
 
 # Testing Strategy
 
-- RED: create responsive smoke tests that expose existing horizontal overflow,
-  clipped shell controls, or console errors.
-- GREEN: implement the smallest shell/foundation fixes needed for the smoke
-  matrix to pass on unauthenticated and shell-level routes.
-- REFACTOR: consolidate helpers and remove duplicated viewport checks.
-- Run:
-  - `pnpm --filter=@plane/hooks test`
-  - `pnpm test:responsive`
-  - `pnpm check:types`
-  - `pnpm check:lint`
-  - `pnpm check:format`
-  - `pnpm build`
+- Follow RED, GREEN, REFACTOR for every milestone.
+- Unit tests for entitlement helpers and feature-specific business rules.
+- API tests for authorization, validation, and persistence.
+- Frontend tests for gating, empty states, and critical forms.
+- Migration checks with the Docker test stack.
+- Type/lint/format checks for touched packages.
+- Deployment smoke checks on `https://app.manut.xyz/` after GKE rollout.
 
 # Rollback Plan
 
-- Revert the responsive commit on the `preview` branch.
-- If a deployment is already live, redeploy the previous preview image or roll
-  back the hosting platform to the previous commit.
-- Remove only the new responsive test scripts if Playwright dependency issues
-  block emergency rollback; do not change app runtime behavior during rollback
-  triage.
+- Every milestone ships in a focused commit.
+- Frontend entitlement/display regressions roll back by reverting the milestone
+  commit and redeploying frontend.
+- Backend schema milestones require reverse migration review before deploy.
+- Background-worker features must be disabled by a feature flag before rolling
+  back worker code.
+- AI features must fail closed to normal non-AI workflows when provider config is
+  unavailable.
 
 # Milestones
 
-## Milestone 1 - Audit And Spec
+# Milestone 1 — Feature Inventory and Entitlement Hardening
 
-- Objective: define scope, preserved deployment context, route inventory, and
-  acceptance criteria.
-- Business impact: prevents mixing deployment planning with mobile UI work.
-- Technical scope: docs only.
-- Dependencies: existing `spec.md`.
-- Risks: stale deployment details.
-- Success metrics: responsive `spec.md` exists and previous GKE spec is
-  preserved.
-- Rollback strategy: restore previous `spec.md`.
+## Goal
 
-## Milestone 2 - Responsive Test Harness
+Document every marketed feature family and remove remaining CE-paid surfaces
+where functionality already exists.
 
-- Objective: add reproducible responsive smoke tests.
-- Business impact: catches mobile regressions before deploy.
-- Technical scope: Playwright config, scripts, viewport matrix.
-- Dependencies: runnable local or preview URLs.
-- Risks: unauthenticated pages may not cover all app shells.
-- Success metrics: tests fail on real overflow and pass after shell fixes.
-- Rollback strategy: remove test harness and dependency.
+## Business Impact
 
-## Milestone 3 - Shared Viewport Foundation
+Users stop hitting upgrade walls for self-host functionality.
 
-- Objective: introduce SSR-safe viewport helpers.
-- Business impact: consistent mobile behavior across apps.
-- Technical scope: `packages/hooks`.
-- Dependencies: React hooks package build.
-- Risks: hydration mismatch if defaults are unstable.
-- Success metrics: hook unit tests pass and apps typecheck.
-- Rollback strategy: remove hook and revert consumers.
+## Technical Scope
 
-## Milestone 4 - Web Shell Parity
+Feature matrix, entitlement helper expansion, paid-copy cleanup, test coverage.
 
-- Objective: make main Plane shell navigable on mobile.
-- Business impact: users can enter core work-management routes on phones.
-- Technical scope: top nav, app rail, sidebars, content wrapper, modals.
-- Dependencies: viewport foundation.
-- Risks: desktop preference regression.
-- Success metrics: no document-level overflow at required viewports.
-- Rollback strategy: revert shell edits only.
+## Dependencies
 
-## Milestone 5 - Admin/Auth Parity
+Existing self-host entitlement module and local Vitest.
 
-- Objective: make admin and unauthenticated surfaces usable on mobile.
-- Business impact: operators can configure Plane from tablets/phones.
-- Technical scope: admin sidebar/header/page wrapper and auth layout.
-- Dependencies: viewport foundation.
-- Risks: hidden admin controls on small screens.
-- Success metrics: admin responsive smoke passes.
-- Rollback strategy: revert admin/auth edits only.
+## Risks
 
-## Milestone 6 - Product Surface Expansion
+UI could imply missing features exist before implementation.
 
-- Objective: extend full mobile parity through every authenticated product
-  surface.
-- Business impact: complete mobile usage for project management workflows.
-- Technical scope: work items, issue detail, cycles, modules, views, pages,
-  analytics, notifications, settings, and dense views.
-- Dependencies: authenticated QA session.
-- Risks: large blast radius across virtualized and drag/drop views.
-- Success metrics: route-by-route QA matrix passes.
-- Rollback strategy: split changes by surface and revert failing surface.
+## Success Metrics
+
+No reachable CE-present workflow shows a paid upgrade modal.
+
+## Rollback
+
+Revert entitlement/display changes.
+
+# Milestone 2 — Worklogs and Time Tracking
+
+## Goal
+
+Make time tracking a complete self-host feature.
+
+## Business Impact
+
+Teams can track effort and report work directly inside Plane.
+
+## Technical Scope
+
+Backend worklog APIs if absent, frontend property/activity UI, permissions,
+export support.
+
+## Dependencies
+
+Existing project `is_time_tracking_enabled` field and issue activity surfaces.
+
+## Risks
+
+Incorrect time totals or missing authorization.
+
+## Success Metrics
+
+Users can create, edit, list, delete, and export worklogs.
+
+## Rollback
+
+Disable worklog UI and revert API changes.
+
+# Milestone 3 — Templates and Recurring Work
+
+## Goal
+
+Enable project/work item/page templates plus recurring work generation.
+
+## Business Impact
+
+Repeated operational workflows become reusable and schedulable.
+
+## Technical Scope
+
+Template models/APIs/UI, recurrence scheduler, worker tasks, run history.
+
+## Dependencies
+
+Celery/beat worker and existing project/issue/page create flows.
+
+## Risks
+
+Duplicate generation, timezone errors, bad cloned references.
+
+## Success Metrics
+
+Templates create real entities and recurring work runs predictably.
+
+## Rollback
+
+Pause recurrence worker flag and revert feature routes.
+
+# Milestone 4 — Workflows and Approvals
+
+## Goal
+
+Implement single and then multiple workflows with transition rules and approvals.
+
+## Business Impact
+
+Teams can enforce agreed delivery process without manual policing.
+
+## Technical Scope
+
+Workflow models, state mapping, transition validation, approval policy, UI.
+
+## Dependencies
+
+State model, issue update APIs, work item type support.
+
+## Risks
+
+Breaking existing state transitions or bulk operations.
+
+## Success Metrics
+
+Invalid transitions are blocked and required approvals are enforced.
+
+## Rollback
+
+Disable workflow enforcement flag and keep state updates unrestricted.
+
+# Milestone 5 — Teamspaces, Initiatives, and Hierarchy
+
+## Goal
+
+Complete organization-scale grouping with teamspaces and richer hierarchy.
+
+## Business Impact
+
+Large teams can separate work without creating multiple tools.
+
+## Technical Scope
+
+Teamspace membership, navigation, project/page binding, initiative/epic polish.
+
+## Dependencies
+
+Existing issue type epic support and workspace navigation.
+
+## Risks
+
+Visibility leaks across teams.
+
+## Success Metrics
+
+Teamspace-scoped content appears only to authorized members.
+
+## Rollback
+
+Hide teamspace navigation and keep project access unchanged.
+
+# Milestone 6 — Enterprise Controls and Audit
+
+## Goal
+
+Add enterprise-grade access controls, SSO/LDAP hardening, and audit logs.
+
+## Business Impact
+
+Self-host can satisfy stronger compliance and admin requirements.
+
+## Technical Scope
+
+GAC/RBAC refinements, auth-provider settings, audit log APIs/UI, retention.
+
+## Dependencies
+
+Existing auth providers, role models, and admin settings.
+
+## Risks
+
+Locking admins out or logging sensitive values.
+
+## Success Metrics
+
+Admins can inspect actions and enforce access rules without data exposure.
+
+## Rollback
+
+Disable enterprise controls while preserving existing auth.
+
+# Milestone 7 — Self-Hosted AI and Semantic Search
+
+## Goal
+
+Expand the existing Vertex AI/Gemini copilot into broader Plane AI capability.
+
+## Business Impact
+
+Users get contextual project help inside our infrastructure.
+
+## Technical Scope
+
+Provider abstraction, workspace context indexing, local logs, AI search, action
+guardrails.
+
+## Dependencies
+
+Existing copilot work, Vertex AI config, optional OpenSearch/vector storage.
+
+## Risks
+
+Hallucinated edits, prompt leakage, provider outage.
+
+## Success Metrics
+
+AI answers and actions are scoped, logged, and recoverable.
+
+## Rollback
+
+Disable AI feature flag and preserve manual workflows.
 
 # Epics
 
-## Epic 1 - Responsive Foundation
+# Epic 1 — Self-Host Entitlements
 
-- User value: every surface can make consistent mobile decisions.
-- Technical requirements: shared hook, breakpoint helpers, tests.
-- Security considerations: no persisted private state.
-- Edge cases: SSR, hydration, resize events, tablet widths.
-- Data flow: browser viewport to React state.
-- API contracts: none.
-- Testing strategy: unit tests plus typecheck.
+## User Value
 
-## Epic 2 - App Shell
+Self-host users see the product as self-hosted, not as a cloud Free plan.
 
-- User value: workspace navigation stays reachable on phone and tablet.
-- Technical requirements: mobile sidebar overlay, app rail collapse, top nav
-  wrapping, contained scrolling.
-- Security considerations: preserve auth and permission checks.
-- Edge cases: nested sidebars, command palette, project switcher, touch targets.
-- Data flow: viewport state and existing MobX shell preferences.
-- API contracts: none.
-- Testing strategy: responsive Playwright smoke.
+## Technical Requirements
 
-## Epic 3 - Product Surfaces
+Central helpers, tests, no paid modals for available features.
 
-- User value: core work-management flows remain usable on mobile.
-- Technical requirements: mobile headers, drawer filters, contained dense views,
-  modal actions.
-- Security considerations: no hidden destructive action exposure.
-- Edge cases: drag/drop, virtualization, inline editors, upload modals.
-- Data flow: existing stores and services.
-- API contracts: unchanged.
-- Testing strategy: route matrix and interaction smoke.
+## Security Considerations
 
-## Epic 4 - Admin And Auth
+Entitlements must not override authorization.
 
-- User value: admins and unauthenticated users can complete setup and access
-  flows on mobile.
-- Technical requirements: mobile admin sidebar, wrapping breadcrumbs, forms,
-  dialogs, auth layout.
-- Security considerations: admin-only pages remain guarded.
-- Edge cases: long provider forms, secret fields, test-email modal.
-- Data flow: existing admin stores.
-- API contracts: unchanged.
-- Testing strategy: admin responsive Playwright smoke.
+## Edge Cases
+
+Old subscription metadata still says Free.
+
+## Data Flow
+
+Instance config -> frontend entitlement helper -> route/component display.
+
+## API Contracts
+
+No new API required for this epic.
+
+## Testing Strategy
+
+Vitest coverage for entitlement helpers and critical gated components.
+
+# Epic 2 — Feature Completion
+
+## User Value
+
+Users can perform the workflows advertised by Plane self-host.
+
+## Technical Requirements
+
+Backend persistence, services, UI, permissions, tests for each feature.
+
+## Security Considerations
+
+Workspace/project scoping on every API.
+
+## Edge Cases
+
+Cross-project cloning, deleted users, and worker retries.
+
+## Data Flow
+
+User action -> API -> domain service/model -> activity/audit -> UI refresh.
+
+## API Contracts
+
+REST endpoints under existing app route conventions.
+
+## Testing Strategy
+
+API tests first, then frontend tests, then smoke.
+
+# Epic 3 — GCP Production Rollout
+
+## User Value
+
+All features work on the live self-hosted domain.
+
+## Technical Requirements
+
+Build images, apply migrations, roll GKE workloads, smoke public endpoints.
+
+## Security Considerations
+
+No secrets in logs; migrations tested before production.
+
+## Edge Cases
+
+Worker and web versions during rolling deploy.
+
+## Data Flow
+
+GitHub preview branch -> Artifact Registry -> GKE rollout -> live smoke.
+
+## API Contracts
+
+No deployment-specific API changes.
+
+## Testing Strategy
+
+Local checks, Docker migrations, rollout status, HTTP smoke.
 
 # User Stories
 
-- As a workspace member, I want to open project navigation on my phone so I can
-  move between projects and work items.
-- As a project member, I want work-item list and detail routes to be readable on
-  mobile so I can triage issues away from desktop.
-- As an admin, I want settings pages and provider forms to fit mobile screens so
-  I can inspect configuration quickly.
-- As an operator, I want responsive tests in CI so mobile regressions are caught
-  before deploy.
+As a workspace member, I want every available feature to open without an upgrade
+modal so that I can use the self-host instance as the full workspace system.
+
+Acceptance criteria: CE-present feature routes render functional screens and
+paid-plan modals do not block them.
+
+As a project manager, I want templates, recurring work, workflows, approvals,
+and worklogs so that repeated delivery processes are controlled inside Plane.
+
+Acceptance criteria: each object can be created, updated, listed, deleted, and
+used in its main workflow with permissions enforced.
+
+As an admin, I want teamspaces, access controls, audit logs, and SSO/LDAP-ready
+configuration so that the instance can support larger teams safely.
+
+Acceptance criteria: private data does not leak across teams and admin actions
+are auditable.
+
+As a self-host operator, I want AI and search to run through our configured
+providers so that prompts, responses, and logs stay under our infrastructure.
+
+Acceptance criteria: AI features work without Plane Cloud checkout or billing
+and fail closed when provider config is missing.
 
 # Tasks
 
-## Task 1 - Preserve Deployment Spec
+# Task
 
-- Objective: keep prior GKE spec available.
-- Scope: docs.
-- Files: `docs/gke-plane-ce-spec-2026-06-05.md`, `spec.md`.
-- Dependencies: existing deployment spec.
-- Risk Tier: R2.
-- Acceptance Criteria: old spec preserved and root spec describes responsive
-  work.
-- Tests: docs review.
-- Rollback: restore old spec.
-- Assigned Model: GPT-5.5 xhigh.
-- Assigned Agent: primary.
+## Objective
 
-## Task 2 - Add Responsive Tests
+Build the all-features inventory matrix.
 
-- Objective: create failing responsive smoke gate.
-- Scope: root scripts and `tests/responsive`.
-- Files: `package.json`, `playwright.responsive.config.ts`,
-  `tests/responsive/responsive-smoke.spec.ts`.
-- Dependencies: Playwright.
-- Risk Tier: R2.
-- Acceptance Criteria: test matrix can run against web/admin URLs.
-- Tests: `pnpm test:responsive`.
-- Rollback: remove test files and dependency.
-- Assigned Model: GPT-5.3-Codex-Spark.
-- Assigned Agent: implementation.
+## Scope
 
-## Task 3 - Add Viewport Hook
+Map public feature list to current source status and implementation path.
 
-- Objective: centralize viewport breakpoint logic.
-- Scope: `packages/hooks`.
-- Files: `packages/hooks/src/use-viewport.tsx`,
-  `packages/hooks/src/use-viewport.test.ts`.
-- Dependencies: React.
-- Risk Tier: R2.
-- Acceptance Criteria: hook exports typed helpers and unit tests pass.
-- Tests: `pnpm --filter=@plane/hooks test`.
-- Rollback: remove hook and tests.
-- Assigned Model: GPT-5.3-Codex-Spark.
-- Assigned Agent: implementation.
+## Files
 
-## Task 4 - Harden Web Shell
+`docs/self-host-feature-parity-matrix-2026-06-06.md`
 
-- Objective: mobile-safe web shell.
-- Scope: `apps/web`.
-- Files: content wrapper, app rail, resizable sidebar, top nav, modal CSS.
-- Dependencies: Task 3.
-- Risk Tier: R2.
-- Acceptance Criteria: no document-level overflow at required viewports.
-- Tests: `pnpm test:responsive`.
-- Rollback: revert shell files.
-- Assigned Model: GPT-5.3-Codex-Spark.
-- Assigned Agent: implementation.
+## Dependencies
 
-## Task 5 - Harden Admin Shell
+Current source tree and Plane public feature pages.
 
-- Objective: mobile-safe admin shell.
-- Scope: `apps/admin`.
-- Files: dashboard layout, sidebar, header, page wrapper.
-- Dependencies: Task 3.
-- Risk Tier: R2.
-- Acceptance Criteria: admin responsive smoke passes at required viewports.
-- Tests: `pnpm test:responsive`.
-- Rollback: revert admin files.
-- Assigned Model: GPT-5.3-Codex-Spark.
-- Assigned Agent: implementation.
+## Risk Tier
+
+R2
+
+## Acceptance Criteria
+
+Every major feature family is classified as present, gated, partial, or missing.
+
+## Tests
+
+Document review and targeted source references.
+
+## Rollback
+
+Delete or revert the matrix.
+
+## Assigned Model
+
+GPT-5.5 xhigh
+
+## Assigned Agent
+
+local codex orchestration
+
+# Task
+
+## Objective
+
+Harden the self-host entitlement helper.
+
+## Scope
+
+Expose feature-family capability flags for all CE-present gates.
+
+## Files
+
+`apps/web/ce/lib/self-host-entitlements.ts`,
+`apps/web/ce/lib/self-host-entitlements.test.ts`
+
+## Dependencies
+
+Existing entitlement helper.
+
+## Risk Tier
+
+R2
+
+## Acceptance Criteria
+
+Tests prove self-host has all CE-present capability flags enabled.
+
+## Tests
+
+`pnpm --filter web test -- apps/web/ce/lib/self-host-entitlements.test.ts`
+
+## Rollback
+
+Revert helper/test changes.
+
+## Assigned Model
+
+GPT-5.3-Codex-Spark
+
+## Assigned Agent
+
+local codex execution
+
+# Task
+
+## Objective
+
+Remove remaining paid-plan UI from self-host reachable surfaces.
+
+## Scope
+
+Billing, upgrade, active cycles, bulk operations, embeds, templates/worklogs
+empty states where code exists.
+
+## Files
+
+Targeted CE/core frontend components found by source inventory.
+
+## Dependencies
+
+Entitlement helper.
+
+## Risk Tier
+
+R2
+
+## Acceptance Criteria
+
+No reachable self-host screen asks for Pro/Business/Enterprise to use a
+CE-present feature.
+
+## Tests
+
+Targeted Vitest/component tests and Playwright smoke where available.
+
+## Rollback
+
+Revert UI changes.
+
+## Assigned Model
+
+GPT-5.3-Codex-Spark
+
+## Assigned Agent
+
+local codex execution
+
+# Task
+
+## Objective
+
+Implement missing feature families milestone by milestone.
+
+## Scope
+
+Worklogs, templates, recurring work, workflows, approvals, teamspaces,
+enterprise controls, audit logs, AI search.
+
+## Files
+
+Backend, frontend, shared packages, migrations, workers, docs.
+
+## Dependencies
+
+Milestone-specific designs and tests.
+
+## Risk Tier
+
+R1
+
+## Acceptance Criteria
+
+Each feature family has tested CRUD/workflow behavior and live GCP smoke proof.
+
+## Tests
+
+API, frontend, migration, type/lint, and deployment smoke tests.
+
+## Rollback
+
+Feature flag disablement and commit/migration rollback per milestone.
+
+## Assigned Model
+
+GPT-5.5 xhigh for architecture, GPT-5.3-Codex-Spark for execution
+
+## Assigned Agent
+
+local codex execution plus isolated subagents where safe
 
 # Acceptance Criteria
 
-- Previous deployment spec is preserved.
-- Root `spec.md` describes responsive work.
-- Responsive Playwright harness is committed.
-- Viewport helpers are typed, exported, and unit-tested.
-- Web/admin shell changes reduce mobile overflow without desktop regressions.
-- Required checks are run or any blockers are reported explicitly.
+- Root `spec.md` reflects the self-host all-features program.
+- A feature parity matrix exists and is kept updated.
+- CE-present paid gates are removed from self-host screens.
+- Missing Commercial features are implemented as working open replacements.
+- All changes are tested, committed, pushed, deployed to GCP, and smoke checked
+  before claiming completion.
