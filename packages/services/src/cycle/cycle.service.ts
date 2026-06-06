@@ -5,7 +5,13 @@
  */
 
 import { API_BASE_URL } from "@plane/constants";
-import type { CycleDateCheckData, ICycle, TIssuesResponse, IWorkspaceActiveCyclesResponse } from "@plane/types";
+import type {
+  CycleDateCheckData,
+  ICycle,
+  TCycleGroups,
+  TIssuesResponse,
+  IWorkspaceActiveCyclesResponse,
+} from "@plane/types";
 import { APIService } from "../api.service";
 
 /**
@@ -49,8 +55,14 @@ export class CycleService extends APIService {
    * @returns {Promise<ICycle[]>} Array of cycle objects
    * @throws {Error} If the request fails
    */
-  async getWorkspaceCycles(workspaceSlug: string): Promise<ICycle[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/cycles/`)
+  async getWorkspaceCycles(workspaceSlug: string, cycleType?: TCycleGroups): Promise<ICycle[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/cycles/`, {
+      params: cycleType
+        ? {
+            cycle_view: cycleType,
+          }
+        : undefined,
+    })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

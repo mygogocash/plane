@@ -12,6 +12,7 @@ import type {
   TIssuesResponse,
   IWorkspaceActiveCyclesResponse,
   TCycleDistribution,
+  TCycleGroups,
   TProgressSnapshot,
   TCycleEstimateDistribution,
 } from "@plane/types";
@@ -78,8 +79,14 @@ export class CycleService extends APIService {
       });
   }
 
-  async getWorkspaceCycles(workspaceSlug: string): Promise<ICycle[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/cycles/`)
+  async getWorkspaceCycles(workspaceSlug: string, cycleType?: TCycleGroups): Promise<ICycle[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/cycles/`, {
+      params: cycleType
+        ? {
+            cycle_view: cycleType,
+          }
+        : undefined,
+    })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
