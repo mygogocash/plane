@@ -97,7 +97,14 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   `app/views/workflow/suggestion.py`, `utils/workflow.py`, `app/views/workflow/base.py`, `app/views/issue/base.py`,
   `app/urls/workflow.py`, tests `tests/unit/utils/test_auto_assign.py`, `tests/contract/app/test_suggested_transition.py`.
   (Minor follow-up: `auto_assign_role` field exists but role-based bulk assignment is deferred — member assignment is the tested path.)
-- ⬜ Frontend WF-T10–T13 (MobX store + service + types → CE enforcement components → settings workflow builder → approval banner + AI chip)
+- ✅ **WF-T10** frontend types + service + MobX store — `@plane/types/workflow.ts` (shared `IWorkflowTransition`,
+  `IWorkItemApproval`, `ISuggestedTransition`, `IWorkflowConfig`, `TWorkflowStatus`…); `apps/web/core/services/workflow.service.ts`
+  (client for the WF-T4–T9 API); `apps/web/core/store/workflow.store.ts` (+ root-store registration) — per-project
+  transition/status maps, per-issue approval/suggestion maps, optimistic `transitionWorkItem` that applies the new state
+  immediately then rolls back on any server rejection (403/409). **5 store tests pass**, web `check:types` 11/11 green.
+  (Deviation note: service lives in `apps/web/core/services/` per the fork's actual convention — every store consumes
+  `@/services/*`, matching `cycle.service.ts` — not the card's literal `packages/services`, which no store consumes.)
+- ⬜ Frontend WF-T11–T13 (CE enforcement components → approval banner + AI chip → settings workflow builder)
   (see `workflows-approvals/tasks.md` for the full card list)
 
 **Tally:** **9 cards done (WF-T1–T9 — backend feature-complete)**, **62 workflow tests passing** (24 unit + 38 contract),
@@ -120,6 +127,8 @@ flakes (unrelated; pass in isolation).
 - `cb9ade1` docs: record React 19 + Headless UI 2 browser boot smoke result
 - `daacba1` feat: typed workflow rule resolution + lifecycle controls (WF-T8)
 - `17ed89c` feat: AI-suggested transitions + transition auto-assignment (WF-T9)
+- `59c1217` docs: record WF-T8 + WF-T9 (backend Workflows feature-complete) in PROGRESS
+- `18eb041` feat: workflow types + service + MobX store (WF-T10)
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
