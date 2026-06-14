@@ -13,7 +13,8 @@ from rest_framework.response import Response
 
 from plane.app.permissions import ROLE, allow_permission
 from plane.app.serializers import EpicSerializer, EpicWriteSerializer
-from plane.db.models import Issue, IssueActivity, Project, ProjectIssueType
+from plane.db.models import Issue, IssueActivity, IssueAssignee, IssueLabel, Label, Project, ProjectIssueType
+from plane.db.models import ProjectMember, State
 from .base import BaseAPIView, BaseViewSet
 
 
@@ -68,6 +69,23 @@ def create_type_activity(issue, actor, old_type, new_type):
         comment="updated the work item type to",
         old_identifier=(old_type.id if old_type else None),
         new_identifier=(new_type.id if new_type else None),
+        epoch=timezone.now().timestamp(),
+    )
+
+
+def create_duplicate_activity(source_issue, duplicated_issue, actor):
+    IssueActivity.objects.create(
+        issue=duplicated_issue,
+        actor=actor,
+        verb="created",
+        old_value=issue_identifier(source_issue),
+        new_value=issue_identifier(duplicated_issue),
+        field="duplicate",
+        project=duplicated_issue.project,
+        workspace=duplicated_issue.workspace,
+        comment="duplicated the epic from",
+        old_identifier=source_issue.id,
+        new_identifier=duplicated_issue.id,
         epoch=timezone.now().timestamp(),
     )
 
@@ -450,4 +468,275 @@ class WorkItemConvertToEpicEndpoint(BaseAPIView):
                 "type_id": str(epic_type.id),
             },
             status=status.HTTP_200_OK,
+        )
+
+
+class EpicDuplicateEndpoint(BaseAPIView):
+    def _has_project_edit_role(self, project, user):
+        return ProjectMember.objects.filter(project=project, member=user, is_active=True, role__gte=15).exists()
+
+    def _resolve_target_project(self, slug, project_id, request):
+        target_workspace_slug = request.data.get("target_workspace_slug") or slug
+        target_project_id = request.data.get("target_project_id") or project_id
+
+        try:
+            target_project_id = str(UUID(str(target_project_id)))
+        except (TypeError, ValueError, AttributeError):
+            return None
+
+        return (
+            Project.objects.filter(id=target_project_id, workspace__slug=target_workspace_slug)
+            .select_related("workspace", "default_state", "default_assignee")
+            .first()
+        )
+
+    def _default_epic_type(self, target_project):
+        project_issue_type = (
+            ProjectIssueType.objects.filter(
+                project=target_project,
+                issue_type__workspace=target_project.workspace,
+                issue_type__is_active=True,
+                issue_type__is_epic=True,
+            )
+            .select_related("issue_type")
+            .order_by("-is_default", "level", "created_at")
+            .first()
+        )
+        return project_issue_type.issue_type if project_issue_type else None
+
+    def _default_work_item_type(self, target_project):
+        project_issue_type = (
+            ProjectIssueType.objects.filter(
+                project=target_project,
+                issue_type__workspace=target_project.workspace,
+                issue_type__is_active=True,
+                issue_type__is_epic=False,
+            )
+            .select_related("issue_type")
+            .order_by("-is_default", "level", "created_at")
+            .first()
+        )
+        return project_issue_type.issue_type if project_issue_type else None
+
+    def _resolve_issue_type(self, source_issue, target_project):
+        if source_issue.type and source_issue.type.is_epic:
+            return self._default_epic_type(target_project)
+
+        if source_issue.type:
+            project_issue_type = (
+                ProjectIssueType.objects.filter(
+                    project=target_project,
+                    issue_type__workspace=target_project.workspace,
+                    issue_type__name=source_issue.type.name,
+                    issue_type__is_active=True,
+                    issue_type__is_epic=source_issue.type.is_epic,
+                )
+                .select_related("issue_type")
+                .first()
+            )
+            if project_issue_type:
+                return project_issue_type.issue_type
+
+        return self._default_work_item_type(target_project)
+
+    def _append_remap(self, remap_summary, field, source_id, target_id, strategy):
+        remap_summary.append(
+            {
+                "field": field,
+                "source_id": str(source_id) if source_id else None,
+                "strategy": strategy,
+                "target_id": str(target_id) if target_id else None,
+            }
+        )
+
+    def _resolve_state(self, source_issue, target_project, remap_summary):
+        source_state = source_issue.state
+        if source_state is None:
+            return target_project.default_state
+
+        if source_state.project_id == target_project.id:
+            return source_state
+
+        matched_state = State.objects.filter(
+            project=target_project,
+            name=source_state.name,
+            group=source_state.group,
+        ).first()
+        if matched_state:
+            return matched_state
+
+        default_state = (
+            target_project.default_state or State.objects.filter(project=target_project, default=True).first()
+        )
+        if default_state is None:
+            default_state = State.objects.filter(project=target_project).first()
+
+        self._append_remap(
+            remap_summary,
+            "state",
+            source_state.id,
+            default_state.id if default_state else None,
+            "default_state" if default_state else "dropped",
+        )
+        return default_state
+
+    def _copy_labels(self, source_issue, duplicated_issue, target_project, remap_summary):
+        created_label_ids = set()
+        source_issue_labels = IssueLabel.objects.filter(issue=source_issue).select_related("label")
+
+        for source_issue_label in source_issue_labels:
+            source_label = source_issue_label.label
+            target_label = (
+                Label.objects.filter(workspace=target_project.workspace, name=source_label.name)
+                .filter(Q(project=target_project) | Q(project__isnull=True))
+                .first()
+            )
+
+            if target_label is None:
+                self._append_remap(remap_summary, "label", source_label.id, None, "dropped")
+                continue
+
+            if target_label.id in created_label_ids:
+                continue
+
+            IssueLabel.objects.create(project=target_project, issue=duplicated_issue, label=target_label)
+            created_label_ids.add(target_label.id)
+
+    def _fallback_assignee(self, target_project):
+        if target_project.default_assignee_id is None:
+            return None
+
+        project_member = (
+            ProjectMember.objects.filter(
+                project=target_project,
+                member=target_project.default_assignee,
+                is_active=True,
+                role__gte=15,
+            )
+            .select_related("member")
+            .first()
+        )
+        return project_member.member if project_member else None
+
+    def _copy_assignees(self, source_issue, duplicated_issue, target_project, remap_summary):
+        created_assignee_ids = set()
+        source_assignees = IssueAssignee.objects.filter(issue=source_issue).select_related("assignee")
+
+        for source_assignee in source_assignees:
+            project_member = (
+                ProjectMember.objects.filter(
+                    project=target_project,
+                    member__email=source_assignee.assignee.email,
+                    is_active=True,
+                    role__gte=15,
+                )
+                .select_related("member")
+                .first()
+            )
+            target_assignee = project_member.member if project_member else self._fallback_assignee(target_project)
+
+            if project_member is None:
+                self._append_remap(
+                    remap_summary,
+                    "assignee",
+                    source_assignee.assignee_id,
+                    target_assignee.id if target_assignee else None,
+                    "default_assignee" if target_assignee else "dropped",
+                )
+
+            if target_assignee is None or target_assignee.id in created_assignee_ids:
+                continue
+
+            IssueAssignee.objects.create(project=target_project, issue=duplicated_issue, assignee=target_assignee)
+            created_assignee_ids.add(target_assignee.id)
+
+    def _copy_issue(self, source_issue, target_project, actor, parent, remap_summary):
+        target_type = self._resolve_issue_type(source_issue, target_project)
+        if target_type is None:
+            raise ValueError("target_issue_type_not_configured")
+
+        duplicated_issue = Issue.objects.create(
+            project=target_project,
+            type=target_type,
+            state=self._resolve_state(source_issue, target_project, remap_summary),
+            parent=parent,
+            name=source_issue.name,
+            description_json=source_issue.description_json,
+            description_html=source_issue.description_html,
+            description_stripped=source_issue.description_stripped,
+            priority=source_issue.priority,
+            start_date=source_issue.start_date,
+            target_date=source_issue.target_date,
+            sort_order=source_issue.sort_order,
+            created_by=actor,
+        )
+        self._copy_labels(source_issue, duplicated_issue, target_project, remap_summary)
+        self._copy_assignees(source_issue, duplicated_issue, target_project, remap_summary)
+        create_duplicate_activity(source_issue, duplicated_issue, actor)
+        return duplicated_issue
+
+    @project_workspace_match_required
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER], level="PROJECT")
+    def post(self, request, slug, project_id, epic_id):
+        target_project = self._resolve_target_project(slug, project_id, request)
+        if target_project is None:
+            return Response({"error": "target_project_invalid"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not self._has_project_edit_role(target_project, request.user):
+            return Response({"error": "target_project_permission_denied"}, status=status.HTTP_403_FORBIDDEN)
+
+        source_epic = (
+            Issue.issue_objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                id=epic_id,
+                type__is_epic=True,
+            )
+            .select_related("project", "workspace", "state", "type")
+            .first()
+        )
+        if source_epic is None:
+            return Response({"error": "Epic not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        include_subtree = bool(request.data.get("include_subtree", False))
+        remap_summary = []
+
+        try:
+            with transaction.atomic():
+                duplicated_epic = self._copy_issue(
+                    source_issue=source_epic,
+                    target_project=target_project,
+                    actor=request.user,
+                    parent=None,
+                    remap_summary=remap_summary,
+                )
+
+                child_issue_ids = []
+                if include_subtree:
+                    children = (
+                        Issue.objects.filter(workspace__slug=slug, project_id=project_id, parent_id=source_epic.id)
+                        .select_related("project", "workspace", "state", "type")
+                        .order_by("created_at")
+                    )
+                    for child in children:
+                        duplicated_child = self._copy_issue(
+                            source_issue=child,
+                            target_project=target_project,
+                            actor=request.user,
+                            parent=duplicated_epic,
+                            remap_summary=remap_summary,
+                        )
+                        child_issue_ids.append(str(duplicated_child.id))
+        except ValueError as error:
+            return Response({"error": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "child_issue_ids": child_issue_ids,
+                "epic_id": str(duplicated_epic.id),
+                "remap_summary": remap_summary,
+                "target_project_id": str(target_project.id),
+                "target_workspace_slug": target_project.workspace.slug,
+            },
+            status=status.HTTP_201_CREATED,
         )

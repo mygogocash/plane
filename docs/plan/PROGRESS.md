@@ -212,7 +212,13 @@ flakes (unrelated; pass in isolation).
   first on missing routes; conversion contract tests 5/5 green; adjacent epic CRUD/progress/bulk/
   conversion contracts 18/18 green; `manage.py check`, touched-file Ruff check, Ruff format check,
   and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-13** (epic duplication), then backend TASK-14+
+- ✅ **TASK-13** epic duplication — added `POST /epics/:epic_id/duplicate/` with same-project
+  copies, optional subtree copying, source/target edit-role enforcement, duplicate activity rows,
+  and cross-workspace state/label/assignee remapping that never carries source-tenant IDs. Verified:
+  RED first on missing route; duplication contract tests 4/4 green; adjacent epic CRUD/progress/
+  bulk/convert/duplicate contracts 22/22 green; `manage.py check`, touched-file Ruff check, Ruff
+  format check, and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-14** (v1 api-key parity + flip `epics` flag ON), then EPIC-3
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
