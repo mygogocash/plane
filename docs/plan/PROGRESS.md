@@ -167,7 +167,12 @@ flakes (unrelated; pass in isolation).
 - ✅ **TASK-1** entitlement flags — added `epics: false` and `initiatives: false` self-host feature
   flags plus resolver coverage. Verified: RED first (`undefined` in Vitest and TS missing-key errors);
   focused entitlement Vitest 3/3 green; web typecheck green.
-- ⬜ remaining cards start at **TASK-2** (`EpicService` typed client), then TASK-3..5 frontend foundation.
+- ✅ **TASK-2** `EpicService` typed client — added `packages/services/src/epic/` with list/retrieve/
+  create/update/destroy/progress methods, exported it from `@plane/services`, and added `TEpic`,
+  `TEpicPayload`, and `TEpicProgress` types. Verified: RED first on missing service module; green via
+  web Vitest fallback runner, services/types typechecks, services/types format/lint budgets, and web typecheck.
+- ⬜ remaining cards start at **TASK-3** (real epic MobX store + filter persistence), then TASK-4..5 frontend
+  foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
