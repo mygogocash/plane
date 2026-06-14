@@ -9,3 +9,4 @@ from .base import (
     WorkflowConfigEndpoint,
     WorkflowTransitionViewSet,
 )
+from .suggestion import SuggestedTransitionEndpoint

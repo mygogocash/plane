@@ -91,6 +91,7 @@ from .workflow.base import (
     WorkflowConfigEndpoint,
     WorkflowTransitionViewSet,
 )
+from .workflow.suggestion import SuggestedTransitionEndpoint
 from .view.base import (
     WorkspaceViewViewSet,
     WorkspaceViewIssuesViewSet,

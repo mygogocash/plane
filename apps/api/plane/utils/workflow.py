@@ -28,6 +28,7 @@ from typing import Optional
 # Django imports
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
 # Module imports
@@ -118,6 +119,34 @@ def _is_project_admin(project, actor) -> bool:
     return ProjectMember.objects.filter(
         project=project, member=actor, role=20, is_active=True
     ).exists()
+
+
+def rank_legal_transitions(issue, project):
+    """Return legal next ``to_state`` ids for ``issue``, ranked best-first.
+
+    The candidate set is the resolved rule set's outgoing transitions from the issue's
+    current state (typed-vs-default per :func:`resolve_rule_set`). Ranking is by how often
+    the project has recently transitioned *into* each candidate state (the ``IssueActivity``
+    state log records the destination state's name), with a deterministic name tie-break so
+    the ordering is stable. Returns ``[]`` when no legal next state exists.
+    """
+    rules = resolve_rule_set(issue, project).filter(from_state_id=issue.state_id)
+    candidates = list(
+        rules.values_list("to_state_id", "to_state__name").distinct()
+    )
+    if not candidates:
+        return []
+
+    names = [name for _id, name in candidates]
+    counts = dict(
+        IssueActivity.objects.filter(project=project, field="state", new_value__in=names)
+        .values("new_value")
+        .annotate(c=Count("id"))
+        .values_list("new_value", "c")
+    )
+
+    ordered = sorted(candidates, key=lambda c: (-counts.get(c[1], 0), str(c[1])))
+    return [state_id for state_id, _name in ordered]
 
 
 def _actor_allowed(rule, project, actor):
@@ -322,6 +351,51 @@ def _apply_state(issue, state_id):
     issue.save(update_fields=["state_id", "updated_at"])
 
 
+def apply_auto_assignment(issue, rule, actor):
+    """Assign the matched rule's ``auto_assign_member`` after a completed transition.
+
+    A no-op (and never raises) when the rule has no auto-assign target or the target is not
+    an active project member — a misconfigured rule must never corrupt or roll back the
+    transition. Idempotent: re-applying does not duplicate an existing active assignment.
+    Notifies the member only on a fresh assignment.
+    """
+    if rule is None:
+        return
+    member_user_id = getattr(rule, "auto_assign_member_id", None)
+    if member_user_id is None:
+        return
+
+    try:
+        is_active_member = ProjectMember.objects.filter(
+            project=issue.project, member_id=member_user_id, is_active=True
+        ).exists()
+        if not is_active_member:
+            return
+
+        already_assigned = IssueAssignee.objects.filter(
+            issue=issue, assignee_id=member_user_id, deleted_at__isnull=True
+        ).exists()
+        if already_assigned:
+            return
+
+        IssueAssignee.objects.create(
+            issue=issue,
+            assignee_id=member_user_id,
+            project=issue.project,
+            workspace=issue.workspace,
+            created_by=actor,
+        )
+        _notify(
+            member_user_id,
+            issue=issue,
+            actor=actor,
+            title=f"You were assigned to {issue.name}",
+            sender="in_app:workflow:auto_assigned",
+        )
+    except Exception as exc:  # assignment must never break the transition it follows
+        logger.exception("Workflow auto-assignment failed: %s", exc)
+
+
 def apply_approval_decision(approval, approver_user, approved: bool, comment=None):
     """Record one approver's decision and resolve the approval if complete.
 
@@ -387,6 +461,7 @@ def _resolve_approval(approval, actor, is_override, comment):
     approval.decided_at = timezone.now()
     approval.save(update_fields=["status", "decided_by", "decided_at", "comment", "updated_at"])
     _apply_state(issue, approval.target_state_id)
+    apply_auto_assignment(issue, approval.transition, actor)
 
     note = "approved (workspace-admin override)" if is_override else "approved"
     _record_activity(issue, actor, "approved", note=note)

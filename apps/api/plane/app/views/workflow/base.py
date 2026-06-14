@@ -39,6 +39,7 @@ from plane.utils.workflow import (
     ApprovalNotAllowed,
     IllegalTransition,
     apply_approval_decision,
+    apply_auto_assignment,
     create_approval,
     enforce_state_transition,
 )
@@ -216,6 +217,10 @@ class IssueStateTransitionEndpoint(BaseAPIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
+
+        # A completed transition may auto-assign the rule's configured member (no-op when
+        # the rule has none or the target is not an active member).
+        apply_auto_assignment(issue, decision.rule, request.user)
 
         issue_activity.delay(
             type="issue.activity.updated",

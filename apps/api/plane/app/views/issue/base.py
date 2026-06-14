@@ -72,6 +72,7 @@ from plane.utils.host import base_host
 from plane.utils.workflow import (
     ActorNotAllowed,
     IllegalTransition,
+    apply_auto_assignment,
     create_approval,
     enforce_state_transition,
 )
@@ -671,6 +672,7 @@ class IssueViewSet(BaseViewSet):
         # Workflow enforcement: every state_id change passes through the single authorization
         # gate. Non-state edits and no-op state writes are untouched. Fail-closed: a denied or
         # illegal transition is rejected here and never reaches serializer.save().
+        decision = None
         new_state_id = request.data.get("state_id")
         if new_state_id is not None and str(new_state_id) != str(issue.state_id):
             try:
@@ -694,6 +696,9 @@ class IssueViewSet(BaseViewSet):
         serializer = IssueCreateSerializer(issue, data=request.data, partial=True, context={"project_id": project_id})
         if serializer.is_valid():
             serializer.save()
+            # A completed gated transition may auto-assign the rule's configured member.
+            if decision is not None:
+                apply_auto_assignment(issue, decision.rule, request.user)
             # Check if the update is a migration description update
             is_migration_description_update = skip_activity and is_description_update
             # Log all the updates
