@@ -11,10 +11,16 @@
 - Helm chart/app: `plane-ce-1.5.1` / `1.3.1`
 - Static IP: `34.143.231.225`
 - DNS: Cloudflare `A app 34.143.231.225`, DNS-only
-- Feature rollout source commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
-- Feature rollout image tag: `preview-0b80aadd9610`
-- Feature rollout CI/CD run: `Plane CI/CD` `27065884344`, success
-- Feature rollout CodeQL run: `27065883913`, success
+- Current deployed source commit: `254013b7228bd39b7ac1645052fbbb48fb62f0c5`
+- Current deployed image tag: `preview-254013b7228b`
+- Current production CI/CD run: `Plane CI/CD` `27503184003`, success
+- Current Code Quality runs: `27503183507` and `27503183488`, success
+- Open GitHub code-scanning alerts: `0`
+- Latest production fix: Headless UI modal transitions now render real elements
+  instead of `Fragment`, resolving the `/gogocash/` route crash captured by
+  frontend route-error logging.
+- Feature-family rollout baseline: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
+  / `preview-0b80aadd9610`; keep this as historical evidence only.
 
 The live runtime is the GKE Helm deployment, not Railway. Railway project
 `grateful-celebration` has been deleted and must not be used as rollback.
@@ -22,9 +28,11 @@ The live runtime is the GKE Helm deployment, not Railway. Railway project
 ## Release Verification Evidence
 
 - API, worker, beat-worker, web, admin, live, and space deployments are `1/1`
-  verified ready on `preview-0b80aadd9610`.
-- The CI/CD migration job `plane-app-api-migrate-0b80aadd9610` completed.
+  verified ready on `preview-254013b7228b`.
+- The CI/CD migration job `plane-app-api-migrate-254013b7228b` completed.
 - `GET https://app.manut.xyz/api/instances/` returns `200`.
+- `GET https://app.manut.xyz/gogocash/` returns the authenticated app shell
+  with `200`; browser clients with older cached assets may need a hard refresh.
 - `HEAD https://app.manut.xyz` returns `200` with the app served over HTTPS.
 - The active workflow has no Railway deploy hook or Railway AIO image build.
 - Docs-only commits may create newer immutable tags; use the verification
@@ -167,14 +175,19 @@ Public unauthenticated checks:
 
 ```bash
 curl -fsS https://app.manut.xyz/api/instances/ >/tmp/plane-instance.json
+curl -fsS -o /tmp/plane-gogocash.html -w '%{http_code}\n' https://app.manut.xyz/gogocash/
 curl -i https://app.manut.xyz/uploads
 kubectl get pods,ingress,certificate -n plane-ce
 helm list -n plane-ce
+kubectl logs deploy/plane-app-api-wl -n plane-ce --since=5m | \
+  rg 'frontend_route_error|Passing props|GET /api/instances'
 ```
 
 Expected:
 
 - `/api/instances/` returns `200`.
+- `/gogocash/` returns `200`; if a signed-in browser still shows the old Plane
+  crash page, hard-refresh to discard cached pre-`254013b72` assets.
 - `/uploads` returns Cloud Storage XML, usually `403`, not Plane HTML.
 - All Plane pods are `Running`.
 - Certificate `app-manut-xyz-tls` is `Ready=True`.

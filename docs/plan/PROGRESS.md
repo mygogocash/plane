@@ -12,6 +12,28 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
 
 ✅ done & verified · 🟡 in progress · ⬜ not started
 
+## Production deployment checkpoint - 2026-06-14
+
+- ✅ `origin/preview` is deployed to GKE at
+  `254013b7228bd39b7ac1645052fbbb48fb62f0c5` / `preview-254013b7228b`.
+- ✅ `Plane CI/CD` run `27503184003` passed web checks, API checks, component
+  image builds, GKE migration, rollout, and production smoke.
+- ✅ Code Quality runs `27503183507` and `27503183488` passed; GitHub reports
+  `0` open code-scanning alerts.
+- ✅ Live smokes: `GET https://app.manut.xyz/api/instances/` returned `200`;
+  `GET https://app.manut.xyz/gogocash/` returned the app shell with `200`.
+- ✅ Production route-crash fix shipped in `254013b72`: Headless UI modal
+  `Transition.Child` children render concrete elements / `Dialog.Panel` instead
+  of `Fragment`.
+- ✅ Diagnostic route-error logging from `b113c62fa` captured the previous
+  `/gogocash/` Fragment ref crash, giving the root cause for the hotfix.
+- ⚠️ During rollout, one new API pod hung in `collectstatic`; deleting the
+  unready pod let its replacement start normally while the old API pod kept
+  serving.
+- ⚠️ Local `main` still diverges from `origin/preview`; do not promote local
+  docs or feature work over production without reconciling security and hotfix
+  commits first.
+
 ## Dependency upgrades (separate from feature work)
 
 - ✅ **Backend — full upgrade incl. Django 5** (`apps/api/requirements/base.txt`). Django 4.2.30→**5.2.15**,
@@ -346,7 +368,8 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   API service was unavailable at `http://127.0.0.1:8000/api/instances/`.
 - ✅ **Epics & Initiatives task-family local implementation complete through TASK-27.** Production
   integration is still blocked by safe reconciliation of the divergent local `main` history with
-  `origin/preview`.
+  `origin/preview`. The current production hotfix stack is separate and already deployed at
+  `254013b7228bd39b7ac1645052fbbb48fb62f0c5` / `preview-254013b7228b`.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 

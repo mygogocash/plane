@@ -4,11 +4,14 @@ Add a Pages import flow that creates Plane project pages from Notion exports. V1
 
 # Current Deployment Note
 
-- Production GCP CI/CD is active for this app-only feature family. The feature
-  rollout was verified at commit `0b80aadd9610d2446f835d06c872c4283b6ddd83` on
-  tag `preview-0b80aadd9610`.
-- `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
-  successfully.
+- Production GCP CI/CD is active. Current production is verified at commit
+  `254013b7228bd39b7ac1645052fbbb48fb62f0c5` on tag
+  `preview-254013b7228b`.
+- `Plane CI/CD` run `27503184003` and Code Quality runs `27503183507` /
+  `27503183488` completed successfully; GitHub reports `0` open code-scanning
+  alerts.
+- The Pages import feature baseline remains the June 6 rollout at
+  `0b80aadd9610d2446f835d06c872c4283b6ddd83` / `preview-0b80aadd9610`.
 - No production GKE data migration is required for the Pages import V1 scope.
 
 # Business Goals

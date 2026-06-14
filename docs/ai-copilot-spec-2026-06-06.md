@@ -4,13 +4,16 @@ Expand Plane Copilot into a Vertex Gemini-first workspace assistant. V1 supports
 
 # Current Rollout Evidence
 
-- Copilot database migrations are already applied in production; the GCP CI/CD
-  migration job for feature rollout tag `preview-0b80aadd9610` reported no
-  pending migrations.
-- The verified feature rollout source commit is
-  `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
-- `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
-  successfully.
+- Current production is verified at commit
+  `254013b7228bd39b7ac1645052fbbb48fb62f0c5` on tag
+  `preview-254013b7228b`.
+- `Plane CI/CD` run `27503184003` completed successfully, including the GKE
+  migration job. The migration job `plane-app-api-migrate-254013b7228b`
+  completed with no pending migrations.
+- Code Quality runs `27503183507` and `27503183488` completed successfully, and
+  GitHub reports `0` open code-scanning alerts.
+- The Copilot feature rollout baseline remains
+  `0b80aadd9610d2446f835d06c872c4283b6ddd83` / `preview-0b80aadd9610`.
 - Live instance config reports `has_llm_configured=true` from
   `GET https://app.manut.xyz/api/instances/`.
 

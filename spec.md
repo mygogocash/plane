@@ -18,19 +18,25 @@ strategy is not a one-line license bypass. The safe path is:
 
 # Verified GCP Deployment Evidence
 
-- Feature rollout commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
-- Feature rollout Artifact Registry tag: `preview-0b80aadd9610`.
-- `Plane CI/CD` run `27065884344` completed successfully with web checks, API
-  checks, six component image builds, migration job, GKE rollout, and production
+- Current deployed commit: `254013b7228bd39b7ac1645052fbbb48fb62f0c5`.
+- Current Artifact Registry tag: `preview-254013b7228b`.
+- `Plane CI/CD` run `27503184003` completed successfully with web checks, API
+  checks, component image builds, migration job, GKE rollout, and production
   smoke.
-- CodeQL run `27065883913` completed successfully for JavaScript/TypeScript,
-  GitHub Actions, and Python.
-- Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
-- GKE deployments verified ready on the same feature rollout tag: API, worker,
+- Code Quality runs `27503183507` and `27503183488` completed successfully, and
+  GitHub reports `0` open code-scanning alerts.
+- Live smokes: `GET https://app.manut.xyz/api/instances/` returns `200`, and
+  `GET https://app.manut.xyz/gogocash/` returns `200`.
+- Latest production fix lineage: `21a3e7526` route param guard, `b113c62fa`
+  frontend route-error logging, and `254013b72` Headless UI modal transition
+  fix.
+- GKE deployments verified ready on the current production tag: API, worker,
   beat-worker, web, admin, live, and space.
 - Docs-only commits may create newer immutable deployment tags. Use
   `kubectl -n plane-ce get deploy -o jsonpath=...` from the ops handover to
   confirm the live tag.
+- Historical feature rollout baseline: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
+  / `preview-0b80aadd9610` / `Plane CI/CD` run `27065884344`.
 
 # Business Goals
 

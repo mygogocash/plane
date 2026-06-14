@@ -73,7 +73,7 @@ User stories live in `docs/plan/epics-initiatives/stories.md`. The current check
 
 # Tasks
 
-Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution has completed `TASK-27`, following locally completed `TASK-25` threaded status-update UI work and `TASK-26` scoped NLQ endpoint work. The feature-family cards are locally complete; production integration still requires safe reconciliation of the divergent local `main` and `origin/preview` histories.
+Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution has completed `TASK-27`, following locally completed `TASK-25` threaded status-update UI work and `TASK-26` scoped NLQ endpoint work. The feature-family cards are locally complete; production integration still requires safe reconciliation of the divergent local `main` and `origin/preview` histories. Production `origin/preview` is currently deployed at `254013b7228bd39b7ac1645052fbbb48fb62f0c5` / `preview-254013b7228b` with the separate route-crash hotfix stack; do not overwrite that stack with local `main` without a merge review.
 
 # Acceptance Criteria
 

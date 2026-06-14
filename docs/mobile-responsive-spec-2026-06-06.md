@@ -8,10 +8,14 @@ tests.
 
 # Current Deployment Note
 
-- The production GCP deploy path is active and verified through `Plane CI/CD`
-  run `27065884344`.
-- Verified feature rollout tag: `preview-0b80aadd9610`.
-- Live HTTPS smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
+- The production GCP deploy path is active and currently verified through
+  `Plane CI/CD` run `27503184003`.
+- Current production tag: `preview-254013b7228b`.
+- Code Quality runs `27503183507` and `27503183488` passed, and GitHub reports
+  `0` open code-scanning alerts.
+- Live HTTPS smokes: `GET https://app.manut.xyz/api/instances/` and
+  `GET https://app.manut.xyz/gogocash/` both return `200`.
+- Historical responsive-work baseline: `preview-0b80aadd9610`.
 - Responsiveness work still should avoid Kubernetes, Cloudflare, and GCP runtime
   changes unless a separate deployment task explicitly requires them.
 

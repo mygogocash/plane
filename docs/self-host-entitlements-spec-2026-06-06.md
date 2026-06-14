@@ -4,14 +4,19 @@ Enable self-host entitlement behavior for this Plane CE deployment so the GoGoCa
 
 # Current Rollout Evidence
 
-- Entitlement and CI/CD changes are included in verified feature rollout commit
-  `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
-- Verified feature rollout image tag: `preview-0b80aadd9610`.
-- `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
-  successfully.
-- Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
+- Current production is verified at commit
+  `254013b7228bd39b7ac1645052fbbb48fb62f0c5` on tag
+  `preview-254013b7228b`.
+- `Plane CI/CD` run `27503184003` and Code Quality runs `27503183507` /
+  `27503183488` completed successfully.
+- GitHub reports `0` open code-scanning alerts.
+- Live smokes: `GET https://app.manut.xyz/api/instances/` and
+  `GET https://app.manut.xyz/gogocash/` both return `200`.
+- Entitlement and original CI/CD changes were included in historical feature
+  rollout `0b80aadd9610d2446f835d06c872c4283b6ddd83` /
+  `preview-0b80aadd9610`.
 - GKE workloads API, worker, beat-worker, web, admin, live, and space are ready
-  on the same tag.
+  on the current production tag.
 
 # Business Goals
 
