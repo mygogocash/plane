@@ -40,7 +40,7 @@ import { CommonProjectBreadcrumbs } from "@/plane-web/components/breadcrumbs/com
 
 export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader() {
   // refs
-  const parentRef = useRef(null);
+  const parentRef = useRef<HTMLElement>(null);
   // router
   const router = useAppRouter();
   const { workspaceSlug, projectId, viewId: routerViewId } = useParams();

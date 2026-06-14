@@ -27,7 +27,7 @@ type TPageListBlock = {
 export const PageListBlock = observer(function PageListBlock(props: TPageListBlock) {
   const { pageId, storeType } = props;
   // refs
-  const parentRef = useRef(null);
+  const parentRef = useRef<HTMLDivElement>(null);
   // hooks
   const page = usePage({
     pageId,

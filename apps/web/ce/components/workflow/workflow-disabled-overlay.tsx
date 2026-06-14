@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 
 export type TWorkflowDisabledOverlayProps = {
-  messageContainerRef: React.RefObject<HTMLDivElement>;
+  messageContainerRef: React.RefObject<HTMLDivElement | null>;
   workflowDisabledSource: string;
   shouldOverlayBeVisible: boolean;
 };

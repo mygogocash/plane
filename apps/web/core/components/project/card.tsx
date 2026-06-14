@@ -45,7 +45,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const [joinProjectModalOpen, setJoinProjectModal] = useState(false);
   const [restoreProject, setRestoreProject] = useState(false);
   // refs
-  const projectCardRef = useRef(null);
+  const projectCardRef = useRef<HTMLAnchorElement>(null);
   // router
   const router = useAppRouter();
   const { workspaceSlug } = useParams();

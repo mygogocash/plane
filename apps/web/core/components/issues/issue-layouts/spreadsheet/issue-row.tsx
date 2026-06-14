@@ -192,7 +192,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   // states
   const [isMenuActive, setIsMenuActive] = useState(false);
   // refs
-  const cellRef = useRef(null);
+  const cellRef = useRef<HTMLTableCellElement>(null);
   const menuActionRef = useRef<HTMLDivElement | null>(null);
   // router
   const { workspaceSlug, projectId } = useParams();

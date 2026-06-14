@@ -14,7 +14,7 @@ type ITooltipProps = {
   tooltipHeading?: string;
   tooltipContent?: string | React.ReactNode | null;
   position?: TPlacement;
-  children: React.ReactElement;
+  children: React.ReactElement<Record<string, unknown>>;
   disabled?: boolean;
   className?: string;
   openDelay?: number;

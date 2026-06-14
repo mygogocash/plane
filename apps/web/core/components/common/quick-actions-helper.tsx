@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { type JSX } from "react";
 // types
 import type { ICycle, IModule, IProjectView, IWorkspaceView } from "@plane/types";
 import type { TContextMenuItem } from "@plane/ui";
