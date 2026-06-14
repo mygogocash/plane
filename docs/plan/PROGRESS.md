@@ -157,6 +157,7 @@ flakes (unrelated; pass in isolation).
 - `0d0ea24` feat(work-items): add custom property models
 - `10ff9d4` feat(work-items): add custom property API
 - `2326318` feat(work-items): render custom property fields
+- `f859f5f` feat(work-items): add work item templates
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -185,7 +186,14 @@ flakes (unrelated; pass in isolation).
   coverage for project scoping, JSON round-trip, nullable issue type, and active default. Verified: RED import failure
   first; target 4/4 green; backend unit suite 250/250 green; touched-file Ruff check/format clean; `manage.py check`
   clean; `makemigrations --check --dry-run` clean; `0128 -> 0127 -> 0128` migration round-trip clean.
-- ⬜ remaining cards (template API/UI, recurring, duplicates — mostly unlock + finish)
+- ✅ **TPL-2-API** template CRUD + create-from-template hydration — added app template CRUD routes,
+  MEMBER/Admin writes, Guest denial, active/type-filtered lists, soft delete, v1 read-only template listing with
+  project-membership enforcement, and `?template_id=` issue-create hydration that sanitizes template HTML/text values,
+  reuses the existing issue serializer for `property_values`, creates simple sub-items, rejects cross-project template
+  ids, and skips missing state/label/assignee refs with warnings. Verified: RED first; TPL-2 contract 12/12 green;
+  adjacent template/property contracts 24/24 green; `manage.py check` clean; `makemigrations --check --dry-run` clean;
+  full app contracts 138/146 green with only the known magic-link rate-limit baseline failures.
+- ⬜ remaining cards (template UI, recurring, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 

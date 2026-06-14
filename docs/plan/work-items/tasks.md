@@ -254,6 +254,7 @@ Vitest in `modal-additional-properties.test.tsx`:
 **Depends on** [TPL-1-BE, CP-2-API]
 **Risk tier** R1 (new flag-gated routes; create path degrades to plain create on rollback)
 **Worktree isolation** y
+**Status** Done 2026-06-14
 
 **Context** MEMBER+ CRUD for templates; server-side hydration on `POST /.../issues/?template_id=<id>` reusing the **existing** issue create (PRD line 94). Missing referenced labels/states/members must skip-and-warn, never hard-fail (PRD line 138). An external read-only `/api/v1/` route is added for parity. Sanitize `description_html` and text property values in `template_data` via `strip_tags`.
 
@@ -262,7 +263,7 @@ Vitest in `modal-additional-properties.test.tsx`:
 - New: `apps/api/plane/app/views/issue/template.py` (or extend issue views — match the module convention)
 - New: `apps/api/plane/app/serializers/work_item_template.py` (+ register)
 - Edit: `apps/api/plane/app/urls/issue.py` (web routes)
-- Edit: `apps/api/plane/app/urls/api.py` (external read-only route)
+- Edit: `apps/api/plane/api/urls/work_item.py` (external read-only route; app `urls/api.py` is API-token management only)
 - Edit: existing issue create view to honor `?template_id=` and hydrate from `template_data`
 - New test: `apps/api/plane/tests/contract/app/test_work_item_template_api.py`
 
@@ -297,8 +298,11 @@ Vitest in `modal-additional-properties.test.tsx`:
 
 **Verify**
 
-- `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest plane/tests/contract/app/test_work_item_template_api.py -m contract -v` (RED→GREEN)
-- Full: `docker compose -f docker-compose-test.yml run --rm api-tests pytest -m "unit or contract"`
+- `docker exec -w /code plane-tests pytest plane/tests/contract/app/test_work_item_template_api.py -m contract -v --tb=short` (RED→GREEN)
+- `docker exec -w /code plane-tests pytest plane/tests/contract/app/test_work_item_template_api.py plane/tests/contract/app/test_issue_property_api.py -m contract -v --tb=short`
+- `docker exec -w /code plane-tests python manage.py check`
+- `docker exec -w /code plane-tests python manage.py makemigrations --check --dry-run`
+- Full app baseline: `docker exec -w /code plane-tests pytest plane/tests/contract/app -m contract -v --tb=short` → 138 passed, 8 known magic-link rate-limit failures.
 
 **Done when** CRUD + hydration + external read live, all named tests RED→GREEN, skip-and-warn proven, authz matrix covered, suite green.
 

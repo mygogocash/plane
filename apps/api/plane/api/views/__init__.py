@@ -69,3 +69,4 @@ from .workflow import (
     WorkflowTransitionDetailAPIEndpoint,
     IssueStateTransitionAPIEndpoint,
 )
+from .work_item_template import WorkItemTemplateListAPIEndpoint

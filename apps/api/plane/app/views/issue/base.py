@@ -25,6 +25,7 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.html import strip_tags
 from django.views.decorators.gzip import gzip_page
 
 # Third Party imports
@@ -55,11 +56,14 @@ from plane.db.models import (
     IssueReaction,
     IssueRelation,
     IssueSubscriber,
+    Label,
     ProjectUserProperty,
     ModuleIssue,
     Project,
     ProjectMember,
+    State,
     UserRecentVisit,
+    WorkItemTemplate,
 )
 from plane.utils.filters import ComplexFilterBackend, IssueFilterSet
 from plane.utils.global_paginator import paginate
@@ -256,6 +260,99 @@ class IssueViewSet(BaseViewSet):
 
         return issues
 
+    def _template_warning(self, field, value, reason="missing"):
+        return {"field": field, "value": str(value), "reason": reason}
+
+    def _filter_template_refs(self, payload, project):
+        warnings = []
+
+        state_id = payload.get("state_id")
+        if state_id and not State.objects.filter(pk=state_id, project=project).exists():
+            payload.pop("state_id", None)
+            warnings.append(self._template_warning("state_id", state_id))
+
+        label_ids = payload.get("label_ids")
+        if label_ids is not None:
+            requested_label_ids = [str(label_id) for label_id in label_ids]
+            valid_label_ids = {
+                str(label_id)
+                for label_id in Label.objects.filter(project=project, id__in=requested_label_ids).values_list(
+                    "id", flat=True
+                )
+            }
+            payload["label_ids"] = [label_id for label_id in requested_label_ids if label_id in valid_label_ids]
+            warnings.extend(
+                self._template_warning("label_ids", label_id)
+                for label_id in requested_label_ids
+                if label_id not in valid_label_ids
+            )
+
+        assignee_ids = payload.get("assignee_ids")
+        if assignee_ids is not None:
+            requested_assignee_ids = [str(assignee_id) for assignee_id in assignee_ids]
+            valid_assignee_ids = {
+                str(member_id)
+                for member_id in ProjectMember.objects.filter(
+                    project=project,
+                    role__gte=15,
+                    is_active=True,
+                    member_id__in=requested_assignee_ids,
+                ).values_list("member_id", flat=True)
+            }
+            payload["assignee_ids"] = [
+                assignee_id for assignee_id in requested_assignee_ids if assignee_id in valid_assignee_ids
+            ]
+            warnings.extend(
+                self._template_warning("assignee_ids", assignee_id)
+                for assignee_id in requested_assignee_ids
+                if assignee_id not in valid_assignee_ids
+            )
+
+        return warnings
+
+    def _hydrate_issue_payload_from_template(self, request, slug, project):
+        template_id = request.query_params.get("template_id")
+        if not template_id:
+            return request.data, [], [], None
+
+        template = WorkItemTemplate.objects.filter(
+            pk=template_id,
+            workspace__slug=slug,
+            project=project,
+            is_active=True,
+        ).first()
+        if template is None:
+            return None, [], [], Response({"error": "Work item template not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        payload = copy.deepcopy(template.template_data or {})
+        if template.issue_type_id and not payload.get("type"):
+            payload["type"] = str(template.issue_type_id)
+        payload.update(copy.deepcopy(request.data))
+
+        sub_items = payload.pop("sub_items", [])
+        warnings = self._filter_template_refs(payload, project)
+        return payload, sub_items if isinstance(sub_items, list) else [], warnings, None
+
+    def _create_template_sub_items(self, project, parent, sub_items, actor):
+        for sub_item in sub_items:
+            if not isinstance(sub_item, dict) or not sub_item.get("name"):
+                continue
+
+            state_id = sub_item.get("state_id")
+            if state_id and not State.objects.filter(pk=state_id, project=project).exists():
+                state_id = None
+
+            Issue.objects.create(
+                project=project,
+                workspace=project.workspace,
+                parent=parent,
+                type=parent.type,
+                name=strip_tags(str(sub_item["name"])),
+                state_id=state_id,
+                priority=sub_item.get("priority", "none"),
+                created_by=actor,
+            )
+
     @method_decorator(gzip_page)
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
     def list(self, request, slug, project_id):
@@ -399,9 +496,12 @@ class IssueViewSet(BaseViewSet):
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
     def create(self, request, slug, project_id):
         project = Project.objects.get(pk=project_id)
+        payload, sub_items, warnings, error_response = self._hydrate_issue_payload_from_template(request, slug, project)
+        if error_response is not None:
+            return error_response
 
         serializer = IssueCreateSerializer(
-            data=request.data,
+            data=payload,
             context={
                 "project_id": project_id,
                 "workspace_id": project.workspace_id,
@@ -411,14 +511,15 @@ class IssueViewSet(BaseViewSet):
         )
 
         if serializer.is_valid():
-            serializer.save()
+            issue_instance = serializer.save()
+            self._create_template_sub_items(project, issue_instance, sub_items, request.user)
 
             # Track the issue
             issue_activity.delay(
                 type="issue.activity.created",
-                requested_data=json.dumps(self.request.data, cls=DjangoJSONEncoder),
+                requested_data=json.dumps(payload, cls=DjangoJSONEncoder),
                 actor_id=str(request.user.id),
-                issue_id=str(serializer.data.get("id", None)),
+                issue_id=str(issue_instance.id),
                 project_id=str(project_id),
                 current_instance=None,
                 epoch=int(timezone.now().timestamp()),
@@ -465,11 +566,13 @@ class IssueViewSet(BaseViewSet):
             )
             datetime_fields = ["created_at", "updated_at"]
             issue = user_timezone_converter(issue, datetime_fields, request.user.user_timezone)
+            if warnings:
+                issue["warnings"] = warnings
             # Send the model activity
             model_activity.delay(
                 model_name="issue",
-                model_id=str(serializer.data["id"]),
-                requested_data=request.data,
+                model_id=str(issue_instance.id),
+                requested_data=payload,
                 current_instance=None,
                 actor_id=request.user.id,
                 slug=slug,
@@ -477,8 +580,8 @@ class IssueViewSet(BaseViewSet):
             )
             # updated issue description version
             issue_description_version_task.delay(
-                updated_issue=json.dumps(request.data, cls=DjangoJSONEncoder),
-                issue_id=str(serializer.data["id"]),
+                updated_issue=json.dumps(payload, cls=DjangoJSONEncoder),
+                issue_id=str(issue_instance.id),
                 user_id=request.user.id,
                 is_creating=True,
             )
