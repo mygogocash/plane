@@ -59,11 +59,15 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   comment sanitized via shared nh3 helper; per-approver notifications; gated by `WORKFLOW_APPROVALS_ENABLED`
   (independent of enforcement). **7 contract tests pass.** Files: `utils/workflow.py`, `app/views/workflow/base.py`,
   `app/views/issue/base.py`, `app/urls/workflow.py`, `settings/common.py`, `.env.example`, `tests/contract/app/test_approvals.py`.
-- ⬜ WF-T7 api-key `/api/v1/` mirror of workflow-transitions CRUD + state-transition
+- ✅ **WF-T7** api-key `/api/v1/` mirror of workflow-transitions CRUD + state-transition — 5 contract tests pass
+  (admin-keyed→201, member-keyed→403, illegal→409 and guest-keyed disallowed→403 identical to session, list scoped
+  to the key's workspace+project). Reuses the same `enforce_state_transition` gate. Files: `apps/api/plane/api/views/workflow.py`,
+  `api/urls/workflow.py`, `api/views/__init__.py`, `api/urls/__init__.py`, `tests/contract/api/test_workflow_v1.py`.
+  (Minor follow-up: v1 list returns a bare array like session, not the v1 `{results}` paginated envelope — one-line `paginate()` swap if desired.)
 - ⬜ WF-T8+ type-specific rules, lifecycle controls; then frontend (MobX store, settings workflow builder, gating UI)
   (see `workflows-approvals/tasks.md` for the full card list)
 
-**Tally:** 6 cards done, **37 workflow tests passing** (17 unit + 20 contract), migrations `0125`+`0126` clean.
+**Tally:** 7 cards done (WF-T1–T7), **42 workflow tests passing** (17 unit + 25 contract), migrations `0125`+`0126` clean.
 Regression: full contract/app suite green except 8 pre-existing magic-link rate-limit flakes (unrelated; pass in isolation).
 
 > Migration note: `0126` reconciles model-state drift from the Django 5.2 + pytz 2026.2 upgrade (timezone `choices` +
@@ -74,6 +78,7 @@ Regression: full contract/app suite green except 8 pre-existing magic-link rate-
 - `28f98cd` chore: initial commit (fork baseline + sessions 1–N work)
 - `697ef6d` feat: workflow approval gates (WF-T6)
 - `3273f6c` fix: reconcile migration state after Django 5.2 + pytz upgrade (0126)
+- `5e060e9` feat: workflow-transitions + state-transition v1 API mirror (WF-T7)
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
