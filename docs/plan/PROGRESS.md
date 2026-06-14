@@ -104,11 +104,20 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   immediately then rolls back on any server rejection (403/409). **5 store tests pass**, web `check:types` 11/11 green.
   (Deviation note: service lives in `apps/web/core/services/` per the fork's actual convention — every store consumes
   `@/services/*`, matching `cycle.service.ts` — not the card's literal `packages/services`, which no store consumes.)
-- ⬜ Frontend WF-T11–T13 (CE enforcement components → approval banner + AI chip → settings workflow builder)
+- ✅ **WF-T11** CE workflow components — replaced the no-op CE workflow stubs with flag/status-gated presentation
+  enforcement. `state-option.tsx` now honors `filterAvailableStateIds` when workflows are enabled; the drag/drop hook
+  preserves the existing return shape while blocking illegal state-grouped drops and approval-required drops with a reason;
+  `workflow-disabled-overlay.tsx`, `workflow-disabled-message.tsx`, and `workflow-group-tree.tsx` now render lightweight
+  workflow guidance instead of empty fragments. Creation stays unrestricted in this slice because workflow rules govern
+  subsequent transitions and the backend remains authoritative. **7 WF-T11 Vitest helper tests pass**; `pnpm --filter web
+run check:format` and `pnpm turbo run check:types --filter=web` green; `pnpm --filter web run check:lint` passes with
+  988 pre-existing warnings and 0 errors.
+- ⬜ Frontend WF-T12–T13 (settings workflow builder → approval banner + AI chip)
   (see `workflows-approvals/tasks.md` for the full card list)
 
-**Tally:** **9 cards done (WF-T1–T9 — backend feature-complete)**, **62 workflow tests passing** (24 unit + 38 contract),
-migrations `0125`+`0126` clean. Regression: full contract/app suite green except 8 pre-existing magic-link rate-limit
+**Tally:** **11 cards done (WF-T1–T11 — backend feature-complete plus frontend store and CE enforcement)**,
+**62 backend workflow tests passing** (24 unit + 38 contract) plus **12 frontend workflow/store tests passing**.
+Migrations `0125`+`0126` clean. Regression: full contract/app suite green except 8 pre-existing magic-link rate-limit
 flakes (unrelated; pass in isolation).
 
 > Migration note: `0126` reconciles model-state drift from the Django 5.2 + pytz 2026.2 upgrade (timezone `choices` +

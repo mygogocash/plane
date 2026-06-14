@@ -4,14 +4,36 @@
  * See the LICENSE file for details.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useContext } from "react";
 import type { TIssueGroupByOptions } from "@plane/types";
+import { cn } from "@plane/utils";
+// store
+import { StoreContext } from "@/lib/store-context";
+// local imports
+import { isSelfHostedFeatureEnabled } from "@/plane-web/lib/self-host-entitlements";
 
 type Props = {
+  className?: string;
   groupBy?: TIssueGroupByOptions;
   groupId: string | undefined;
 };
 
 export function WorkFlowGroupTree(props: Props) {
-  return <></>;
+  const { className, groupBy, groupId } = props;
+  const store = useContext(StoreContext);
+  const projectId = store.router.projectId;
+
+  if (!isSelfHostedFeatureEnabled("workflows_approvals") || groupBy !== "state" || !projectId || !groupId) return null;
+
+  const targetStateIds = store.workflow.getLegalTargetStateIds(projectId, groupId);
+
+  if (targetStateIds.length === 0) return null;
+
+  return (
+    <ul className={cn("space-y-1 text-12 text-secondary", className)} aria-label="Allowed workflow targets">
+      {targetStateIds.map((stateId) => (
+        <li key={stateId}>{stateId}</li>
+      ))}
+    </ul>
+  );
 }

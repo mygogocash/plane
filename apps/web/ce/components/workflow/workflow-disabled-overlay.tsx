@@ -5,6 +5,7 @@
  */
 
 import { observer } from "mobx-react";
+import { AlertCircle } from "lucide-react";
 
 export type TWorkflowDisabledOverlayProps = {
   messageContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -12,7 +13,15 @@ export type TWorkflowDisabledOverlayProps = {
   shouldOverlayBeVisible: boolean;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const WorkFlowDisabledOverlay = observer(function WorkFlowDisabledOverlay(props: TWorkflowDisabledOverlayProps) {
-  return <></>;
+  const { workflowDisabledSource, shouldOverlayBeVisible } = props;
+
+  if (!shouldOverlayBeVisible) return null;
+
+  return (
+    <div className="my-8 flex items-center gap-1.5 rounded-sm p-3 text-danger-secondary">
+      <AlertCircle width={13} height={13} aria-hidden="true" />
+      <span>{workflowDisabledSource}</span>
+    </div>
+  );
 });
