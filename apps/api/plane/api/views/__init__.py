@@ -16,6 +16,8 @@ from .state import (
 
 from .epic import EpicAPIEndpoint
 
+from .initiative import InitiativeAPIEndpoint
+
 from .issue import (
     WorkspaceIssueAPIEndpoint,
     IssueListCreateAPIEndpoint,
