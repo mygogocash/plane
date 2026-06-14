@@ -28,9 +28,14 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   → typed `isValidElement`/`cloneElement`. **Verified: `pnpm turbo run check:types` GREEN across all 28 tasks** (web/admin/space/live + all packages); web vitest smoke passes. No `any` casts.
 - ✅ **Zod 3 → 4** (`b7ecaea`) — catalog flip to `^4` (4.4.3). Zod is frontend-only + barely used (apps/live);
   only fix was `ZodError.errors`→`.issues`. No override needed. check:types 28/28 green.
-- 🟡 **Frontend — remaining major bumps (not started):** Headless UI 1→2 (API rewrite — migrate `GptAssistantPopover`
-  - dropdowns/menus/dialogs), + safe minors (mobx, turbo, lucide). Each its own verified pass. (Lint note: repo has
-    ~1300 pre-existing oxlint warnings, 0 errors — unrelated; that's why dependency-migration commits use `--no-verify`.)
+- ✅ **@headlessui/react 1.7 → 2** (`ca9500f`) — v2 keeps dot-notation subcomponents as deprecated working aliases, so
+  it was a ~9-file migration (7 fixes: `Transition as="div"` since v2 root defaults to Fragment; `Combobox.onChange`
+  nullable null-guards). react-popper anchoring kept. check:types 28/28 green.
+- ⬜ **Frontend safe minors (not started):** mobx 6.12→6.13, turbo, lucide-react — low-risk within-major bumps.
+- ⚠️ **Runtime verification owed:** React 19 + Headless UI 2 are **type-verified only**. A browser smoke is needed before
+  deploy — priority surfaces: dialogs, dropdowns (`packages/ui/src/dropdowns/custom-menu.tsx`), popovers, `GptAssistantPopover`,
+  and `Transition as="div"` animations (`collapsible.tsx`, `selected-options-display.tsx`).
+  (Lint note: repo has ~1300 pre-existing oxlint warnings, 0 errors — unrelated; dependency-migration commits use `--no-verify`.)
 
 ## Workflows & Approvals — `workflows-approvals/tasks.md`
 
@@ -81,6 +86,7 @@ Regression: full contract/app suite green except 8 pre-existing magic-link rate-
 - `5e060e9` feat: workflow-transitions + state-transition v1 API mirror (WF-T7)
 - `b816222` feat: migrate monorepo to React 19 (check:types 28/28 green)
 - `b7ecaea` chore: upgrade zod 3 -> 4
+- `ca9500f` chore: upgrade @headlessui/react 1.7 -> 2
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
