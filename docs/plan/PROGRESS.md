@@ -171,7 +171,13 @@ flakes (unrelated; pass in isolation).
   create/update/destroy/progress methods, exported it from `@plane/services`, and added `TEpic`,
   `TEpicPayload`, and `TEpicProgress` types. Verified: RED first on missing service module; green via
   web Vitest fallback runner, services/types typechecks, services/types format/lint budgets, and web typecheck.
-- ⬜ remaining cards start at **TASK-3** (real epic MobX store + filter persistence), then TASK-4..5 frontend
+- ✅ **TASK-3** real epic MobX store + filter persistence — replaced the dead `@ts-nocheck` epic stores
+  with typed `ProjectEpics` and `ProjectEpicsFilter` implementations, backed `fetchEpics`/`createEpic`
+  with `EpicService`, normalized epics into the shared issue map, persisted epic filters through layout
+  switches, and kept epic refetches/clears scoped to `projectEpics`. Verified: RED first on the stubbed
+  store; focused epic store Vitest 3/3 green; full web Vitest 64/64 green; web typecheck, touched-file
+  format, strict touched-file lint, and `@ts-nocheck` scan clean.
+- ⬜ remaining cards start at **TASK-4** (real epic create/update modal), then TASK-5 frontend
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
