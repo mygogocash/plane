@@ -29,11 +29,16 @@ from plane.db.models import (
     State,
     WorkflowTransition,
     WorkflowTransitionActor,
+    WorkItemApproval,
 )
 from plane.utils.host import base_host
 from plane.utils.workflow import (
     ActorNotAllowed,
+    ApprovalError,
+    ApprovalNotAllowed,
     IllegalTransition,
+    apply_approval_decision,
+    create_approval,
     enforce_state_transition,
 )
 
@@ -153,11 +158,17 @@ class IssueStateTransitionEndpoint(BaseAPIView):
             return Response({"error": "Issue not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            enforce_state_transition(issue, to_state, request.user)
+            decision = enforce_state_transition(issue, to_state, request.user)
         except IllegalTransition as exc:
             return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
         except ActorNotAllowed as exc:
             return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+
+        # Approval-gated transition: defer the state change, create a pending approval,
+        # and return 202 without touching state_id.
+        if decision.requires_approval:
+            approval = create_approval(issue, decision.rule, to_state, request.user)
+            return Response({"approval_id": str(approval.id)}, status=status.HTTP_202_ACCEPTED)
 
         current_instance = json.dumps(IssueDetailSerializer(issue).data, cls=DjangoJSONEncoder)
         serializer = IssueCreateSerializer(
@@ -181,3 +192,87 @@ class IssueStateTransitionEndpoint(BaseAPIView):
 
         issue.refresh_from_db()
         return Response(IssueDetailSerializer(issue).data, status=status.HTTP_200_OK)
+
+
+def _serialize_approval(approval):
+    """Render an approval, re-sanitizing the comment on the way out (defense in depth)."""
+    from plane.utils.workflow import _sanitize_comment
+
+    return {
+        "id": str(approval.id),
+        "issue": str(approval.issue_id),
+        "transition": str(approval.transition_id),
+        "status": approval.status,
+        "requested_by": str(approval.requested_by_id),
+        "decided_by": str(approval.decided_by_id) if approval.decided_by_id else None,
+        "decided_at": approval.decided_at,
+        "target_state": str(approval.target_state_id) if approval.target_state_id else None,
+        "fallback_state": (
+            str(approval.fallback_state_id) if approval.fallback_state_id else None
+        ),
+        "comment": _sanitize_comment(approval.comment),
+        "approvers": [
+            {
+                "member": str(a.member.member_id),
+                "responded": a.responded,
+            }
+            for a in approval.approvers.all()
+        ],
+    }
+
+
+class IssueApprovalsEndpoint(BaseAPIView):
+    """List approval requests for a work item (any active project member may read)."""
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
+    def get(self, request, slug, project_id, issue_id):
+        approvals = (
+            WorkItemApproval.objects.filter(
+                issue_id=issue_id, project_id=project_id, workspace__slug=slug
+            )
+            .select_related("issue", "transition")
+            .prefetch_related("approvers__member")
+        )
+        return Response(
+            [_serialize_approval(a) for a in approvals], status=status.HTTP_200_OK
+        )
+
+
+class ApprovalDecisionEndpoint(BaseAPIView):
+    """Record an approve/reject decision on a pending approval.
+
+    Guests are allowed to reach the endpoint so the service (not the route decorator)
+    decides authorization: only assigned approvers, or a workspace admin override.
+    """
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
+    def post(self, request, slug, project_id, approval_id):
+        approved = request.data.get("approved")
+        if approved is None:
+            return Response(
+                {"error": "approved is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        approval = (
+            WorkItemApproval.objects.filter(
+                pk=approval_id, project_id=project_id, workspace__slug=slug
+            )
+            .select_related("issue", "transition")
+            .first()
+        )
+        if approval is None:
+            return Response({"error": "Approval not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            approval = apply_approval_decision(
+                approval,
+                request.user,
+                approved=bool(approved),
+                comment=request.data.get("comment"),
+            )
+        except ApprovalNotAllowed as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except ApprovalError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(_serialize_approval(approval), status=status.HTTP_200_OK)

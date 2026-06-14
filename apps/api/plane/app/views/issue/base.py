@@ -72,6 +72,7 @@ from plane.utils.host import base_host
 from plane.utils.workflow import (
     ActorNotAllowed,
     IllegalTransition,
+    create_approval,
     enforce_state_transition,
 )
 from plane.utils.issue_filters import issue_filters
@@ -673,11 +674,19 @@ class IssueViewSet(BaseViewSet):
         new_state_id = request.data.get("state_id")
         if new_state_id is not None and str(new_state_id) != str(issue.state_id):
             try:
-                enforce_state_transition(issue, new_state_id, request.user)
+                decision = enforce_state_transition(issue, new_state_id, request.user)
             except IllegalTransition as exc:
                 return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
             except ActorNotAllowed as exc:
                 return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+
+            # Approval-gated transition: defer the state change here too. Create a pending
+            # approval and return 202 instead of silently applying the move.
+            if decision.requires_approval:
+                approval = create_approval(issue, decision.rule, new_state_id, request.user)
+                return Response(
+                    {"approval_id": str(approval.id)}, status=status.HTTP_202_ACCEPTED
+                )
 
         current_instance = json.dumps(IssueDetailSerializer(issue).data, cls=DjangoJSONEncoder)
 

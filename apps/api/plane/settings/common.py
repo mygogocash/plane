@@ -135,6 +135,13 @@ REST_FRAMEWORK = {
 # API key throttle rate (DRF SimpleRateThrottle format, e.g. "60/minute")
 API_KEY_RATE_LIMIT = os.environ.get("API_KEY_RATE_LIMIT", "60/minute")
 
+# Workflow approval gates. Enabled by default. When turned off, transitions that
+# match an approval-required rule apply immediately through the same enforcement
+# gate instead of creating an approval — i.e. approvals can be disabled
+# independently of transition enforcement (which stays governed by
+# ``Project.workflow_status``).
+WORKFLOW_APPROVALS_ENABLED = os.environ.get("WORKFLOW_APPROVALS_ENABLED", "1") == "1"
+
 # Django Auth Backend
 AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)  # default
 

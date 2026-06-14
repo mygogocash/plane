@@ -4,7 +4,12 @@
 
 from django.urls import path
 
-from plane.app.views import WorkflowTransitionViewSet, IssueStateTransitionEndpoint
+from plane.app.views import (
+    ApprovalDecisionEndpoint,
+    IssueApprovalsEndpoint,
+    IssueStateTransitionEndpoint,
+    WorkflowTransitionViewSet,
+)
 
 
 urlpatterns = [
@@ -12,6 +17,16 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/state-transition/",
         IssueStateTransitionEndpoint.as_view(),
         name="issue-state-transition",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/approvals/",
+        IssueApprovalsEndpoint.as_view(),
+        name="issue-approvals",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/approvals/<uuid:approval_id>/decision/",
+        ApprovalDecisionEndpoint.as_view(),
+        name="approval-decision",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/workflow-transitions/",

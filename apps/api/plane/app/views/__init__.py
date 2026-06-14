@@ -84,7 +84,12 @@ from .workspace.quick_link import QuickLinkViewSet
 from .workspace.sticky import WorkspaceStickyViewSet
 
 from .state.base import StateViewSet, IntakeStateEndpoint
-from .workflow.base import WorkflowTransitionViewSet, IssueStateTransitionEndpoint
+from .workflow.base import (
+    ApprovalDecisionEndpoint,
+    IssueApprovalsEndpoint,
+    IssueStateTransitionEndpoint,
+    WorkflowTransitionViewSet,
+)
 from .view.base import (
     WorkspaceViewViewSet,
     WorkspaceViewIssuesViewSet,
