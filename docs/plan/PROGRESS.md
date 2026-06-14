@@ -166,6 +166,7 @@ flakes (unrelated; pass in isolation).
 - `087c8d1d7` feat(epics): add custom property fields
 - `31889ac16` feat(initiatives): add data models
 - `e5ee3c6ef` feat(initiatives): add session API
+- `6666fb267` feat(initiatives): add v1 API parity
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -272,8 +273,16 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   adjacent initiative + epic CRUD/progress/bulk contracts and initiative model tests 23/23 green;
   `manage.py check`; `makemigrations --check --dry-run`; touched-file Ruff check/format and
   `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-20** (initiatives v1 api-key parity), then TASK-21
-  initiatives frontend data layer.
+- ✅ **TASK-20** initiatives v1 api-key parity — added api-key routes for initiative
+  list/create/detail at `/api/v1/workspaces/:slug/initiatives/`, reusing the session
+  serializer and workspace role checks. Member keys can create/list/read, viewer keys can
+  list/read but cannot create, keys outside the workspace are rejected, and no v1 NLQ route is
+  exposed. Verified: RED first on missing v1 initiative routes; focused initiative v1
+  contract 1/1 green; adjacent initiative session + epic v1 contracts 8/8 green;
+  `manage.py check`; `makemigrations --check --dry-run`; touched-file Ruff check/format and
+  `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-21** (initiatives frontend data layer), then TASK-22
+  initiatives UI and TASK-23 status-update models.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
