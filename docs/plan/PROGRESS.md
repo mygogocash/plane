@@ -325,7 +325,16 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   local dev boot smoke returned `200 text/html` at `http://127.0.0.1:3000/`, and Playwright
   rendered the expected Plane startup-failure screen because the local API service was unavailable
   at `http://127.0.0.1:8000/api/instances/`.
-- ⬜ remaining cards start at **TASK-26** (AI NLQ endpoint), then TASK-27 Ask AI affordance.
+- ✅ **TASK-26** AI NLQ `/copilot/query/` endpoint — added session-only scoped NLQ for epic,
+  initiative, and workspace queries; reuses the existing copilot provider boundary; builds
+  evidence from caller-readable targets/status updates; filters unreadable project evidence before
+  the model call; returns `409 ai_provider_not_configured` when no provider is configured and
+  graceful `503 ai_unavailable` on provider outage; and keeps NLQ absent from the v1 api-key
+  surface. Verified: RED first on missing `/copilot/query/` route; focused copilot-query contracts
+  5/5 green; adjacent copilot query + existing copilot messages + status update API + initiative v1
+  NLQ-absence contracts 25/25 green; `manage.py check`; `makemigrations --check --dry-run`;
+  touched-file Ruff format/check; `git diff --check` clean.
+- ⬜ remaining card is **TASK-27** (AI NLQ Ask AI / Summarize affordance).
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 

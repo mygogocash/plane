@@ -213,7 +213,7 @@ from .external.base import (
     UnsplashEndpoint,
     WorkspaceGPTIntegrationEndpoint,
 )
-from .copilot import CopilotConversationsEndpoint, CopilotMessagesEndpoint
+from .copilot import CopilotConversationsEndpoint, CopilotMessagesEndpoint, CopilotQueryEndpoint
 from .estimate.base import (
     ProjectEstimatePointEndpoint,
     BulkEstimatePointEndpoint,

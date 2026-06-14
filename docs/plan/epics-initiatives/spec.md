@@ -69,18 +69,17 @@ The delivery epics are `EPIC-1` through `EPIC-7` in `docs/plan/epics-initiatives
 
 # User Stories
 
-User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-6.4`: add status-update thread UI to epic and initiative detail views.
+User stories live in `docs/plan/epics-initiatives/stories.md`. The current checkpoint implements `EI-7.1`: add a fail-closed, scoped `/copilot/query/` NLQ endpoint for epic, initiative, and workspace evidence.
 
 # Tasks
 
-Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-25`, following locally completed `TASK-24` status-update API work.
+Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution has completed `TASK-26`, following locally completed `TASK-25` threaded status-update UI work. `TASK-27` is the next card.
 
 # Acceptance Criteria
 
-- Epic detail renders a status-update section only for epic work items, not ordinary work items.
-- Initiative detail renders the same status-update section in the right-hand detail panel.
-- The section lists top-level updates with nested replies, status chips for `ON_TRACK`, `AT_RISK`, and `OFF_TRACK`, and safe comment text.
-- Members can post an `AT_RISK` update and a threaded reply through `EpicService` or `InitiativeService`.
-- Emoji reactions use the existing reaction UI primitives and toggle through the TASK-24 add/delete endpoints.
-- Empty owners render a "post the first update" state without crashing.
-- TASK-25 component/service Vitests, `pnpm turbo run check:types --filter=web`, touched-file oxfmt/oxlint, and `git diff --check` pass.
+- `POST /api/workspaces/<slug>/copilot/query/` accepts `{ scope, object_id, question }` for `epic`, `initiative`, and `workspace` scopes.
+- NLQ reuses the existing copilot provider boundary (`get_llm_config`, `is_llm_configured`, `call_copilot_llm`) and is not exposed on the v1 api-key surface.
+- Epic and initiative evidence includes only caller-readable target data plus readable status updates; unreadable project evidence is excluded before the model call.
+- Missing provider config fails closed with `409 ai_provider_not_configured`; provider outage returns graceful `503 ai_unavailable` without leaking provider exception text.
+- Non-members are rejected before provider calls, and project-scoped epic reads require project membership.
+- TASK-26 contracts, adjacent copilot/status-update/v1 contracts, `manage.py check`, `makemigrations --check --dry-run`, touched-file Ruff format/check, and `git diff --check` pass.
