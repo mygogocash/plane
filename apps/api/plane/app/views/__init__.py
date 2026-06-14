@@ -33,7 +33,7 @@ from .user.base import (
 
 
 from .base import BaseAPIView, BaseViewSet
-from .epic import EpicProgressEndpoint, EpicViewSet
+from .epic import EpicProgressEndpoint, EpicViewSet, EpicWorkItemsEndpoint
 
 from .workspace.base import (
     WorkSpaceViewSet,

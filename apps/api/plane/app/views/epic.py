@@ -3,14 +3,17 @@
 # See the LICENSE file for details.
 
 from functools import wraps
+from uuid import UUID
 
+from django.db import transaction
 from django.db.models import Count, Q
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
 from plane.app.permissions import ROLE, allow_permission
 from plane.app.serializers import EpicSerializer, EpicWriteSerializer
-from plane.db.models import Issue, Project, ProjectIssueType
+from plane.db.models import Issue, IssueActivity, Project, ProjectIssueType
 from .base import BaseAPIView, BaseViewSet
 
 
@@ -172,6 +175,121 @@ class EpicProgressEndpoint(BaseAPIView):
                 "counts_by_group": counts_by_group,
                 "percent_complete": percent_complete,
                 "total_count": total_count,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class EpicWorkItemsEndpoint(BaseAPIView):
+    def _issue_identifier(self, issue):
+        if issue is None:
+            return ""
+
+        return f"{issue.project.identifier}-{issue.sequence_id}"
+
+    def _normalize_issue_ids(self, issue_ids):
+        if not isinstance(issue_ids, list) or not issue_ids:
+            return []
+
+        normalized_issue_ids = []
+        for issue_id in issue_ids:
+            try:
+                normalized_issue_ids.append(str(UUID(str(issue_id))))
+            except (TypeError, ValueError, AttributeError):
+                return None
+
+        return list(dict.fromkeys(normalized_issue_ids))
+
+    @project_workspace_match_required
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER], level="PROJECT")
+    def post(self, request, slug, project_id, epic_id):
+        issue_ids = self._normalize_issue_ids(request.data.get("issue_ids"))
+        if issue_ids is None:
+            return Response({"error": "invalid_issue_ids"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not issue_ids:
+            return Response({"error": "issue_ids_required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        epic = (
+            Issue.issue_objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                id=epic_id,
+                type__is_epic=True,
+            )
+            .select_related("project", "workspace")
+            .first()
+        )
+        if epic is None:
+            return Response({"error": "Epic not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        issues = list(
+            Issue.issue_objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                id__in=issue_ids,
+            ).select_related("project", "workspace", "type", "parent", "parent__project")
+        )
+        issues_by_id = {str(issue.id): issue for issue in issues}
+        invalid_issue_ids = [issue_id for issue_id in issue_ids if issue_id not in issues_by_id]
+        if invalid_issue_ids:
+            return Response(
+                {"error": "invalid_issue_ids", "issue_ids": invalid_issue_ids},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        epic_issue_ids = [
+            issue_id for issue_id in issue_ids if issues_by_id[issue_id].type and issues_by_id[issue_id].type.is_epic
+        ]
+        if epic_issue_ids:
+            return Response(
+                {"error": "issue_ids_must_be_work_items", "issue_ids": epic_issue_ids},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reparent = bool(request.data.get("reparent", False))
+        already_parented_issue_ids = [
+            issue_id
+            for issue_id in issue_ids
+            if issues_by_id[issue_id].parent_id is not None and issues_by_id[issue_id].parent_id != epic.id
+        ]
+        if already_parented_issue_ids and not reparent:
+            return Response(
+                {"error": "already_parented", "issue_ids": already_parented_issue_ids},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            for issue_id in issue_ids:
+                issue = issues_by_id[issue_id]
+                old_parent = issue.parent
+                old_parent_id = issue.parent_id
+                if old_parent_id == epic.id:
+                    continue
+
+                issue.parent = epic
+                issue.updated_by = request.user
+                issue.save(update_fields=["parent", "updated_by", "updated_at"])
+
+                IssueActivity.objects.create(
+                    issue=issue,
+                    actor=request.user,
+                    verb="updated",
+                    old_value=self._issue_identifier(old_parent),
+                    new_value=self._issue_identifier(epic),
+                    field="parent",
+                    project=issue.project,
+                    workspace=issue.workspace,
+                    comment="updated the parent issue to",
+                    old_identifier=old_parent_id,
+                    new_identifier=epic.id,
+                    epoch=timezone.now().timestamp(),
+                )
+
+        return Response(
+            {
+                "attached_issue_ids": issue_ids,
+                "epic_id": str(epic.id),
             },
             status=status.HTTP_200_OK,
         )

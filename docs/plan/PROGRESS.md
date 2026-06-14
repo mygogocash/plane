@@ -200,7 +200,13 @@ flakes (unrelated; pass in isolation).
   zero-child epics return 0 without divide-by-zero, and soft-deleted children are excluded.
   Verified: RED first on missing progress route; epic CRUD + progress contracts 8/8 green;
   `manage.py check`, touched-file Ruff check, Ruff format check, and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-11** (bulk attach work items), then backend TASK-12+
+- ✅ **TASK-11** epic bulk-attach work items — added `POST /epics/:epic_id/work-items/`
+  for assigning project-scoped work items to an epic, with one-epic-per-item enforcement,
+  explicit `reparent: true` override, project edit-role authorization, cross-project rejection,
+  and deterministic parent-change `IssueActivity` rows. Verified: RED first on missing route;
+  bulk attach contract tests 5/5 green; adjacent epic CRUD/progress/bulk contracts 13/13 green;
+  `manage.py check`, touched-file Ruff check, Ruff format check, and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-12** (epic child listing), then backend TASK-13+
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
