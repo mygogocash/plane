@@ -333,6 +333,11 @@ export const coreRoutes: RouteConfigEntry[] = [
               ":workspaceSlug/settings/projects/:projectId/workflows",
               "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/workflows/page.tsx"
             ),
+            // Project Templates
+            route(
+              ":workspaceSlug/settings/projects/:projectId/templates",
+              "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/templates/page.tsx"
+            ),
             // Project Labels
             route(
               ":workspaceSlug/settings/projects/:projectId/labels",

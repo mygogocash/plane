@@ -42,6 +42,37 @@ export type TIssueProperty = {
   is_active: boolean;
 };
 
+export type TWorkItemTemplateData = Partial<TIssue> & {
+  type?: string | null;
+  sub_items?: Partial<TIssue>[];
+  [key: string]: unknown;
+};
+
+export type TWorkItemTemplate = {
+  id: string;
+  project_id: string;
+  workspace_id: string;
+  name: string;
+  description_html: string;
+  template_data: TWorkItemTemplateData;
+  issue_type: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TWorkItemTemplatePayload = {
+  name: string;
+  description_html?: string;
+  template_data?: TWorkItemTemplateData;
+  issue_type?: string | null;
+  is_active?: boolean;
+};
+
+export type TIssueCreatePayload = Partial<TIssue> & {
+  template_id?: string | null;
+};
+
 export enum EIssueLayoutTypes {
   LIST = "list",
   KANBAN = "kanban",

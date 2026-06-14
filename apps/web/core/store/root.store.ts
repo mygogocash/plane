@@ -71,6 +71,8 @@ import type { IUserStore } from "./user";
 import { UserStore } from "./user";
 import type { IWorkflowStore } from "./workflow.store";
 import { WorkflowStore } from "./workflow.store";
+import type { IWorkItemTemplateStore } from "./work-item-template.store";
+import { WorkItemTemplateStore } from "./work-item-template.store";
 import type { IWorkspaceRootStore } from "./workspace";
 
 enableStaticRendering(typeof window === "undefined");
@@ -107,6 +109,7 @@ export class CoreRootStore {
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
   workflow: IWorkflowStore;
+  workItemTemplate: IWorkItemTemplateStore;
 
   constructor() {
     this.router = new RouterStore();
@@ -140,6 +143,7 @@ export class CoreRootStore {
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
     this.workflow = new WorkflowStore(this);
+    this.workItemTemplate = new WorkItemTemplateStore(this);
   }
 
   resetOnSignOut() {
@@ -175,5 +179,6 @@ export class CoreRootStore {
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
     this.workflow = new WorkflowStore(this);
+    this.workItemTemplate = new WorkItemTemplateStore(this);
   }
 }

@@ -158,6 +158,7 @@ flakes (unrelated; pass in isolation).
 - `10ff9d4` feat(work-items): add custom property API
 - `2326318` feat(work-items): render custom property fields
 - `f859f5f` feat(work-items): add work item templates
+- `985efa4` feat(work-items): add template API
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -193,7 +194,13 @@ flakes (unrelated; pass in isolation).
   ids, and skips missing state/label/assignee refs with warnings. Verified: RED first; TPL-2 contract 12/12 green;
   adjacent template/property contracts 24/24 green; `manage.py check` clean; `makemigrations --check --dry-run` clean;
   full app contracts 138/146 green with only the known magic-link rate-limit baseline failures.
-- ⬜ remaining cards (template UI, recurring, duplicates — mostly unlock + finish)
+- ✅ **TPL-3-FE** template picker + project-settings manager — replaced the CE template-picker stub with a
+  `templates`-flagged self-host picker, added a work-item-template service + MobX store in the web core root store,
+  wired selected templates into issue creation through `?template_id=`, and added a project settings `/templates`
+  manager with create, edit, deactivate/reactivate, and delete controls. Verified: RED first; picker/manager/store
+  Vitest 6/6 green; full web Vitest 50/50 green; touched-file oxlint clean; `@plane/types` build/typecheck clean;
+  `pnpm --filter web check:types` clean.
+- ⬜ remaining cards (recurring, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 

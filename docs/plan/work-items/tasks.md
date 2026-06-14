@@ -314,6 +314,7 @@ Vitest in `modal-additional-properties.test.tsx`:
 **Depends on** [TPL-2-API]
 **Risk tier** R1 (flag-gated UI)
 **Worktree isolation** y
+**Status** Done 2026-06-14
 
 **Context** `form.tsx:49` renders `WorkItemTemplateSelect` from the CE stub `apps/web/ce/components/issues/issue-modal/template-select.tsx` (returns `<></>`). This card implements the picker + a project-settings manager, gated on `templates`. Zero templates → first-party self-host empty state ("Self-hosted — no templates yet, create one"), never an upgrade prompt.
 
@@ -322,8 +323,9 @@ Vitest in `modal-additional-properties.test.tsx`:
 - Edit: `apps/web/ce/components/issues/issue-modal/template-select.tsx` (replace stub)
 - New: project-settings template manager under `apps/web/core/components/settings/templates/` (grep existing settings managers for the layout/route convention)
 - Edit: `apps/web/app/routes/core.ts` — add `":workspaceSlug/settings/projects/:projectId/templates"` next to the features routes (grep `core.ts` for the existing features block lines)
-- New: `packages/shared-state/src/store/.../work-item-template.store.ts` (`WorkItemTemplateStore`)
-- New: `packages/services/src/.../template.service.ts`
+- New: `apps/web/core/store/work-item-template.store.ts` (`WorkItemTemplateStore`; live app convention in this checkout)
+- New: `apps/web/core/services/work-item-template.service.ts`
+- New: `apps/web/core/hooks/store/use-work-item-template.ts`
 - New test: `apps/web/ce/components/issues/issue-modal/template-select.test.tsx` (Vitest)
 
 **TDD — failing test first**
@@ -348,7 +350,12 @@ Vitest:
 
 **Verify**
 
-- `pnpm --filter web vitest run apps/web/ce/components/issues/issue-modal/template-select.test.tsx` (RED→GREEN)
+- `pnpm --filter web exec vitest run ce/components/issues/issue-modal/template-select.test.tsx` (RED→GREEN)
+- `pnpm --filter web exec vitest run ce/components/issues/issue-modal/template-select.test.tsx core/store/work-item-template.store.test.ts`
+- `pnpm --filter web test`
+- `pnpm exec oxlint <touched frontend/type files> --max-warnings=0`
+- `pnpm --filter @plane/types build`
+- `pnpm --filter @plane/types check:types`
 - `pnpm --filter web check:types`
 
 **Done when** Stub replaced, manager + route added, all Vitest cases RED→GREEN, type-check passes, empty state is self-host (no upgrade modal).

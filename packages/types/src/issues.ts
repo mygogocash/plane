@@ -27,6 +27,10 @@ export type {
   TIssuePropertyType,
   TIssuePropertyValue,
   TIssuePropertyValues,
+  TIssueCreatePayload,
+  TWorkItemTemplate,
+  TWorkItemTemplateData,
+  TWorkItemTemplatePayload,
 } from "./issues/issue";
 
 export interface IIssueCycle {
