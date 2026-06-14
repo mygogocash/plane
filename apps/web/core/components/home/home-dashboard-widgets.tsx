@@ -76,16 +76,17 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
   // derived values
   const noWidgetsResolvedPath = resolvedTheme === "light" ? lightWidgetsAsset : darkWidgetsAsset;
 
-  // derived values
-  const isWikiApp = pathname.includes(`/${workspaceSlug.toString()}/pages`);
   if (!workspaceSlug) return null;
+  // derived values
+  const workspaceSlugValue = workspaceSlug.toString();
+  const isWikiApp = pathname.includes(`/${workspaceSlugValue}/pages`);
   if (loading || loader !== "loaded") return <HomeLoader />;
 
   return (
     <div className="relative flex h-full w-full flex-col gap-7">
       <HomePageHeader />
       <ManageWidgetsModal
-        workspaceSlug={workspaceSlug.toString()}
+        workspaceSlug={workspaceSlugValue}
         isModalOpen={showWidgetSettings}
         handleOnClose={() => toggleWidgetSettings(false)}
       />
@@ -99,7 +100,7 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
             if (!WidgetComponent || !isEnabled) return null;
             return (
               <div key={key} className="py-4">
-                <WidgetComponent workspaceSlug={workspaceSlug.toString()} />
+                <WidgetComponent workspaceSlug={workspaceSlugValue} />
               </div>
             );
           })}
