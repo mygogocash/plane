@@ -21,6 +21,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
+import { useRecurringWorkItem } from "@/hooks/store/use-recurring-work-item";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 // services
@@ -32,6 +33,28 @@ import { DraftIssueLayout } from "./draft-issue-layout";
 import { IssueFormRoot } from "./form";
 import type { IssueFormProps } from "./form";
 import type { IssuesModalProps } from "./modal";
+
+const getIssuePayloadForRecurrence = (payload: TIssueCreatePayload): TIssueCreatePayload => {
+  const recurrencePayload: Record<string, unknown> = { ...payload };
+  [
+    "id",
+    "project_id",
+    "workspace_id",
+    "sequence_id",
+    "created_at",
+    "updated_at",
+    "created_by",
+    "updated_by",
+    "completed_at",
+    "archived_at",
+    "is_recurring",
+    "template_id",
+    "tempId",
+    "sourceIssueId",
+  ].forEach((key) => delete recurrencePayload[key]);
+
+  return recurrencePayload as TIssueCreatePayload;
+};
 
 export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueModalBase(props: IssuesModalProps) {
   const {
@@ -81,9 +104,16 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const { issues: projectIssues } = useIssues(EIssuesStoreType.PROJECT);
   const { issues: draftIssues } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
   const { fetchIssue } = useIssueDetail();
-  const { allowedProjectIds, handleCreateUpdatePropertyValues, handleCreateSubWorkItem, workItemTemplateId } =
-    useIssueModal();
+  const {
+    allowedProjectIds,
+    handleCreateUpdatePropertyValues,
+    handleCreateSubWorkItem,
+    recurrenceDraft,
+    resetRecurrenceDraft,
+    workItemTemplateId,
+  } = useIssueModal();
   const { getProjectByIdentifier } = useProject();
+  const { createRecurrence } = useRecurringWorkItem();
   // current store details
   const { createIssue, updateIssue } = useIssuesActions(storeType);
   // derived values
@@ -388,8 +418,31 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       const createPayload: TIssueCreatePayload =
         !data?.id && !is_draft_issue && workItemTemplateId ? { ...payload, template_id: workItemTemplateId } : payload;
 
-      if (!data?.id) response = await handleCreateIssue(createPayload, is_draft_issue);
-      else response = await handleUpdateIssue(payload);
+      if (!data?.id) {
+        response = await handleCreateIssue(createPayload, is_draft_issue);
+        if (response && !is_draft_issue && recurrenceDraft.enabled && payload.project_id) {
+          try {
+            await createRecurrence(workspaceSlug.toString(), payload.project_id, {
+              name: payload.name || response.name || "Recurring work item",
+              template: workItemTemplateId,
+              payload: getIssuePayloadForRecurrence(createPayload),
+              frequency: recurrenceDraft.frequency,
+              rrule: recurrenceDraft.frequency === "custom" ? recurrenceDraft.rrule || null : null,
+              timezone: recurrenceDraft.timezone,
+              start_date: new Date(recurrenceDraft.start_date).toISOString(),
+              end_date: recurrenceDraft.end_date ? new Date(recurrenceDraft.end_date).toISOString() : null,
+              max_iterations: recurrenceDraft.end_date ? null : recurrenceDraft.max_iterations,
+            });
+            resetRecurrenceDraft();
+          } catch (error: any) {
+            setToast({
+              type: TOAST_TYPE.ERROR,
+              title: t("error"),
+              message: error?.error ?? "Recurring work item could not be scheduled.",
+            });
+          }
+        }
+      } else response = await handleUpdateIssue(payload);
     } finally {
       if (response != undefined && onSubmit) await onSubmit(response);
     }

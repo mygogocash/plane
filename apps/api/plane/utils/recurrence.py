@@ -47,10 +47,7 @@ def compute_next_run_at(
     local_last_run_at = _coerce_to_timezone(last_run_at, timezone)
 
     recurrence = _build_recurrence(frequency, rrule_value, local_start)
-    candidate = recurrence.after(
-        local_last_run_at or local_start,
-        inc=local_last_run_at is None,
-    )
+    candidate = local_start if local_last_run_at is None else recurrence.after(local_last_run_at, inc=False)
 
     if candidate is None:
         return None

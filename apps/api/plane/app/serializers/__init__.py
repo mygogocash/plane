@@ -51,6 +51,7 @@ from .workflow import (
     WorkItemApprovalApproverSerializer,
 )
 from .issue_property import IssuePropertySerializer
+from .recurring_work_item import RecurringWorkItemRunSerializer, RecurringWorkItemSerializer
 from .work_item_template import WorkItemTemplateSerializer
 from .view import IssueViewSerializer, ViewIssueListSerializer
 from .cycle import (

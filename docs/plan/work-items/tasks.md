@@ -478,6 +478,13 @@ Vitest:
 **Depends on** [REC-1-BE, REC-2-WORKER]
 **Risk tier** R1 (flag-gated routes + UI)
 **Worktree isolation** y
+**Status** Done 2026-06-14
+
+**Validation** RED first for backend contract coverage and focused Vitest cases; focused recurrence suite
+23/23 green; full web Vitest 56/56 green; web typecheck/format/lint green; `manage.py check`,
+`makemigrations --check --dry-run`, touched-file Ruff check/format green. Full backend
+unit+contract app suite is 411/419 green with the 8 residual authentication/magic-link tests returning
+`RATE_LIMIT_EXCEEDED` after cache/Redis clearing; recurrence tests are isolated and green.
 
 **Context** Adds MEMBER+ recurrence CRUD + read-only runs history, plus the modal recurrence section and a recurrence badge on cards. Gated on `recurring_work_items`. Validates RRULE and end-conditions before persist; rejects invalid timezone.
 
@@ -485,8 +492,10 @@ Vitest:
 
 - New: `apps/api/plane/app/views/issue/recurring.py`; serializer `apps/api/plane/app/serializers/recurring_work_item.py` (+ register)
 - Edit: `apps/api/plane/app/urls/issue.py` (`recurring-work-items/`, `/<id>/`, `/<id>/runs/`)
-- New: recurrence section component in `apps/web/core/components/issues/issue-modal/`; badge added to card renderers under `apps/web/core/components/issues/issue-layouts/properties/` (grep the shared card-properties renderer to add the badge once)
-- New: `packages/shared-state/src/store/.../recurring-work-item.store.ts`; `packages/services/src/.../recurring.service.ts`
+- New: recurrence section component in `apps/web/ce/components/issues/issue-modal/`; badge added to shared
+  issue-property renderers under `apps/web/core/components/issues/issue-layouts/properties/`
+- New: `apps/web/core/store/recurring-work-item.store.ts`; `apps/web/core/services/recurring-work-item.service.ts`;
+  `apps/web/core/hooks/store/use-recurring-work-item.ts`; local recurrence types in `apps/web/core/types/`
 - New tests: `apps/api/plane/tests/contract/app/test_recurring_work_item_api.py`; Vitest `apps/web/core/components/issues/issue-layouts/properties/recurrence-badge.test.tsx`
 
 **TDD — failing test first**
@@ -515,9 +524,10 @@ Contract `@pytest.mark.contract`:
 
 **Verify**
 
-- `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest plane/tests/contract/app/test_recurring_work_item_api.py -m contract -v` (RED→GREEN)
-- `pnpm --filter web vitest run apps/web/core/components/issues/issue-layouts/properties/recurrence-badge.test.tsx`; `pnpm --filter web check:types`
-- Full: `docker compose -f docker-compose-test.yml run --rm api-tests pytest -m "unit or contract"`
+- `docker exec -w /code plane-tests pytest plane/tests/contract/app/test_recurring_work_item_api.py -m contract -v --tb=short` (RED→GREEN)
+- `pnpm --filter web exec vitest run core/store/recurring-work-item.store.test.ts ce/components/issues/issue-modal/recurrence-section.test.tsx core/components/issues/issue-layouts/properties/recurrence-badge.test.tsx`
+- `pnpm --filter web test`; `pnpm --filter web check:types`; `pnpm --filter web check:format`; `pnpm --filter web check:lint`
+- Full backend recurrence slice: `docker exec -w /code plane-tests pytest plane/tests/unit/bg_tasks/test_recurring_generation.py plane/tests/unit/db/test_recurring_work_item_model.py plane/tests/unit/utils/test_recurrence.py plane/tests/contract/app/test_recurring_work_item_api.py -m "unit or contract" -v --tb=short`
 
 **Done when** CRUD + runs history + modal section + badge live, all named tests RED→GREEN, both suites green, flag-gating + empty state verified.
 

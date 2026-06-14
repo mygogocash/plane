@@ -32,6 +32,7 @@ from plane.app.views import (
     IssueMetaEndpoint,
     IssueDetailIdentifierEndpoint,
     IssuePropertyViewSet,
+    RecurringWorkItemViewSet,
     WorkItemTemplateViewSet,
 )
 
@@ -101,6 +102,27 @@ urlpatterns = [
             }
         ),
         name="work-item-templates",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/recurring-work-items/",
+        RecurringWorkItemViewSet.as_view({"get": "list", "post": "create"}),
+        name="recurring-work-items",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/recurring-work-items/<uuid:pk>/",
+        RecurringWorkItemViewSet.as_view(
+            {
+                "get": "retrieve",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="recurring-work-items",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/recurring-work-items/<uuid:pk>/runs/",
+        RecurringWorkItemViewSet.as_view({"get": "runs"}),
+        name="recurring-work-item-runs",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issue-labels/",

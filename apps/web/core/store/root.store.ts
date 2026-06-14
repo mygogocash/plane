@@ -61,6 +61,8 @@ import type { IProjectRootStore } from "./project";
 import { ProjectRootStore } from "./project";
 import type { IProjectViewStore } from "./project-view.store";
 import { ProjectViewStore } from "./project-view.store";
+import type { IRecurringWorkItemStore } from "./recurring-work-item.store";
+import { RecurringWorkItemStore } from "./recurring-work-item.store";
 import type { IRouterStore } from "./router.store";
 import { RouterStore } from "./router.store";
 import type { IStickyStore } from "./sticky/sticky.store";
@@ -110,6 +112,7 @@ export class CoreRootStore {
   powerK: IPowerKStore;
   workflow: IWorkflowStore;
   workItemTemplate: IWorkItemTemplateStore;
+  recurringWorkItem: IRecurringWorkItemStore;
 
   constructor() {
     this.router = new RouterStore();
@@ -144,6 +147,7 @@ export class CoreRootStore {
     this.powerK = new PowerKStore();
     this.workflow = new WorkflowStore(this);
     this.workItemTemplate = new WorkItemTemplateStore(this);
+    this.recurringWorkItem = new RecurringWorkItemStore(this);
   }
 
   resetOnSignOut() {
@@ -180,5 +184,6 @@ export class CoreRootStore {
     this.powerK = new PowerKStore();
     this.workflow = new WorkflowStore(this);
     this.workItemTemplate = new WorkItemTemplateStore(this);
+    this.recurringWorkItem = new RecurringWorkItemStore(this);
   }
 }

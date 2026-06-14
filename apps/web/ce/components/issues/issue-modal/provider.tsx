@@ -9,6 +9,8 @@ import { observer } from "mobx-react";
 // plane imports
 import { DEFAULT_WORK_ITEM_FORM_VALUES } from "@plane/constants";
 import type { ISearchIssueResponse, TIssue, TWorkItemTemplateData } from "@plane/types";
+// types
+import type { TIssueModalRecurrenceDraft } from "@/types/recurring-work-item";
 // components
 import { IssueModalContext } from "@/components/issues/issue-modal/context";
 import type { THandleTemplateChangeProps } from "@/components/issues/issue-modal/context";
@@ -23,10 +25,21 @@ export type TIssueModalProviderProps = {
   children: React.ReactNode;
 };
 
+const getDefaultRecurrenceDraft = (): TIssueModalRecurrenceDraft => ({
+  enabled: false,
+  frequency: "daily",
+  rrule: "",
+  timezone: "UTC",
+  start_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+  end_date: "",
+  max_iterations: 5,
+});
+
 export const IssueModalProvider = observer(function IssueModalProvider(props: TIssueModalProviderProps) {
   const { children, allowedProjectIds, dataForPreload, templateId } = props;
   // states
   const [workItemTemplateId, setWorkItemTemplateId] = useState<string | null>(templateId ?? null);
+  const [recurrenceDraft, setRecurrenceDraft] = useState<TIssueModalRecurrenceDraft>(() => getDefaultRecurrenceDraft());
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
   const [selectedParentIssue, setSelectedParentIssue] = useState<ISearchIssueResponse | null>(null);
   // store hooks
@@ -80,6 +93,10 @@ export const IssueModalProvider = observer(function IssueModalProvider(props: TI
       allowedProjectIds: allowedProjectIds ?? projectIdsWithCreatePermissions,
       workItemTemplateId,
       setWorkItemTemplateId,
+      recurrenceDraft,
+      setRecurrenceDraft,
+      resetRecurrenceDraft: () => setRecurrenceDraft(getDefaultRecurrenceDraft()),
+      recurrenceRuns: [],
       isApplyingTemplate,
       setIsApplyingTemplate,
       selectedParentIssue,
@@ -102,6 +119,7 @@ export const IssueModalProvider = observer(function IssueModalProvider(props: TI
       handleTemplateChange,
       isApplyingTemplate,
       projectIdsWithCreatePermissions,
+      recurrenceDraft,
       selectedParentIssue,
       workItemTemplateId,
     ]

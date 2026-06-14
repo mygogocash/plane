@@ -214,7 +214,15 @@ flakes (unrelated; pass in isolation).
   and per-recurring exception isolation. Verified: RED missing-task import first; focused worker tests 7/7 green;
   backend unit suite 263/263 green; touched-file Ruff check/format clean; `manage.py check` clean;
   `makemigrations --check --dry-run` clean.
-- ⬜ remaining cards (recurring API-FE, duplicates — mostly unlock + finish)
+- ✅ **REC-3-API-FE** recurrence CRUD + runs history, modal section, badge — added MEMBER/Admin recurrence CRUD,
+  read-only runs history, RRULE/timezone/end-condition validation, `owned_by` assignment, `next_run_at` recompute
+  rules, list/detail `is_recurring` annotation, a self-host recurrence modal section, recurrence service/store/hooks,
+  and a shared issue-card recurrence badge. Verified: RED first; recurrence backend contract 10/10 green; full
+  recurrence backend slice 23/23 green; full web Vitest 56/56 green; web typecheck/format/lint clean; `manage.py
+check`, `makemigrations --check --dry-run`, and touched-file Ruff check/format clean. Full backend unit+contract app
+  suite is 411/419 green with only the existing authentication/magic-link rate-limit failures after cache/Redis
+  clearing.
+- ⬜ remaining cards (duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 

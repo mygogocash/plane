@@ -56,6 +56,7 @@ from plane.db.models import (
     IssueReaction,
     IssueRelation,
     IssueSubscriber,
+    RecurringWorkItemRun,
     Label,
     ProjectUserProperty,
     ModuleIssue,
@@ -146,6 +147,14 @@ class IssueListEndpoint(BaseAPIView):
                 .annotate(count=Func(F("id"), function="Count"))
                 .values("count")
             )
+            .annotate(
+                is_recurring=Exists(
+                    RecurringWorkItemRun.objects.filter(
+                        generated_issue_id=OuterRef("id"),
+                        deleted_at__isnull=True,
+                    )
+                )
+            )
             .distinct()
         )
 
@@ -195,6 +204,7 @@ class IssueListEndpoint(BaseAPIView):
                 "updated_by",
                 "attachment_count",
                 "link_count",
+                "is_recurring",
                 "is_draft",
                 "archived_at",
                 "deleted_at",
@@ -254,6 +264,14 @@ class IssueViewSet(BaseViewSet):
                     .values("parent")
                     .annotate(count=Count("id"))
                     .values("count")
+                )
+            )
+            .annotate(
+                is_recurring=Exists(
+                    RecurringWorkItemRun.objects.filter(
+                        generated_issue_id=OuterRef("id"),
+                        deleted_at__isnull=True,
+                    )
                 )
             )
         )
@@ -558,6 +576,7 @@ class IssueViewSet(BaseViewSet):
                     "updated_by",
                     "attachment_count",
                     "link_count",
+                    "is_recurring",
                     "is_draft",
                     "archived_at",
                     "deleted_at",
@@ -625,6 +644,14 @@ class IssueViewSet(BaseViewSet):
                     .values("parent")
                     .annotate(count=Count("id"))
                     .values("count")
+                )
+            )
+            .annotate(
+                is_recurring=Exists(
+                    RecurringWorkItemRun.objects.filter(
+                        generated_issue_id=OuterRef("id"),
+                        deleted_at__isnull=True,
+                    )
                 )
             )
             .annotate(
@@ -1011,6 +1038,7 @@ class IssuePaginatedViewSet(BaseViewSet):
             "link_count",
             "attachment_count",
             "sub_issues_count",
+            "is_recurring",
         ]
 
         if str(is_description_required).lower() == "true":
@@ -1119,6 +1147,14 @@ class IssueDetailEndpoint(BaseAPIView):
                 .order_by()
                 .annotate(count=Func(F("id"), function="Count"))
                 .values("count")
+            )
+            .annotate(
+                is_recurring=Exists(
+                    RecurringWorkItemRun.objects.filter(
+                        generated_issue_id=OuterRef("id"),
+                        deleted_at__isnull=True,
+                    )
+                )
             )
             .prefetch_related(
                 Prefetch(

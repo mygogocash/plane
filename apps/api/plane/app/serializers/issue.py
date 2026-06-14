@@ -901,6 +901,7 @@ class IssueSerializer(DynamicBaseSerializer):
     sub_issues_count = serializers.IntegerField(read_only=True)
     attachment_count = serializers.IntegerField(read_only=True)
     link_count = serializers.IntegerField(read_only=True)
+    is_recurring = serializers.SerializerMethodField()
     property_values = serializers.SerializerMethodField()
 
     class Meta:
@@ -929,6 +930,7 @@ class IssueSerializer(DynamicBaseSerializer):
             "updated_by",
             "attachment_count",
             "link_count",
+            "is_recurring",
             "is_draft",
             "archived_at",
             "property_values",
@@ -937,6 +939,12 @@ class IssueSerializer(DynamicBaseSerializer):
 
     def get_property_values(self, obj):
         return {str(value.property_id): value.value for value in obj.property_values.all()}
+
+    def get_is_recurring(self, obj):
+        annotated_value = getattr(obj, "is_recurring", None)
+        if annotated_value is not None:
+            return bool(annotated_value)
+        return obj.recurring_runs.filter(deleted_at__isnull=True).exists()
 
     def validate(self, data):
         if (
@@ -993,6 +1001,7 @@ class IssueListDetailSerializer(serializers.Serializer):
             "sub_issues_count": instance.sub_issues_count,
             "attachment_count": instance.attachment_count,
             "link_count": instance.link_count,
+            "is_recurring": bool(getattr(instance, "is_recurring", False)),
         }
 
         # Handle expanded fields only when requested - using direct field access
