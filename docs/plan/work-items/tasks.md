@@ -368,6 +368,7 @@ Vitest:
 **Depends on** [TPL-1-BE] (template FK; payload fallback)
 **Risk tier** R1 (additive schema)
 **Worktree isolation** y
+**Status** Done 2026-06-14
 
 **Context** No recurrence model exists. This card adds `RecurringWorkItem(ProjectBaseModel)` (frequency/rrule/timezone/end-conditions/`next_run_at`/`owned_by`) and `RecurringWorkItemRun(ProjectBaseModel)` with a unique `(recurring_work_item, run_at)` for idempotent generation (PRD line 73). It also implements the **pure** next-run computation function (timezone + end conditions) so REC-2 can call it — unit-tested in isolation, no Celery.
 
@@ -376,7 +377,7 @@ Vitest:
 - New: `apps/api/plane/db/models/recurring_work_item.py`
 - Edit: `apps/api/plane/db/models/__init__.py`
 - New: `apps/api/plane/utils/recurrence.py` (pure `compute_next_run_at(...)` + RRULE validation)
-- New migration: `apps/api/plane/db/migrations/0xxx_recurring_work_items.py`
+- New migration: `apps/api/plane/db/migrations/0129_recurring_work_items.py`
 - New tests: `apps/api/plane/tests/unit/db/test_recurring_work_item_model.py`, `apps/api/plane/tests/unit/utils/test_recurrence.py`
 - Edit: `apps/api/plane/tests/factories.py` (`RecurringWorkItemFactory`)
 
@@ -404,8 +405,14 @@ Vitest:
 
 **Verify**
 
-- `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest plane/tests/unit/db/test_recurring_work_item_model.py plane/tests/unit/utils/test_recurrence.py -m unit -v` (RED→GREEN)
-- Migration forward+reverse; full unit suite green.
+- RED: `docker exec -w /code plane-tests pytest plane/tests/unit/db/test_recurring_work_item_model.py plane/tests/unit/utils/test_recurrence.py -m unit -v --tb=short` failed on missing `RecurringWorkItem` export and missing `plane.utils.recurrence`.
+- GREEN: `docker exec -w /code plane-tests pytest plane/tests/unit/db/test_recurring_work_item_model.py plane/tests/unit/utils/test_recurrence.py -m unit -v --tb=short` → 6 passed.
+- `docker exec -w /code plane-tests ruff format plane/db/models/recurring_work_item.py plane/utils/recurrence.py plane/tests/factories.py plane/tests/unit/db/test_recurring_work_item_model.py plane/tests/unit/utils/test_recurrence.py` → clean.
+- `docker exec -w /code plane-tests ruff check plane/db/models/recurring_work_item.py plane/utils/recurrence.py plane/tests/factories.py plane/tests/unit/db/test_recurring_work_item_model.py plane/tests/unit/utils/test_recurrence.py --fix` → clean.
+- `docker exec -w /code plane-tests python manage.py check` → clean.
+- `docker exec -w /code plane-tests python manage.py makemigrations --check --dry-run` → no changes.
+- `docker exec -w /code plane-tests python manage.py migrate db 0128 && docker exec -w /code plane-tests python manage.py migrate db 0129` → round-trip clean.
+- `docker exec -w /code plane-tests pytest plane/tests/unit -m unit -v --tb=short` → 256 passed, 12 existing factory deprecation warnings.
 
 **Done when** Models + pure recurrence util + migration + factory exist, all named unit tests RED→GREEN, migration round-trips, dependency for RRULE confirmed (or noted as blocker).
 

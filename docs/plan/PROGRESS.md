@@ -159,6 +159,7 @@ flakes (unrelated; pass in isolation).
 - `2326318` feat(work-items): render custom property fields
 - `f859f5f` feat(work-items): add work item templates
 - `985efa4` feat(work-items): add template API
+- `5e2f4bf` feat(work-items): add template UI
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -200,7 +201,13 @@ flakes (unrelated; pass in isolation).
   manager with create, edit, deactivate/reactivate, and delete controls. Verified: RED first; picker/manager/store
   Vitest 6/6 green; full web Vitest 50/50 green; touched-file oxlint clean; `@plane/types` build/typecheck clean;
   `pnpm --filter web check:types` clean.
-- ⬜ remaining cards (recurring, duplicates — mostly unlock + finish)
+- ✅ **REC-1-BE** recurring work item data layer — added `RecurringWorkItem` + `RecurringWorkItemRun`,
+  migration `0129_recurring_work_items.py`, `dateutil`/`pytz` next-run utilities, factories, and unit coverage for
+  persistence, workspace inheritance, idempotent `(recurring_work_item, run_at)` runs, RRULE validation, end-date, and
+  max-iteration stopping. Verified: RED import/module failures first; focused 6/6 green; backend unit suite 256/256
+  green; touched-file Ruff check/format clean; `manage.py check` clean; `makemigrations --check --dry-run` clean;
+  `0129 -> 0128 -> 0129` migration round-trip clean.
+- ⬜ remaining cards (recurring worker/API-FE, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 

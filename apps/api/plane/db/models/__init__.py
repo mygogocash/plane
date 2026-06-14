@@ -91,6 +91,8 @@ from .workflow import (
     WorkItemApprovalApprover,
 )
 
+from .recurring_work_item import RecurringWorkItem, RecurringWorkItemRun
+
 from .work_item_template import WorkItemTemplate
 
 from .recent_visit import UserRecentVisit
