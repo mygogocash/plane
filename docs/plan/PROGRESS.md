@@ -177,7 +177,13 @@ flakes (unrelated; pass in isolation).
   switches, and kept epic refetches/clears scoped to `projectEpics`. Verified: RED first on the stubbed
   store; focused epic store Vitest 3/3 green; full web Vitest 64/64 green; web typecheck, touched-file
   format, strict touched-file lint, and `@ts-nocheck` scan clean.
-- ⬜ remaining cards start at **TASK-4** (real epic create/update modal), then TASK-5 frontend
+- ✅ **TASK-4** real epic create/update modal — replaced the empty CE modal with a scoped create/update
+  form for project, title, lead, rich description, start date, and target date; submit is wired through
+  `EpicService.create`/`update`, trims names, normalizes the single lead to `assignee_ids`, runs
+  `beforeFormSubmit`/`onSubmit`, and closes only after success. Verified: RED first on the empty stub;
+  focused modal Vitest 5/5 green; full web Vitest 69/69 green; web typecheck, touched-file format,
+  and strict touched-file lint clean.
+- ⬜ remaining cards start at **TASK-5** (project epics route + empty state), then backend TASK-9+
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
