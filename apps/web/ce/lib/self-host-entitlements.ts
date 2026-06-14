@@ -16,7 +16,7 @@ export const SELF_HOSTED_FEATURE_FLAGS = {
   audit_logs: true,
   bulk_operations: true,
   dashboards: true,
-  epics: false,
+  epics: true,
   estimates_time: true,
   intake: true,
   initiatives: false,

@@ -218,7 +218,14 @@ flakes (unrelated; pass in isolation).
   RED first on missing route; duplication contract tests 4/4 green; adjacent epic CRUD/progress/
   bulk/convert/duplicate contracts 22/22 green; `manage.py check`, touched-file Ruff check, Ruff
   format check, and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-14** (v1 api-key parity + flip `epics` flag ON), then EPIC-3
+- ✅ **TASK-14** epic v1 api-key parity + flag flip — added v1 `GET|POST /epics/`
+  and `GET /epics/:id/` endpoints with the same project role checks as session routes,
+  then flipped `SELF_HOSTED_FEATURE_FLAGS.epics` to `true`. Verified: RED first on missing
+  v1 route + false flag; v1 epic contract 1/1 green; adjacent epic app+v1 contracts 23/23
+  green; entitlement Vitest 3/3 green; `pnpm turbo run check:types --filter=web`, `manage.py
+check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff --check`
+  clean.
+- ⬜ remaining cards start at **TASK-15** (epic custom properties data layer), then EPIC-3
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
