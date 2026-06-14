@@ -4,7 +4,8 @@
 
 from django.urls import path
 
-from plane.app.views import EpicProgressEndpoint, EpicViewSet, EpicWorkItemsEndpoint
+from plane.app.views import EpicConvertEndpoint, EpicProgressEndpoint, EpicViewSet, EpicWorkItemsEndpoint
+from plane.app.views import WorkItemConvertToEpicEndpoint
 
 
 urlpatterns = [
@@ -34,5 +35,15 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/work-items/",
         EpicWorkItemsEndpoint.as_view(),
         name="project-epic-work-items",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/convert/",
+        EpicConvertEndpoint.as_view(),
+        name="project-epic-convert",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/work-items/<uuid:issue_id>/convert-to-epic/",
+        WorkItemConvertToEpicEndpoint.as_view(),
+        name="project-work-item-convert-to-epic",
     ),
 ]

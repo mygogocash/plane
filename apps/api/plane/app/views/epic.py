@@ -31,6 +31,47 @@ def project_workspace_match_required(view_func):
     return _wrapped_view
 
 
+def issue_identifier(issue):
+    if issue is None:
+        return ""
+
+    return f"{issue.project.identifier}-{issue.sequence_id}"
+
+
+def create_parent_activity(issue, actor, old_parent, new_parent):
+    IssueActivity.objects.create(
+        issue=issue,
+        actor=actor,
+        verb="updated",
+        old_value=issue_identifier(old_parent),
+        new_value=issue_identifier(new_parent),
+        field="parent",
+        project=issue.project,
+        workspace=issue.workspace,
+        comment="updated the parent issue to",
+        old_identifier=(old_parent.id if old_parent else None),
+        new_identifier=(new_parent.id if new_parent else None),
+        epoch=timezone.now().timestamp(),
+    )
+
+
+def create_type_activity(issue, actor, old_type, new_type):
+    IssueActivity.objects.create(
+        issue=issue,
+        actor=actor,
+        verb="updated",
+        old_value=(old_type.name if old_type else ""),
+        new_value=(new_type.name if new_type else ""),
+        field="type",
+        project=issue.project,
+        workspace=issue.workspace,
+        comment="updated the work item type to",
+        old_identifier=(old_type.id if old_type else None),
+        new_identifier=(new_type.id if new_type else None),
+        epoch=timezone.now().timestamp(),
+    )
+
+
 class EpicViewSet(BaseViewSet):
     serializer_class = EpicSerializer
     model = Issue
@@ -181,12 +222,6 @@ class EpicProgressEndpoint(BaseAPIView):
 
 
 class EpicWorkItemsEndpoint(BaseAPIView):
-    def _issue_identifier(self, issue):
-        if issue is None:
-            return ""
-
-        return f"{issue.project.identifier}-{issue.sequence_id}"
-
     def _normalize_issue_ids(self, issue_ids):
         if not isinstance(issue_ids, list) or not issue_ids:
             return []
@@ -275,8 +310,8 @@ class EpicWorkItemsEndpoint(BaseAPIView):
                     issue=issue,
                     actor=request.user,
                     verb="updated",
-                    old_value=self._issue_identifier(old_parent),
-                    new_value=self._issue_identifier(epic),
+                    old_value=issue_identifier(old_parent),
+                    new_value=issue_identifier(epic),
                     field="parent",
                     project=issue.project,
                     workspace=issue.workspace,
@@ -290,6 +325,129 @@ class EpicWorkItemsEndpoint(BaseAPIView):
             {
                 "attached_issue_ids": issue_ids,
                 "epic_id": str(epic.id),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class EpicConvertEndpoint(BaseAPIView):
+    child_reparenting_policy = "reparent_to_epic_parent"
+
+    def _get_target_issue_type(self, slug, project_id, target_issue_type_id):
+        try:
+            target_issue_type_id = str(UUID(str(target_issue_type_id)))
+        except (TypeError, ValueError, AttributeError):
+            return None
+
+        project_issue_type = (
+            ProjectIssueType.objects.filter(
+                project_id=project_id,
+                issue_type_id=target_issue_type_id,
+                issue_type__workspace__slug=slug,
+                issue_type__is_active=True,
+                issue_type__is_epic=False,
+            )
+            .select_related("issue_type")
+            .first()
+        )
+        return project_issue_type.issue_type if project_issue_type else None
+
+    @project_workspace_match_required
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER], level="PROJECT")
+    def post(self, request, slug, project_id, epic_id):
+        target_type = self._get_target_issue_type(slug, project_id, request.data.get("target_issue_type_id"))
+        if target_type is None:
+            return Response({"error": "target_issue_type_invalid"}, status=status.HTTP_400_BAD_REQUEST)
+
+        epic = (
+            Issue.issue_objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                id=epic_id,
+                type__is_epic=True,
+            )
+            .select_related("project", "workspace", "type", "parent", "parent__project")
+            .first()
+        )
+        if epic is None:
+            return Response({"error": "Epic not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        with transaction.atomic():
+            children = list(
+                Issue.objects.select_for_update()
+                .filter(workspace__slug=slug, project_id=project_id, parent_id=epic.id)
+                .select_related("project", "workspace", "parent", "parent__project")
+            )
+            target_parent = epic.parent
+
+            for child in children:
+                old_parent = child.parent
+                child.parent = target_parent
+                child.updated_by = request.user
+                child.save(update_fields=["parent", "updated_by", "updated_at"])
+                create_parent_activity(child, request.user, old_parent, target_parent)
+
+            old_type = epic.type
+            epic.type = target_type
+            epic.updated_by = request.user
+            epic.save(update_fields=["type", "updated_by", "updated_at"])
+            create_type_activity(epic, request.user, old_type, target_type)
+
+        return Response(
+            {
+                "child_reparenting_policy": self.child_reparenting_policy,
+                "id": str(epic.id),
+                "is_epic": False,
+                "type_id": str(target_type.id),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class WorkItemConvertToEpicEndpoint(BaseAPIView):
+    def get_default_epic_type(self, project_id):
+        project_issue_type = (
+            ProjectIssueType.objects.filter(project_id=project_id, issue_type__is_epic=True, issue_type__is_active=True)
+            .select_related("issue_type")
+            .order_by("-is_default", "level", "created_at")
+            .first()
+        )
+        return project_issue_type.issue_type if project_issue_type else None
+
+    @project_workspace_match_required
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER], level="PROJECT")
+    def post(self, request, slug, project_id, issue_id):
+        issue = (
+            Issue.issue_objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                id=issue_id,
+            )
+            .select_related("project", "workspace", "type")
+            .first()
+        )
+        if issue is None:
+            return Response({"error": "Work item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if issue.type and issue.type.is_epic:
+            return Response({"error": "work_item_already_epic"}, status=status.HTTP_400_BAD_REQUEST)
+
+        epic_type = self.get_default_epic_type(project_id)
+        if epic_type is None:
+            return Response({"error": "epic_type_not_configured"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            old_type = issue.type
+            issue.type = epic_type
+            issue.updated_by = request.user
+            issue.save(update_fields=["type", "updated_by", "updated_at"])
+            create_type_activity(issue, request.user, old_type, epic_type)
+
+        return Response(
+            {
+                "id": str(issue.id),
+                "is_epic": True,
+                "type_id": str(epic_type.id),
             },
             status=status.HTTP_200_OK,
         )

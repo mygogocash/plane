@@ -206,7 +206,13 @@ flakes (unrelated; pass in isolation).
   and deterministic parent-change `IssueActivity` rows. Verified: RED first on missing route;
   bulk attach contract tests 5/5 green; adjacent epic CRUD/progress/bulk contracts 13/13 green;
   `manage.py check`, touched-file Ruff check, Ruff format check, and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-12** (epic child listing), then backend TASK-13+
+- ✅ **TASK-12** epic ↔ work-item conversion — added epic-to-work-item and work-item-to-epic
+  conversion routes with same-project type validation, project edit-role authorization, explicit
+  `reparent_to_epic_parent` child policy, and type/parent `IssueActivity` rows. Verified: RED
+  first on missing routes; conversion contract tests 5/5 green; adjacent epic CRUD/progress/bulk/
+  conversion contracts 18/18 green; `manage.py check`, touched-file Ruff check, Ruff format check,
+  and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-13** (epic duplication), then backend TASK-14+
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
