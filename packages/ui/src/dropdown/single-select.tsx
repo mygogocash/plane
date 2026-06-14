@@ -118,7 +118,9 @@ export function Dropdown(props: ISingleSelectDropdown) {
       as="div"
       ref={dropdownRef}
       value={value}
-      onChange={onChange}
+      onChange={(val) => {
+        if (val !== null) onChange(val);
+      }}
       className={cn(
         "h-full",
         typeof containerClassName === "function" ? containerClassName(isOpen) : containerClassName
