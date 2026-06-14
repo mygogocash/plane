@@ -195,6 +195,7 @@ from .module.issue import ModuleIssueViewSet
 from .module.archive import ModuleArchiveUnarchiveEndpoint
 
 from .api import ApiTokenEndpoint
+from .client_error import ClientErrorReportEndpoint
 
 from .page.base import (
     PageViewSet,
