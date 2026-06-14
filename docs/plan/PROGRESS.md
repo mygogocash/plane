@@ -183,7 +183,13 @@ flakes (unrelated; pass in isolation).
   `beforeFormSubmit`/`onSubmit`, and closes only after success. Verified: RED first on the empty stub;
   focused modal Vitest 5/5 green; full web Vitest 69/69 green; web typecheck, touched-file format,
   and strict touched-file lint clean.
-- ⬜ remaining cards start at **TASK-5** (project epics route + empty state), then backend TASK-9+
+- ✅ **TASK-5** project epics route + empty state — added the `/projects/:projectId/epics`
+  route, header, page root, entitlement-gated disabled state, shared epic layout root, epic empty
+  state CTA, filter mapping, and project navigation entry. The route renders no live epic layout
+  while `epics` is disabled, and the enabled path mounts the epic issue-layout store root. Verified:
+  RED first on the missing route component and missing navigation item; focused route/navigation
+  Vitest 3/3 green; full web Vitest 72/72 green; web typecheck green.
+- ⬜ remaining cards start at **TASK-9** (session API), then backend TASK-10+
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
