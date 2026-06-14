@@ -69,19 +69,18 @@ The delivery epics are `EPIC-1` through `EPIC-7` in `docs/plan/epics-initiatives
 
 # User Stories
 
-User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-5.3` through `EI-5.6`: add the Initiatives route, list/board/timeline layouts, detail surface, gated empty state, persisted filters, and flip the `initiatives` entitlement on after the UI is functional.
+User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-6.1`: add first-class structured status-update models for epics and initiatives, including the status-update reaction model and additive migration.
 
 # Tasks
 
-Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-22`, following locally completed `TASK-21` initiative service/store/types/constants work.
+Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-23`, following locally completed `TASK-22` initiative route/list/board/timeline/detail work.
 
 # Acceptance Criteria
 
-- The workspace route `/:workspaceSlug/initiatives` renders a gated Initiatives surface.
-- With the `initiatives` flag disabled, the route renders "Create your first initiative" and requests no live initiative data.
-- With the `initiatives` flag enabled, the route renders list, board, and timeline layouts backed by the TASK-21 store/service.
-- The board renders exactly five lifecycle columns: `DRAFT`, `PLANNED`, `ACTIVE`, `COMPLETED`, and `CLOSED`.
-- State and lead filters persist when switching between board and timeline layouts.
-- The detail surface renders initiative progress and attach/detach controls for epic and project membership.
-- `SELF_HOSTED_FEATURE_FLAGS.initiatives` is flipped to `true` after the functional UI tests pass.
-- TASK-22 Vitest coverage, web type check, and web build pass.
+- `StatusUpdate` extends `BaseModel` and stores `workspace`, nullable `epic`, nullable `initiative`, `status`, `comment_html`, `comment_stripped`, `comment_json`, `parent`, and `actor`.
+- The database enforces exactly one owning object with a `CheckConstraint`: either `epic` or `initiative`, never both and never neither.
+- `status` supports exactly `ON_TRACK`, `AT_RISK`, and `OFF_TRACK`.
+- Saving a status update strips `comment_html` into `comment_stripped` using the same HTML stripping path as `IssueComment`.
+- `StatusUpdateReaction` stores `status_update`, `actor`, and `reaction`, and rejects duplicate active reactions by the same actor through a partial unique constraint.
+- The additive migration creates only the new status-update tables and can migrate forward and backward cleanly.
+- TASK-23 focused model tests, `manage.py check`, `makemigrations --check --dry-run`, touched-file Ruff checks, and migration rollback/forward checks pass.

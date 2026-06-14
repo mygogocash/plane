@@ -300,8 +300,17 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   oxfmt/oxlint clean; `pnpm turbo run check:types --filter=web` green; `pnpm --filter web run build`
   green. Rendered route smoke reached `http://127.0.0.1:3000/acme/initiatives`, but full route QA
   was blocked by the local API service being unavailable at `http://localhost:8000/api/instances/`.
-- ⬜ remaining cards start at **TASK-23** (status updates: models + migration), then TASK-24 status
-  update API.
+- ✅ **TASK-23** status updates models + migration — added first-class `StatusUpdate` and
+  `StatusUpdateReaction` models, model exports, migration `0132_status_updates.py`, comment HTML
+  stripping, epic/initiative XOR database constraint, same-owner parent validation, and duplicate
+  active reaction rejection. Also aligned the backend test `httpx` pin with `google-genai` so the
+  documented Docker pytest command runs. Verified: RED first on missing `StatusUpdate` export;
+  focused status-update model tests 5/5 green; adjacent initiative + status-update model tests 9/9
+  green through the normal Docker pytest entrypoint; `manage.py check`; `makemigrations --check
+--dry-run`; `0132 -> 0131 -> 0132` migration rollback/forward; touched-file Ruff check/format
+  and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-24** (status updates API), then TASK-25 threaded status
+  update UI.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 

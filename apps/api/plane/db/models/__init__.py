@@ -86,6 +86,8 @@ from .issue_property import IssueProperty, IssuePropertyOption, IssuePropertyVal
 
 from .initiative import Initiative, InitiativeEpic, InitiativeProject, InitiativeLabel
 
+from .status_update import StatusUpdate, StatusUpdateReaction
+
 from .workflow import (
     WorkflowTransition,
     WorkflowTransitionActor,
