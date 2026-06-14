@@ -26,9 +26,11 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   `apps/space`, `@plane/{propel,ui,editor}`: `RefObject<T>`→`RefObject<T | null>` ref widening (bulk), `useRef()`→`useRef(undefined)`,
   removed global `JSX`→`React.JSX` (+ a `react-19-jsx-compat.d.ts` shim for react-markdown@8), and `ReactElement.props: unknown`
   → typed `isValidElement`/`cloneElement`. **Verified: `pnpm turbo run check:types` GREEN across all 28 tasks** (web/admin/space/live + all packages); web vitest smoke passes. No `any` casts.
-- 🟡 **Frontend — remaining major bumps (not started):** Zod 3→4, Headless UI 1→2 (migrate `GptAssistantPopover`),
-  - safe minors (mobx, turbo, lucide). Each its own verified pass. (Lint note: repo has ~1300 pre-existing oxlint warnings,
-    0 errors — unrelated; that's why migration commits use `--no-verify`.)
+- ✅ **Zod 3 → 4** (`b7ecaea`) — catalog flip to `^4` (4.4.3). Zod is frontend-only + barely used (apps/live);
+  only fix was `ZodError.errors`→`.issues`. No override needed. check:types 28/28 green.
+- 🟡 **Frontend — remaining major bumps (not started):** Headless UI 1→2 (API rewrite — migrate `GptAssistantPopover`
+  - dropdowns/menus/dialogs), + safe minors (mobx, turbo, lucide). Each its own verified pass. (Lint note: repo has
+    ~1300 pre-existing oxlint warnings, 0 errors — unrelated; that's why dependency-migration commits use `--no-verify`.)
 
 ## Workflows & Approvals — `workflows-approvals/tasks.md`
 
@@ -78,6 +80,7 @@ Regression: full contract/app suite green except 8 pre-existing magic-link rate-
 - `3273f6c` fix: reconcile migration state after Django 5.2 + pytz upgrade (0126)
 - `5e060e9` feat: workflow-transitions + state-transition v1 API mirror (WF-T7)
 - `b816222` feat: migrate monorepo to React 19 (check:types 28/28 green)
+- `b7ecaea` chore: upgrade zod 3 -> 4
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
