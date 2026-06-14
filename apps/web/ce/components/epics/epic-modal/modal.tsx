@@ -23,6 +23,7 @@ import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user/user-user";
 import { WorkspaceService } from "@/services/workspace.service";
+import { EpicProperties } from "../epic-properties/properties";
 
 export interface EpicModalProps {
   data?: Partial<TIssue>;
@@ -323,6 +324,14 @@ export function CreateUpdateEpicModal(props: EpicModalProps) {
                 )}
               />
             </div>
+            {data?.id && data.type_id && selectedProjectId && workspaceSlug && (
+              <EpicProperties
+                workspaceSlug={workspaceSlug}
+                projectId={selectedProjectId}
+                epicId={data.id}
+                issueTypeId={data.type_id}
+              />
+            )}
           </div>
         </div>
 

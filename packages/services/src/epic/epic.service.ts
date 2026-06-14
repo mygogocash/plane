@@ -5,7 +5,7 @@
  */
 
 import { API_BASE_URL } from "@plane/constants";
-import type { TEpic, TEpicPayload, TEpicProgress } from "@plane/types";
+import type { TEpic, TEpicPayload, TEpicProgress, TEpicPropertyValuesResponse, TIssueProperty } from "@plane/types";
 import { APIService } from "../api.service";
 
 export class EpicService extends APIService {
@@ -55,6 +55,44 @@ export class EpicService extends APIService {
 
   async getProgress(workspaceSlug: string, projectId: string, epicId: string): Promise<TEpicProgress> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/progress/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getProperties(workspaceSlug: string, issueTypeId: string): Promise<TIssueProperty[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/issue-types/${issueTypeId}/properties/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getPropertyValues(
+    workspaceSlug: string,
+    projectId: string,
+    epicId: string
+  ): Promise<TEpicPropertyValuesResponse> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/property-values/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async setPropertyValue(
+    workspaceSlug: string,
+    projectId: string,
+    epicId: string,
+    propertyId: string,
+    value: TEpicPropertyValuesResponse["property_values"][string]
+  ): Promise<TEpicPropertyValuesResponse> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/property-values/`, {
+      property_values: {
+        [propertyId]: value,
+      },
+    })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

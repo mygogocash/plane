@@ -75,4 +75,35 @@ describe("EpicService", () => {
     expect(http.get).toHaveBeenCalledWith("/api/workspaces/acme/projects/project-1/epics/epic-1/progress/", {});
     expect(response).toBe(progress);
   });
+
+  it("loads epic properties and persists one property value", async () => {
+    const service = new EpicService("http://unit.test");
+    const properties = [{ id: "property-1", display_name: "Release owner", property_type: "member" }];
+    const propertyValues = { property_values: { "property-1": "member-1" } };
+    http.get.mockResolvedValueOnce({ data: properties }).mockResolvedValueOnce({ data: propertyValues });
+    http.post.mockResolvedValue({ data: propertyValues });
+
+    const loadedProperties = await service.getProperties("acme", "type-epic");
+    const loadedValues = await service.getPropertyValues("acme", "project-1", "epic-1");
+    const savedValues = await service.setPropertyValue("acme", "project-1", "epic-1", "property-1", "member-1");
+
+    expect(http.get).toHaveBeenNthCalledWith(1, "/api/workspaces/acme/issue-types/type-epic/properties/", {});
+    expect(http.get).toHaveBeenNthCalledWith(
+      2,
+      "/api/workspaces/acme/projects/project-1/epics/epic-1/property-values/",
+      {}
+    );
+    expect(http.post).toHaveBeenCalledWith(
+      "/api/workspaces/acme/projects/project-1/epics/epic-1/property-values/",
+      {
+        property_values: {
+          "property-1": "member-1",
+        },
+      },
+      {}
+    );
+    expect(loadedProperties).toBe(properties);
+    expect(loadedValues).toBe(propertyValues);
+    expect(savedValues).toBe(propertyValues);
+  });
 });

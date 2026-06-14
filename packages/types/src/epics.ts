@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "./issues";
+import type { TIssue, TIssuePropertyValues } from "./issues";
 import type { TStateGroups } from "./state";
 
 export type TEpic = TIssue;
@@ -17,6 +17,10 @@ export type TEpicProgress = {
   counts_by_group: Partial<Record<TStateGroups, number>>;
   percent_complete: number;
   total_count?: number;
+};
+
+export type TEpicPropertyValuesResponse = {
+  property_values: TIssuePropertyValues;
 };
 
 export type TEpicAnalyticsGroup =

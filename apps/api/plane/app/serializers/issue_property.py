@@ -34,6 +34,26 @@ class IssuePropertySerializer(BaseSerializer):
         ]
         read_only_fields = ["workspace_id", "issue_type"]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        options = instance.options.filter(deleted_at__isnull=True).order_by("sort_order", "created_at")
+        if options.exists():
+            data["settings"] = {
+                **(data.get("settings") or {}),
+                "options": [
+                    {
+                        "id": option.id,
+                        "is_default": option.is_default,
+                        "label": option.name,
+                        "name": option.name,
+                        "sort_order": option.sort_order,
+                        "value": option.id,
+                    }
+                    for option in options
+                ],
+            }
+        return data
+
     def validate(self, attrs):
         property_type = attrs.get(
             "property_type",

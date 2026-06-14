@@ -277,6 +277,30 @@ class TestIssuePropertyAPI:
 
         assert beta_option_response.status_code == status.HTTP_201_CREATED
         assert ga_option_response.status_code == status.HTTP_201_CREATED
+        properties_reload_response = member_client.get(_properties_url(workspace.slug, epic_type.id))
+
+        assert properties_reload_response.status_code == status.HTTP_200_OK
+        reloaded_option_property = next(
+            item for item in properties_reload_response.data if str(item["id"]) == option_property_id
+        )
+        assert reloaded_option_property["settings"]["options"] == [
+            {
+                "id": beta_option_response.data["id"],
+                "is_default": True,
+                "label": "Beta",
+                "name": "Beta",
+                "sort_order": 10.0,
+                "value": beta_option_response.data["id"],
+            },
+            {
+                "id": ga_option_response.data["id"],
+                "is_default": False,
+                "label": "GA",
+                "name": "GA",
+                "sort_order": 20.0,
+                "value": ga_option_response.data["id"],
+            },
+        ]
 
         property_values = {
             text_property_id: "<b>Launch in Q3</b>",

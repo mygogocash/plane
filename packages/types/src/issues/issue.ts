@@ -12,11 +12,24 @@ import type { TIssueLink } from "./issue_link";
 import type { TIssueReaction, IIssuePublicReaction, IPublicVote } from "./issue_reaction";
 import type { TIssueRelationTypes } from "./issue_relation";
 
-export type TIssuePropertyType = "text" | "number" | "date" | "select" | "multi_select" | "boolean" | "member" | "url";
+export type TIssuePropertyType =
+  | "text"
+  | "option"
+  | "number"
+  | "date"
+  | "select"
+  | "multi_select"
+  | "boolean"
+  | "member"
+  | "url";
 
 export type TIssuePropertyOption = {
-  label: string;
-  value: string;
+  id?: string;
+  name?: string;
+  label?: string;
+  value?: string;
+  sort_order?: number;
+  is_default?: boolean;
 };
 
 export type TIssuePropertySettings = {
@@ -34,12 +47,16 @@ export type TIssueProperty = {
   issue_type: string;
   name: string;
   display_name: string;
+  description?: string;
   property_type: TIssuePropertyType;
   settings: TIssuePropertySettings;
+  is_multi?: boolean;
   is_required: boolean;
   default_value: TIssuePropertyValue;
   sort_order: number;
   is_active: boolean;
+  external_source?: string | null;
+  external_id?: string | null;
 };
 
 export type TWorkItemTemplateData = Partial<TIssue> & {
