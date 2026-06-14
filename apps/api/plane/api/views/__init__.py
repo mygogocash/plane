@@ -14,6 +14,10 @@ from .state import (
     StateDetailAPIEndpoint,
 )
 
+from .epic import EpicAPIEndpoint
+
+from .initiative import InitiativeAPIEndpoint
+
 from .issue import (
     WorkspaceIssueAPIEndpoint,
     IssueListCreateAPIEndpoint,
@@ -63,3 +67,10 @@ from .user import UserEndpoint
 from .invite import WorkspaceInvitationsViewset
 
 from .sticky import StickyViewSet
+
+from .workflow import (
+    WorkflowTransitionAPIEndpoint,
+    WorkflowTransitionDetailAPIEndpoint,
+    IssueStateTransitionAPIEndpoint,
+)
+from .work_item_template import WorkItemTemplateListAPIEndpoint

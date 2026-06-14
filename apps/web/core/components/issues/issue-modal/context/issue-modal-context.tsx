@@ -10,6 +10,8 @@ import type { UseFormReset, UseFormWatch } from "react-hook-form";
 // plane imports
 import type { EditorRefApi } from "@plane/editor";
 import type { ISearchIssueResponse, TIssue } from "@plane/types";
+// types
+import type { TIssueModalRecurrenceDraft, TRecurringWorkItemRun } from "@/types/recurring-work-item";
 // plane web imports
 import type { TIssuePropertyValues, TIssuePropertyValueErrors } from "@/plane-web/types/issue-types";
 import type { TIssueFields } from "@/plane-web/components/issues/issue-modal";
@@ -63,6 +65,10 @@ export type TIssueModalContext = {
   allowedProjectIds: string[];
   workItemTemplateId: string | null;
   setWorkItemTemplateId: React.Dispatch<React.SetStateAction<string | null>>;
+  recurrenceDraft: TIssueModalRecurrenceDraft;
+  setRecurrenceDraft: React.Dispatch<React.SetStateAction<TIssueModalRecurrenceDraft>>;
+  resetRecurrenceDraft: () => void;
+  recurrenceRuns: TRecurringWorkItemRun[];
   isApplyingTemplate: boolean;
   setIsApplyingTemplate: React.Dispatch<React.SetStateAction<boolean>>;
   selectedParentIssue: ISearchIssueResponse | null;

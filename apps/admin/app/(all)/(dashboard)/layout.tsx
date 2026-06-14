@@ -38,11 +38,11 @@ function AdminLayout(_props: Route.ComponentProps) {
 
   if (isUserLoggedIn) {
     return (
-      <div className="relative flex h-dvh w-full min-w-0 overflow-hidden">
+      <div className="relative flex h-screen w-screen overflow-hidden">
         <AdminSidebar />
-        <main className="relative flex h-full w-full min-w-0 flex-col overflow-hidden bg-surface-1">
+        <main className="relative flex h-full w-full flex-col overflow-hidden bg-surface-1">
           <AdminHeader />
-          <div className="vertical-scrollbar scrollbar-md h-full w-full min-w-0 overflow-hidden overflow-y-scroll">
+          <div className="vertical-scrollbar scrollbar-md h-full w-full overflow-hidden overflow-y-scroll">
             <Outlet />
           </div>
         </main>

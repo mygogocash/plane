@@ -12,6 +12,84 @@ import type { TIssueLink } from "./issue_link";
 import type { TIssueReaction, IIssuePublicReaction, IPublicVote } from "./issue_reaction";
 import type { TIssueRelationTypes } from "./issue_relation";
 
+export type TIssuePropertyType =
+  | "text"
+  | "option"
+  | "number"
+  | "date"
+  | "select"
+  | "multi_select"
+  | "boolean"
+  | "member"
+  | "url";
+
+export type TIssuePropertyOption = {
+  id?: string;
+  name?: string;
+  label?: string;
+  value?: string;
+  sort_order?: number;
+  is_default?: boolean;
+};
+
+export type TIssuePropertySettings = {
+  options?: TIssuePropertyOption[];
+  [key: string]: unknown;
+};
+
+export type TIssuePropertyValue = string | number | boolean | string[] | null;
+
+export type TIssuePropertyValues = Record<string, TIssuePropertyValue>;
+
+export type TIssueProperty = {
+  id: string;
+  workspace_id: string;
+  issue_type: string;
+  name: string;
+  display_name: string;
+  description?: string;
+  property_type: TIssuePropertyType;
+  settings: TIssuePropertySettings;
+  is_multi?: boolean;
+  is_required: boolean;
+  default_value: TIssuePropertyValue;
+  sort_order: number;
+  is_active: boolean;
+  external_source?: string | null;
+  external_id?: string | null;
+};
+
+export type TWorkItemTemplateData = Partial<TIssue> & {
+  type?: string | null;
+  sub_items?: Partial<TIssue>[];
+  [key: string]: unknown;
+};
+
+export type TWorkItemTemplate = {
+  id: string;
+  project_id: string;
+  workspace_id: string;
+  name: string;
+  description_html: string;
+  template_data: TWorkItemTemplateData;
+  issue_type: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TWorkItemTemplatePayload = {
+  name: string;
+  description_html?: string;
+  template_data?: TWorkItemTemplateData;
+  issue_type?: string | null;
+  is_active?: boolean;
+};
+
+export type TIssueCreatePayload = Partial<TIssue> & {
+  template_id?: string | null;
+};
+
 export enum EIssueLayoutTypes {
   LIST = "list",
   KANBAN = "kanban",
@@ -96,6 +174,7 @@ export type TIssue = TBaseIssue & {
   issue_link?: TIssueLink[];
   issue_relation?: IssueRelation[];
   issue_related?: IssueRelation[];
+  property_values?: TIssuePropertyValues;
   // tempId is used for optimistic updates. It is not a part of the API response.
   tempId?: string;
   // sourceIssueId is used to store the original issue id when creating a copy of an issue. Used in cloning property values. It is not a part of the API response.

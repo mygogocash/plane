@@ -41,6 +41,8 @@ import type { IInstanceStore } from "./instance.store";
 import { InstanceStore } from "./instance.store";
 import type { IIssueRootStore } from "./issue/root.store";
 import { IssueRootStore } from "./issue/root.store";
+import type { IIssuePropertyStore } from "./issue-property.store";
+import { IssuePropertyStore } from "./issue-property.store";
 import type { ILabelStore } from "./label.store";
 import { LabelStore } from "./label.store";
 import type { IMemberRootStore } from "./member";
@@ -59,6 +61,8 @@ import type { IProjectRootStore } from "./project";
 import { ProjectRootStore } from "./project";
 import type { IProjectViewStore } from "./project-view.store";
 import { ProjectViewStore } from "./project-view.store";
+import type { IRecurringWorkItemStore } from "./recurring-work-item.store";
+import { RecurringWorkItemStore } from "./recurring-work-item.store";
 import type { IRouterStore } from "./router.store";
 import { RouterStore } from "./router.store";
 import type { IStickyStore } from "./sticky/sticky.store";
@@ -67,6 +71,10 @@ import type { IThemeStore } from "./theme.store";
 import { ThemeStore } from "./theme.store";
 import type { IUserStore } from "./user";
 import { UserStore } from "./user";
+import type { IWorkflowStore } from "./workflow.store";
+import { WorkflowStore } from "./workflow.store";
+import type { IWorkItemTemplateStore } from "./work-item-template.store";
+import { WorkItemTemplateStore } from "./work-item-template.store";
 import type { IWorkspaceRootStore } from "./workspace";
 
 enableStaticRendering(typeof window === "undefined");
@@ -82,6 +90,7 @@ export class CoreRootStore {
   projectView: IProjectViewStore;
   globalView: IGlobalViewStore;
   issue: IIssueRootStore;
+  issueProperty: IIssuePropertyStore;
   state: IStateStore;
   label: ILabelStore;
   dashboard: IDashboardStore;
@@ -101,6 +110,9 @@ export class CoreRootStore {
   editorAssetStore: IEditorAssetStore;
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
+  workflow: IWorkflowStore;
+  workItemTemplate: IWorkItemTemplateStore;
+  recurringWorkItem: IRecurringWorkItemStore;
 
   constructor() {
     this.router = new RouterStore();
@@ -118,6 +130,7 @@ export class CoreRootStore {
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this as unknown as RootStore);
+    this.issueProperty = new IssuePropertyStore(this);
     this.state = new StateStore(this as unknown as RootStore);
     this.label = new LabelStore(this);
     this.dashboard = new DashboardStore(this);
@@ -132,6 +145,9 @@ export class CoreRootStore {
     this.analytics = new AnalyticsStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
+    this.workflow = new WorkflowStore(this);
+    this.workItemTemplate = new WorkItemTemplateStore(this);
+    this.recurringWorkItem = new RecurringWorkItemStore(this);
   }
 
   resetOnSignOut() {
@@ -152,6 +168,7 @@ export class CoreRootStore {
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this as unknown as RootStore);
+    this.issueProperty = new IssuePropertyStore(this);
     this.state = new StateStore(this as unknown as RootStore);
     this.label = new LabelStore(this);
     this.dashboard = new DashboardStore(this);
@@ -165,5 +182,8 @@ export class CoreRootStore {
     this.editorAssetStore = new EditorAssetStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
+    this.workflow = new WorkflowStore(this);
+    this.workItemTemplate = new WorkItemTemplateStore(this);
+    this.recurringWorkItem = new RecurringWorkItemStore(this);
   }
 }

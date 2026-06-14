@@ -6,4 +6,5 @@
 
 export * from "./provider";
 export * from "./issue-type-select";
+export * from "./recurrence-section";
 export * from "./template-select";

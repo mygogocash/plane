@@ -17,6 +17,7 @@ import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { Input } from "@plane/ui";
 // components
+import { AIThinkingIndicator } from "@/components/core/modals/ai-thinking-indicator";
 import { RichTextEditor } from "@/components/editor/rich-text";
 // services
 import { AIService } from "@/services/ai.service";
@@ -214,12 +215,16 @@ export function GptAssistantPopover(props: Props) {
       >
         <Popover.Panel
           as="div"
-          className={`shadow fixed z-10 flex w-[min(50rem,calc(100vw-1rem))] max-w-full min-w-0 flex-col space-y-4 overflow-hidden rounded-[10px] border border-subtle bg-surface-1 p-4 ${className}`}
+          className={`shadow fixed z-10 flex flex-col space-y-4 overflow-hidden rounded-[10px] border border-subtle bg-surface-1 p-4 ${className}`}
           ref={setPopperElement as Ref<HTMLDivElement>}
-          style={styles.popper}
+          // Definite width set inline so it is never resolved against the `w-min`
+          // Popover parent (which previously collapsed the panel into a thin strip),
+          // and capped to the viewport so it stays usable on small screens.
+          style={{ ...styles.popper, width: "min(36rem, calc(100vw - 2rem))" }}
           {...attributes.popper}
         >
           <div className="vertical-scroll-enable max-h-72 space-y-4 overflow-y-auto">
+            {isSubmitting && <AIThinkingIndicator />}
             {prompt && (
               <div className="text-13">
                 Content:
@@ -271,6 +276,7 @@ export function GptAssistantPopover(props: Props) {
                   prompt && prompt !== "" ? "Tell AI what action to perform on this content..." : "Ask AI anything..."
                 }`}
                 className="w-full"
+                autoFocus
               />
             )}
           />

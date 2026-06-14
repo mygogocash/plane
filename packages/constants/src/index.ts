@@ -20,6 +20,7 @@ export * from "./graph";
 export * from "./icon";
 export * from "./instance";
 export * from "./intake";
+export * from "./initiative";
 export * from "./issue";
 export * from "./members";
 export * from "./label";

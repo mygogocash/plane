@@ -25,6 +25,8 @@ from plane.db.models import (
     Page,
     Project,
     ProjectMember,
+    Initiative,
+    StatusUpdate,
     WorkspaceMember,
     Workspace,
 )
@@ -58,6 +60,17 @@ class CopilotMessageSerializer(serializers.Serializer):
     mode = serializers.ChoiceField(choices=COPILOT_MODES, default="auto")
     project_id = serializers.UUIDField(required=False, allow_null=True)
     issue_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class CopilotQuerySerializer(serializers.Serializer):
+    scope = serializers.ChoiceField(choices=("epic", "initiative", "workspace"))
+    object_id = serializers.UUIDField(required=False, allow_null=True)
+    question = serializers.CharField(allow_blank=False, trim_whitespace=True)
+
+    def validate(self, attrs):
+        if attrs["scope"] in {"epic", "initiative"} and not attrs.get("object_id"):
+            raise serializers.ValidationError({"object_id": "object_id is required for scoped Copilot queries."})
+        return attrs
 
 
 class CopilotMessagesEndpoint(BaseAPIView):
@@ -190,6 +203,74 @@ class CopilotMessagesEndpoint(BaseAPIView):
                 "subtask_draft": _normalize_subtask_draft(llm_result.get("subtask_draft"), mode),
                 "actions": actions,
                 "action_results": action_results,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class CopilotQueryEndpoint(BaseAPIView):
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], level="WORKSPACE")
+    def post(self, request, slug):
+        serializer = CopilotQuerySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = serializer.validated_data
+        api_key, model, provider = get_llm_config()
+        if not is_llm_configured(api_key, model, provider):
+            return Response(
+                {
+                    "error": "ai_provider_not_configured",
+                    "message": "AI provider is not configured.",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        scope = payload["scope"]
+        object_id = payload.get("object_id")
+        question = payload["question"]
+        evidence_result = retrieve_copilot_query_evidence(
+            slug=slug,
+            user=request.user,
+            question=question,
+            scope=scope,
+            object_id=object_id,
+        )
+        if isinstance(evidence_result, Response):
+            return evidence_result
+
+        context = {
+            "workspace_slug": slug,
+            "scope": scope,
+            "object_id": str(object_id) if object_id else None,
+        }
+
+        try:
+            llm_result = call_copilot_llm(
+                api_key=api_key,
+                model=model,
+                provider=provider,
+                mode="answer",
+                message=question,
+                evidence=evidence_result,
+                context=context,
+            )
+        except Exception:
+            return Response(
+                {
+                    "error": "ai_unavailable",
+                    "message": "AI is temporarily unavailable.",
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        answer = llm_result.get("answer") if isinstance(llm_result, dict) else ""
+        summary = llm_result.get("summary") if isinstance(llm_result, dict) else ""
+        return Response(
+            {
+                "answer": answer or "",
+                "summary": summary or answer or "",
+                "evidence": evidence_result,
             },
             status=status.HTTP_200_OK,
         )
@@ -437,6 +518,131 @@ def retrieve_copilot_evidence(slug, user, message, project_id=None, issue_id=Non
         )
 
     return evidence
+
+
+def retrieve_copilot_query_evidence(slug, user, question, scope, object_id=None):
+    if scope == "workspace":
+        return retrieve_copilot_evidence(slug=slug, user=user, message=question)
+    if scope == "epic":
+        return _epic_query_evidence(slug=slug, user=user, epic_id=object_id)
+    if scope == "initiative":
+        return _initiative_query_evidence(slug=slug, user=user, initiative_id=object_id)
+    return Response({"error": "Unsupported Copilot query scope."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _epic_query_evidence(slug, user, epic_id):
+    project_ids = _readable_project_ids(slug, user)
+    epic = (
+        Issue.issue_objects.filter(
+            workspace__slug=slug,
+            project_id__in=project_ids,
+            id=epic_id,
+            type__is_epic=True,
+        )
+        .select_related("project", "state")
+        .first()
+    )
+    if epic is None:
+        if Issue.issue_objects.filter(workspace__slug=slug, id=epic_id, type__is_epic=True).exists():
+            return Response(
+                {"error": "You don't have the required permissions."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return Response({"error": "Epic not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    evidence = [_issue_evidence(epic, slug, entity_type="epic")]
+    evidence.extend(_status_update_evidence(slug=slug, user=user, epic=epic, initiative=None))
+    return evidence[:EVIDENCE_LIMIT]
+
+
+def _initiative_query_evidence(slug, user, initiative_id):
+    initiative = Initiative.objects.filter(workspace__slug=slug, id=initiative_id).select_related("lead").first()
+    if initiative is None:
+        return Response({"error": "Initiative not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    evidence = [_initiative_evidence(initiative, slug)]
+    evidence.extend(_status_update_evidence(slug=slug, user=user, epic=None, initiative=initiative))
+
+    remaining = EVIDENCE_LIMIT - len(evidence)
+    if remaining <= 0:
+        return evidence[:EVIDENCE_LIMIT]
+
+    project_ids = _readable_project_ids(slug, user)
+    epics = (
+        Issue.issue_objects.filter(
+            workspace__slug=slug,
+            initiative_memberships__initiative=initiative,
+            initiative_memberships__deleted_at__isnull=True,
+            project_id__in=project_ids,
+            type__is_epic=True,
+        )
+        .select_related("project", "state")
+        .order_by("-updated_at")
+        .distinct()[:remaining]
+    )
+    for epic in epics:
+        evidence.append(_issue_evidence(epic, slug, entity_type="epic"))
+
+    return evidence[:EVIDENCE_LIMIT]
+
+
+def _initiative_evidence(initiative, slug):
+    lead_name = initiative.lead.display_name if initiative.lead_id else None
+    source_text = " ".join(
+        filter(
+            None,
+            [
+                initiative.description_stripped or initiative.description_html,
+                f"State: {initiative.state}" if initiative.state else None,
+                f"Lead: {lead_name}" if lead_name else None,
+            ],
+        )
+    )
+    return _evidence(
+        entity_type="initiative",
+        entity_id=initiative.id,
+        title=initiative.name,
+        url=f"/{slug}/initiatives/{initiative.id}",
+        source_text=source_text,
+        extra={
+            "state": initiative.state,
+            "lead_id": str(initiative.lead_id) if initiative.lead_id else None,
+        },
+    )
+
+
+def _status_update_evidence(slug, user, epic=None, initiative=None):
+    queryset = StatusUpdate.objects.filter(workspace__slug=slug)
+    if epic is not None:
+        queryset = queryset.filter(epic=epic, epic__project_id__in=_readable_project_ids(slug, user))
+    elif initiative is not None:
+        queryset = queryset.filter(initiative=initiative)
+    else:
+        return []
+
+    return [
+        _evidence(
+            entity_type="status_update",
+            entity_id=status_update.id,
+            title=status_update.epic.name if status_update.epic_id else status_update.initiative.name,
+            url=_status_update_url(slug, status_update),
+            source_text=status_update.comment_stripped or status_update.comment_html,
+            extra={
+                "status": status_update.status,
+                "owner_type": "epic" if status_update.epic_id else "initiative",
+                "owner_id": str(status_update.epic_id or status_update.initiative_id),
+            },
+        )
+        for status_update in queryset.select_related("epic", "initiative", "actor").order_by("-created_at")[
+            : EVIDENCE_LIMIT - 1
+        ]
+    ]
+
+
+def _status_update_url(slug, status_update):
+    if status_update.epic_id:
+        return f"/{slug}/projects/{status_update.epic.project_id}/epics/{status_update.epic_id}"
+    return f"/{slug}/initiatives/{status_update.initiative_id}"
 
 
 def call_copilot_llm(api_key, model, provider, mode, message, evidence, context):

@@ -33,6 +33,22 @@ from .user.base import (
 
 
 from .base import BaseAPIView, BaseViewSet
+from .epic import EpicConvertEndpoint, EpicDuplicateEndpoint, EpicProgressEndpoint, EpicPropertyValuesEndpoint
+from .epic import EpicViewSet, EpicWorkItemsEndpoint
+from .epic import WorkItemConvertToEpicEndpoint
+from .initiative import (
+    InitiativeEpicMembersEndpoint,
+    InitiativeProgressEndpoint,
+    InitiativeProjectMembersEndpoint,
+    InitiativesSummaryEndpoint,
+    InitiativeViewSet,
+)
+from .status_update import (
+    EpicStatusUpdateReactionEndpoint,
+    EpicStatusUpdateViewSet,
+    InitiativeStatusUpdateReactionEndpoint,
+    InitiativeStatusUpdateViewSet,
+)
 
 from .workspace.base import (
     WorkSpaceViewSet,
@@ -84,6 +100,14 @@ from .workspace.quick_link import QuickLinkViewSet
 from .workspace.sticky import WorkspaceStickyViewSet
 
 from .state.base import StateViewSet, IntakeStateEndpoint
+from .workflow.base import (
+    ApprovalDecisionEndpoint,
+    IssueApprovalsEndpoint,
+    IssueStateTransitionEndpoint,
+    WorkflowConfigEndpoint,
+    WorkflowTransitionViewSet,
+)
+from .workflow.suggestion import SuggestedTransitionEndpoint
 from .view.base import (
     WorkspaceViewViewSet,
     WorkspaceViewIssuesViewSet,
@@ -144,6 +168,11 @@ from .issue.label import LabelViewSet, BulkCreateIssueLabelsEndpoint
 
 from .issue.link import IssueLinkViewSet
 
+from .issue.property import IssuePropertyOptionViewSet, IssuePropertyViewSet
+from .issue.recurring import RecurringWorkItemViewSet
+from .issue.similar import SimilarIssuesEndpoint
+from .issue.template import WorkItemTemplateViewSet
+
 from .issue.relation import IssueRelationViewSet
 
 from .issue.reaction import IssueReactionViewSet
@@ -184,7 +213,7 @@ from .external.base import (
     UnsplashEndpoint,
     WorkspaceGPTIntegrationEndpoint,
 )
-from .copilot import CopilotConversationsEndpoint, CopilotMessagesEndpoint
+from .copilot import CopilotConversationsEndpoint, CopilotMessagesEndpoint, CopilotQueryEndpoint
 from .estimate.base import (
     ProjectEstimatePointEndpoint,
     BulkEstimatePointEndpoint,

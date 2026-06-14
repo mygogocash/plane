@@ -16,12 +16,9 @@ import globalStyles from "@/styles/globals.css?url";
 import { AppProviders } from "@/providers";
 import type { Route } from "./+types/root";
 // fonts
-// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource-variable/inter";
 import interVariableWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
-// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource/material-symbols-rounded";
-// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource/ibm-plex-mono";
 
 const APP_TITLE = "Plane | Simple, extensible, open-source project management tool.";
@@ -77,7 +74,7 @@ export const meta: Route.MetaFunction = () => [
 
 export default function Root() {
   return (
-    <div className="min-h-dvh w-full overflow-x-hidden bg-canvas">
+    <div className="min-h-screen bg-canvas">
       <Outlet />
     </div>
   );

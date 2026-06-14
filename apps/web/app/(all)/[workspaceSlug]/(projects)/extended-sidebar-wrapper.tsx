@@ -8,7 +8,7 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 // plane imports
 import { EXTENDED_SIDEBAR_WIDTH, SIDEBAR_WIDTH } from "@plane/constants";
-import { useLocalStorage, useViewport } from "@plane/hooks";
+import { useLocalStorage } from "@plane/hooks";
 import { cn } from "@plane/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
@@ -18,7 +18,7 @@ import useExtendedSidebarOutsideClickDetector from "@/hooks/use-extended-sidebar
 type Props = {
   className?: string;
   children: React.ReactNode;
-  extendedSidebarRef: React.RefObject<HTMLDivElement>;
+  extendedSidebarRef: React.RefObject<HTMLDivElement | null>;
   isExtendedSidebarOpened: boolean;
   handleClose: () => void;
   excludedElementId: string;
@@ -30,7 +30,6 @@ export const ExtendedSidebarWrapper = observer(function ExtendedSidebarWrapper(p
   const { sidebarCollapsed } = useAppTheme();
   // local storage
   const { storedValue } = useLocalStorage("sidebarWidth", SIDEBAR_WIDTH);
-  const { isMobile } = useViewport();
 
   useExtendedSidebarOutsideClickDetector(extendedSidebarRef, handleClose, excludedElementId);
 
@@ -41,34 +40,23 @@ export const ExtendedSidebarWrapper = observer(function ExtendedSidebarWrapper(p
   }, [sidebarCollapsed, handleClose]);
 
   return (
-    <>
-      {isMobile && isExtendedSidebarOpened && (
-        <button
-          type="button"
-          aria-label="Close extended sidebar"
-          className="fixed inset-0 z-[20] bg-backdrop/40 md:hidden"
-          onClick={handleClose}
-        />
+    <div
+      id={excludedElementId}
+      ref={extendedSidebarRef}
+      className={cn(
+        "shadow-sm absolute z-[21] flex h-full transform flex-col border-r border-subtle bg-surface-1 p-4 py-2 transition-all duration-300 ease-in-out",
+        {
+          "opacity-100": isExtendedSidebarOpened,
+          "hidden opacity-0": !isExtendedSidebarOpened,
+        },
+        className
       )}
-      <div
-        id={excludedElementId}
-        ref={extendedSidebarRef}
-        className={cn(
-          "shadow-sm absolute z-[21] flex h-full transform flex-col border-r border-subtle bg-surface-1 p-4 py-2 transition-all duration-300 ease-in-out",
-          isMobile && "left-0! max-w-[calc(100vw-1rem)]",
-          {
-            "opacity-100": isExtendedSidebarOpened,
-            "hidden opacity-0": !isExtendedSidebarOpened,
-          },
-          className
-        )}
-        style={{
-          left: isMobile ? "0px" : `${storedValue ?? SIDEBAR_WIDTH}px`,
-          width: isMobile ? `min(86vw, ${EXTENDED_SIDEBAR_WIDTH}px)` : `${EXTENDED_SIDEBAR_WIDTH}px`,
-        }}
-      >
-        {children}
-      </div>
-    </>
+      style={{
+        left: `${storedValue ?? SIDEBAR_WIDTH}px`,
+        width: `${EXTENDED_SIDEBAR_WIDTH}px`,
+      }}
+    >
+      {children}
+    </div>
   );
 });

@@ -19,6 +19,20 @@ import type {
 } from "./view-props";
 import type { IWorkspaceLite } from "./workspace";
 
+export type {
+  TIssue,
+  TIssueProperty,
+  TIssuePropertyOption,
+  TIssuePropertySettings,
+  TIssuePropertyType,
+  TIssuePropertyValue,
+  TIssuePropertyValues,
+  TIssueCreatePayload,
+  TWorkItemTemplate,
+  TWorkItemTemplateData,
+  TWorkItemTemplatePayload,
+} from "./issues/issue";
+
 export interface IIssueCycle {
   id: string;
   cycle_detail: ICycle;

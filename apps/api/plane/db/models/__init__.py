@@ -80,7 +80,24 @@ from .workspace import (
 
 from .favorite import UserFavorite
 
-from .issue_type import IssueType
+from .issue_type import IssueType, ProjectIssueType
+
+from .issue_property import IssueProperty, IssuePropertyOption, IssuePropertyValue
+
+from .initiative import Initiative, InitiativeEpic, InitiativeProject, InitiativeLabel
+
+from .status_update import StatusUpdate, StatusUpdateReaction
+
+from .workflow import (
+    WorkflowTransition,
+    WorkflowTransitionActor,
+    WorkItemApproval,
+    WorkItemApprovalApprover,
+)
+
+from .recurring_work_item import RecurringWorkItem, RecurringWorkItemRun
+
+from .work_item_template import WorkItemTemplate
 
 from .recent_visit import UserRecentVisit
 

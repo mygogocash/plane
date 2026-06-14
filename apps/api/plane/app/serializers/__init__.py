@@ -44,6 +44,15 @@ from .project import (
     ProjectMemberPreferenceSerializer,
 )
 from .state import StateSerializer, StateLiteSerializer
+from .workflow import (
+    WorkflowTransitionSerializer,
+    WorkflowTransitionActorSerializer,
+    WorkItemApprovalSerializer,
+    WorkItemApprovalApproverSerializer,
+)
+from .issue_property import IssuePropertyOptionSerializer, IssuePropertySerializer
+from .recurring_work_item import RecurringWorkItemRunSerializer, RecurringWorkItemSerializer
+from .work_item_template import WorkItemTemplateSerializer
 from .view import IssueViewSerializer, ViewIssueListSerializer
 from .cycle import (
     CycleSerializer,
@@ -81,6 +90,11 @@ from .issue import (
     IssueDescriptionVersionDetailSerializer,
     IssueListDetailSerializer,
 )
+from .epic import EpicSerializer, EpicWriteSerializer
+
+from .initiative import InitiativeSerializer
+
+from .status_update import StatusUpdateReactionSerializer, StatusUpdateSerializer
 
 from .module import (
     ModuleDetailSerializer,

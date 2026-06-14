@@ -42,7 +42,7 @@ export const CalendarIssueBlock = observer(
     // states
     const [isMenuActive, setIsMenuActive] = useState(false);
     // refs
-    const blockRef = useRef(null);
+    const blockRef = useRef<HTMLDivElement>(null);
     const menuActionRef = useRef<HTMLDivElement | null>(null);
     // hooks
     const { workspaceSlug } = useParams();

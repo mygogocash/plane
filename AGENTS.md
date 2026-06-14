@@ -1,36 +1,76 @@
 # Agent Development Guide
 
-## Commands
+This file is the always-loaded entrypoint for AI coding agents. Keep it short. Load the domain files below only when the task touches that area.
 
-- `pnpm dev` - Start all dev servers (web:3000, admin:3001)
-- `pnpm build` - Build all packages and apps
-- `pnpm check` - Run all checks (format, lint, types)
-- `pnpm check:lint` - OxLint across all packages
-- `pnpm check:types` - TypeScript type checking
-- `pnpm fix` - Auto-fix format and lint issues
-- `pnpm turbo run <command> --filter=<package>` - Target specific package/app
-- `pnpm --filter=@plane/ui storybook` - Start Storybook on port 6006
+## Read Next
 
-## Code Style
+- [ARCHITECTURE.md](ARCHITECTURE.md) - system map, ownership boundaries, data flow, and security posture.
+- [TESTING.md](TESTING.md) - TDD expectations, frontend checks, backend Docker pytest flow, and smoke testing.
+- [TYPESCRIPT.md](TYPESCRIPT.md) - TypeScript, React, MobX, imports, formatting, and linting rules.
+- [PYTHON.md](PYTHON.md) - Django API, DRF contracts, Ruff, migrations, and backend service rules.
+- [BUILD.md](BUILD.md) - install, dev, build, environment, Docker, and deployment notes.
+- [SKILLS.md](SKILLS.md) - on-demand workflows for PRs, release notes, branch names, and translation.
+- [spec.md](spec.md) - current feature spec. Verify the task scope before replacing it.
 
-- **Imports**: Use `workspace:*` for internal packages, `catalog:` for external deps
-- **TypeScript**: Strict mode enabled, all files must be typed
-- **Formatting**: oxfmt, run `pnpm fix:format`
-- **Linting**: OxLint with shared `.oxlintrc.json` config
-- **Naming**: camelCase for variables/functions, PascalCase for components/types
-- **Error Handling**: Use try-catch with proper error types, log errors appropriately
-- **State Management**: MobX stores in `packages/shared-state`, reactive patterns
-- **Testing**: All features require unit tests, use existing test framework per package
-- **Components**: Build in `@plane/ui` with Storybook for isolated development
+Also check nested `AGENTS.md` files before editing inside a package. Today this repo has `packages/tailwind-config/AGENTS.md`.
 
-## Backend tests (Docker)
+## Workspace Facts
 
-The Django/pytest suite for `apps/api` runs in an isolated stack defined by `docker-compose-test.yml` at the repo root.
+- Plane is a monorepo with React Router web apps, shared TypeScript packages, and a Django API.
+- `apps/api` is intentionally excluded from the pnpm workspace and uses its own Python/Docker test flow.
+- This local checkout may not contain `.git`. Do not claim a commit or push from this directory unless `git status` succeeds. If publishing is required, use a real clone or ask for the intended publish path.
+- Use `pnpm`, not `npm` or `yarn`.
+- Runtime baseline: Node `>=22.18.0`, pnpm `11.3.0`.
 
-Prereq (once): `./setup.sh` — generates `apps/api/.env` from `.env.example`.
+## Common Commands
 
-- Full suite: `docker compose -f docker-compose-test.yml up --build --abort-on-container-exit --exit-code-from api-tests`
-- Subset: `docker compose -f docker-compose-test.yml run --rm api-tests pytest -m unit`
-- Teardown: `docker compose -f docker-compose-test.yml down -v`
+```bash
+pnpm install
+pnpm dev
+pnpm build
+pnpm check
+pnpm check:format
+pnpm check:lint
+pnpm check:types
+pnpm fix
+pnpm turbo run <command> --filter=<package>
+pnpm --filter=@plane/ui storybook
+```
 
-See `apps/api/tests/RUNNING_TESTS.md` for the full walkthrough and troubleshooting; see `apps/api/tests/TESTING_GUIDE.md` for test conventions and fixtures.
+Backend tests run through the isolated Docker stack:
+
+```bash
+./setup.sh
+docker compose -f docker-compose-test.yml up --build --abort-on-container-exit --exit-code-from api-tests
+docker compose -f docker-compose-test.yml run --rm --build api-tests pytest -m unit
+docker compose -f docker-compose-test.yml down -v
+```
+
+## Code Boundaries
+
+- Do not edit generated or dependency output: `node_modules/`, `.turbo/`, `.react-router/`, `.next/`, `.vite/`, `dist/`, `build/`, `coverage/`, `storybook-static/`.
+- Do not print, commit, or hardcode secrets. If an environment variable changes, update the relevant `.env.example` and documentation.
+- Do not modify deployment assets under `deployments/` or `k8s/` unless the task is explicitly infrastructure or release related.
+- Keep user-facing strings in the i18n system when the surrounding code already uses it. Load the translate skill before editing `packages/i18n/src/locales/**`.
+- Prefer existing shared packages before adding local one-off helpers: `@plane/ui`, `@plane/services`, `@plane/shared-state`, `@plane/types`, `@plane/utils`, and `@plane/constants`.
+
+## Engineering Workflow
+
+- Start with discovery: inspect the target files, package scripts, tests, and current runtime behavior.
+- For nontrivial code changes, update or create an appropriate spec before implementation. If `spec.md` already belongs to another active task, create a scoped spec under `docs/` instead of overwriting it.
+- Use TDD for behavior changes: write the smallest failing test, implement the minimum fix, then refactor.
+- Keep changes scoped to the request. Avoid unrelated cleanup.
+- For UI work, verify in a browser against the relevant local surface and capture the actual behavior.
+- For backend/API work, prove permissions, validation, and rollback behavior with contract or unit tests.
+- For Python backend work, load [PYTHON.md](PYTHON.md) before changing `apps/api/**`.
+
+## Completion Gates
+
+Choose the narrowest meaningful checks while working, then run the broader gate when the change warrants it:
+
+```bash
+pnpm check
+docker compose -f docker-compose-test.yml run --rm --build api-tests pytest -m unit
+```
+
+For docs-only changes, at minimum inspect the rendered links/paths and avoid claiming full code validation.

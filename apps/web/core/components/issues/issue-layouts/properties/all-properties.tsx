@@ -46,6 +46,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { WorkItemLayoutAdditionalProperties } from "@/plane-web/components/issues/issue-layouts/additional-properties";
 // local components
 import { IssuePropertyLabels } from "./labels";
+import { IssueRecurrenceBadge } from "./recurrence-badge";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
 
 export interface IIssueProperties {
@@ -57,6 +58,18 @@ export interface IIssueProperties {
   activeLayout: string;
   isEpic?: boolean;
 }
+
+const handleEventPropagation = (e: SyntheticEvent<HTMLElement>) => {
+  e.stopPropagation();
+  e.preventDefault();
+};
+
+const eventBoundaryProps = {
+  role: "presentation",
+  onFocus: handleEventPropagation,
+  onClick: handleEventPropagation,
+  onKeyDown: handleEventPropagation,
+} as const;
 
 export const IssueProperties = observer(function IssueProperties(props: IIssueProperties) {
   const { issue, updateIssue, displayProperties, isReadOnly, className, isEpic = false } = props;
@@ -186,17 +199,12 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const minDate = getDate(issue.start_date);
   const maxDate = getDate(issue.target_date);
 
-  const handleEventPropagation = (e: SyntheticEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
   return (
     <div className={className}>
       {/* basic properties */}
       {/* state */}
       <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="state">
-        <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+        <div className="h-5" {...eventBoundaryProps}>
           <StateDropdown
             buttonContainerClassName="truncate max-w-40"
             value={issue.state_id}
@@ -212,7 +220,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
 
       {/* priority */}
       <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="priority">
-        <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+        <div className="h-5" {...eventBoundaryProps}>
           <PriorityDropdown
             value={issue?.priority}
             onChange={handlePriority}
@@ -230,7 +238,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
         displayPropertyKey={["start_date", "due_date"]}
         shouldRenderProperty={() => isDateRangeEnabled}
       >
-        <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+        <div className="h-5" {...eventBoundaryProps}>
           <DateRangeDropdown
             value={{
               from: getDate(issue.start_date) || undefined,
@@ -265,7 +273,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
         displayPropertyKey="start_date"
         shouldRenderProperty={() => !isDateRangeEnabled}
       >
-        <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+        <div className="h-5" {...eventBoundaryProps}>
           <DateDropdown
             value={issue.start_date ?? null}
             onChange={handleStartDate}
@@ -288,7 +296,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
         displayPropertyKey="due_date"
         shouldRenderProperty={() => !isDateRangeEnabled}
       >
-        <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+        <div className="h-5" {...eventBoundaryProps}>
           <DateDropdown
             value={issue?.target_date ?? null}
             onChange={handleTargetDate}
@@ -311,7 +319,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
 
       {/* assignee */}
       <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="assignee">
-        <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+        <div className="h-5" {...eventBoundaryProps}>
           <MemberDropdown
             projectId={issue?.project_id}
             value={issue?.assignee_ids}
@@ -335,7 +343,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             {/* modules */}
             {projectDetails?.module_view && (
               <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="modules">
-                <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+                <div className="h-5" {...eventBoundaryProps}>
                   <ModuleDropdown
                     buttonContainerClassName="truncate max-w-40"
                     projectId={issue?.project_id}
@@ -355,7 +363,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             {/* cycles */}
             {projectDetails?.cycle_view && (
               <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="cycle">
-                <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+                <div className="h-5" {...eventBoundaryProps}>
                   <CycleDropdown
                     buttonContainerClassName="truncate max-w-40"
                     projectId={issue?.project_id}
@@ -376,7 +384,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
       {/* estimates */}
       {projectId && areEstimateEnabledByProjectId(projectId?.toString()) && (
         <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="estimate">
-          <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+          <div className="h-5" {...eventBoundaryProps}>
             <EstimateDropdown
               value={issue.estimate_point ?? undefined}
               onChange={handleEstimate}
@@ -404,7 +412,8 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             isMobile={isMobile}
             renderByDefault={false}
           >
-            <div
+            <button
+              type="button"
               onFocus={handleEventPropagation}
               onClick={(e) => {
                 e.stopPropagation();
@@ -420,7 +429,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             >
               <ViewsIcon className="h-3 w-3 flex-shrink-0" strokeWidth={2} />
               <div className="text-caption-sm-regular">{subIssueCount}</div>
-            </div>
+            </button>
           </Tooltip>
         </WithDisplayPropertiesHOC>
       )}
@@ -439,8 +448,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
         >
           <div
             className="flex h-5 flex-shrink-0 items-center justify-center gap-2 overflow-hidden rounded-sm border-[0.5px] border-strong px-2.5 py-1"
-            onFocus={handleEventPropagation}
-            onClick={handleEventPropagation}
+            {...eventBoundaryProps}
           >
             <Paperclip className="h-3 w-3 flex-shrink-0" strokeWidth={2} />
             <div className="text-caption-sm-regular">{issue.attachment_count}</div>
@@ -462,14 +470,16 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
         >
           <div
             className="flex h-5 flex-shrink-0 items-center justify-center gap-2 overflow-hidden rounded-sm border-[0.5px] border-strong px-2.5 py-1"
-            onFocus={handleEventPropagation}
-            onClick={handleEventPropagation}
+            {...eventBoundaryProps}
           >
             <LinkIcon className="h-3 w-3 flex-shrink-0" strokeWidth={2} />
             <div className="text-caption-sm-regular">{issue.link_count}</div>
           </div>
         </Tooltip>
       </WithDisplayPropertiesHOC>
+
+      {/* Additional Properties */}
+      <IssueRecurrenceBadge issue={issue} />
 
       {/* Additional Properties */}
       <WorkItemLayoutAdditionalProperties displayProperties={displayProperties} issue={issue} />

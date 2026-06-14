@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Script from "next/script";
 import { Links, Meta, Outlet, Scripts } from "react-router";
 import type { LinksFunction } from "react-router";
@@ -28,12 +28,9 @@ import { LogoSpinner } from "@/components/common/logo-spinner";
 import { CustomErrorComponent } from "./error";
 import { AppProvider } from "./provider";
 // fonts
-// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource-variable/inter";
 import interVariableWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
-// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource/material-symbols-rounded";
-// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource/ibm-plex-mono";
 
 const APP_TITLE = "Plane | Simple, extensible, open-source project management tool.";
@@ -126,13 +123,8 @@ export const meta: Route.MetaFunction = () => [
 export default function Root() {
   return (
     <AppProvider>
-      <div
-        className={cn(
-          "relative flex h-dvh w-full flex-col overflow-hidden overflow-x-hidden bg-canvas",
-          "desktop-app-container"
-        )}
-      >
-        <main className="relative h-full w-full min-w-0 overflow-hidden">
+      <div className={cn("relative flex h-screen w-full flex-col overflow-hidden bg-canvas", "desktop-app-container")}>
+        <main className="relative h-full w-full overflow-hidden">
           <Outlet />
         </main>
       </div>
@@ -142,17 +134,12 @@ export default function Root() {
 
 export function HydrateFallback() {
   const { resolvedTheme } = useTheme();
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
 
   // if we are on the server or the theme is not resolved, return an empty div
-  if (!hasMounted || resolvedTheme === undefined) return <div />;
+  if (typeof window === "undefined" || resolvedTheme === undefined) return <div />;
 
   return (
-    <div className="relative flex h-dvh w-full items-center justify-center bg-canvas">
+    <div className="relative flex h-screen w-full items-center justify-center bg-canvas">
       <LogoSpinner />
     </div>
   );

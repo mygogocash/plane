@@ -26,7 +26,7 @@ type Props = {
 export const ProjectViewListItem = observer(function ProjectViewListItem(props: Props) {
   const { view } = props;
   // refs
-  const parentRef = useRef(null);
+  const parentRef = useRef<HTMLDivElement>(null);
   // router
   const { workspaceSlug, projectId } = useParams();
   // store hooks

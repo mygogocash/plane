@@ -1,2 +1,4 @@
-export type TIssuePropertyValues = object;
-export type TIssuePropertyValueErrors = object;
+import type { TIssuePropertyValues } from "@plane/types";
+
+export type { TIssuePropertyValues };
+export type TIssuePropertyValueErrors = Record<string, string | string[]>;

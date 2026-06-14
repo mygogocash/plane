@@ -29,6 +29,7 @@ import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
+import { AiSuggestionChip, ApprovalBanner } from "@/components/workflows";
 // hooks
 import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -100,8 +101,20 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                 buttonClassName="text-body-xs-regular"
                 dropdownArrow
                 dropdownArrowClassName="h-3.5 w-3.5 hidden group-hover:inline"
+                filterAvailableStateIds
+                issueTypeId={issue.type_id}
               />
             </SidebarPropertyListItem>
+            <div className="space-y-2 pl-9 whitespace-normal">
+              <ApprovalBanner workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
+              <AiSuggestionChip
+                workspaceSlug={workspaceSlug}
+                projectId={projectId}
+                issueId={issueId}
+                fromStateId={issue.state_id}
+                disabled={!isEditable}
+              />
+            </div>
 
             <SidebarPropertyListItem icon={MembersPropertyIcon} label={t("common.assignees")}>
               <MemberDropdown

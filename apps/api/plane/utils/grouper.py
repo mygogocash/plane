@@ -124,6 +124,7 @@ def issue_on_results(
         "updated_by",
         "attachment_count",
         "link_count",
+        "is_recurring",
         "is_draft",
         "archived_at",
         "state__group",

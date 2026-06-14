@@ -2,7 +2,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 
+# Python imports
+import json
+
 # Django imports
+from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
@@ -42,11 +46,14 @@ from plane.db.models import (
     IssueDescriptionVersion,
     ProjectMember,
     EstimatePoint,
+    IssueProperty,
+    IssuePropertyValue,
 )
 from plane.utils.content_validator import (
     validate_html_content,
     validate_binary_data,
 )
+from plane.utils.html_processor import strip_tags
 
 
 class IssueFlatSerializer(BaseSerializer):
@@ -99,6 +106,7 @@ class IssueCreateSerializer(BaseSerializer):
     )
     project_id = serializers.UUIDField(source="project.id", read_only=True)
     workspace_id = serializers.UUIDField(source="workspace.id", read_only=True)
+    property_values = serializers.DictField(child=serializers.JSONField(), write_only=True, required=False)
 
     class Meta:
         model = Issue
@@ -194,11 +202,128 @@ class IssueCreateSerializer(BaseSerializer):
         ):
             raise serializers.ValidationError("Estimate point is not valid please pass a valid estimate_point_id")
 
+        self._validate_property_values(attrs)
+
         return attrs
+
+    def _issue_type_from_attrs(self, attrs):
+        if attrs.get("type"):
+            return attrs["type"]
+        if self.instance:
+            return self.instance.type
+        return None
+
+    def _normalize_property_value(self, issue_property, value):
+        if value is None:
+            return None
+        if issue_property.property_type in [
+            IssueProperty.PropertyType.TEXT,
+            IssueProperty.PropertyType.URL,
+        ] and isinstance(value, str):
+            return strip_tags(value)
+        return value
+
+    def _validate_property_values(self, attrs):
+        property_values = attrs.get("property_values")
+        issue_type = self._issue_type_from_attrs(attrs)
+
+        if property_values is None:
+            property_values = {}
+
+        if property_values and issue_type is None:
+            raise serializers.ValidationError({"property_values": "issue_type_required"})
+
+        errors = {}
+        normalized = {}
+        if property_values:
+            property_ids = [str(property_id) for property_id in property_values]
+            properties = {
+                str(issue_property.id): issue_property
+                for issue_property in IssueProperty.objects.filter(id__in=property_ids, is_active=True)
+            }
+
+            for property_id, value in property_values.items():
+                property_key = str(property_id)
+                issue_property = properties.get(property_key)
+                if issue_property is None:
+                    errors[property_key] = "property_not_found"
+                    continue
+                if issue_property.issue_type_id != issue_type.id:
+                    errors[property_key] = "property_not_for_type"
+                    continue
+                normalized[property_key] = self._normalize_property_value(issue_property, value)
+
+        if issue_type is not None and self.instance is None:
+            missing_required = [
+                issue_property.name
+                for issue_property in IssueProperty.objects.filter(
+                    issue_type=issue_type,
+                    is_active=True,
+                    is_required=True,
+                )
+                if str(issue_property.id) not in normalized
+            ]
+            if missing_required:
+                errors["missing_required"] = missing_required
+
+        if errors:
+            raise serializers.ValidationError({"property_values": errors})
+
+        if "property_values" in attrs:
+            attrs["property_values"] = normalized
+
+    def _json_value(self, value):
+        return json.dumps(value, cls=DjangoJSONEncoder) if value is not None else None
+
+    def _record_property_value_activity(self, issue, issue_property, actor, old_value, new_value):
+        if actor is None or old_value == new_value:
+            return
+
+        IssueActivity.objects.create(
+            issue=issue,
+            project=issue.project,
+            workspace=issue.workspace,
+            actor=actor,
+            verb="updated",
+            field="property_values",
+            old_value=self._json_value(old_value),
+            new_value=self._json_value(new_value),
+            new_identifier=issue_property.id,
+            comment=f"updated {issue_property.display_name}",
+            epoch=int(timezone.now().timestamp()),
+        )
+
+    def _sync_property_values(self, issue, property_values):
+        if property_values is None:
+            return
+
+        actor = self.context.get("actor")
+        properties = {
+            str(issue_property.id): issue_property
+            for issue_property in IssueProperty.objects.filter(id__in=property_values.keys())
+        }
+        for property_id, value in property_values.items():
+            issue_property = properties[str(property_id)]
+            property_value = IssuePropertyValue.objects.filter(issue=issue, property=issue_property).first()
+            old_value = property_value.value if property_value else None
+            if property_value is None:
+                property_value = IssuePropertyValue(
+                    project=issue.project,
+                    issue=issue,
+                    property=issue_property,
+                    value=value,
+                )
+            else:
+                property_value.project = issue.project
+                property_value.value = value
+                property_value.updated_by = actor
+            property_value.save()
+            self._record_property_value_activity(issue, issue_property, actor, old_value, value)
 
     def create(self, validated_data):
         assignees = validated_data.pop("assignee_ids", None)
         labels = validated_data.pop("label_ids", None)
+        property_values = validated_data.pop("property_values", None)
 
         project_id = self.context["project_id"]
         workspace_id = self.context["workspace_id"]
@@ -271,11 +396,14 @@ class IssueCreateSerializer(BaseSerializer):
             except IntegrityError:
                 pass
 
+        self._sync_property_values(issue, property_values)
+
         return issue
 
     def update(self, instance, validated_data):
         assignees = validated_data.pop("assignee_ids", None)
         labels = validated_data.pop("label_ids", None)
+        property_values = validated_data.pop("property_values", None)
 
         # Related models
         project_id = instance.project_id
@@ -327,7 +455,9 @@ class IssueCreateSerializer(BaseSerializer):
 
         # Time updation occues even when other related models are updated
         instance.updated_at = timezone.now()
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        self._sync_property_values(instance, property_values)
+        return instance
 
 
 class IssueActivitySerializer(BaseSerializer):
@@ -771,6 +901,8 @@ class IssueSerializer(DynamicBaseSerializer):
     sub_issues_count = serializers.IntegerField(read_only=True)
     attachment_count = serializers.IntegerField(read_only=True)
     link_count = serializers.IntegerField(read_only=True)
+    is_recurring = serializers.SerializerMethodField()
+    property_values = serializers.SerializerMethodField()
 
     class Meta:
         model = Issue
@@ -798,10 +930,21 @@ class IssueSerializer(DynamicBaseSerializer):
             "updated_by",
             "attachment_count",
             "link_count",
+            "is_recurring",
             "is_draft",
             "archived_at",
+            "property_values",
         ]
         read_only_fields = fields
+
+    def get_property_values(self, obj):
+        return {str(value.property_id): value.value for value in obj.property_values.all()}
+
+    def get_is_recurring(self, obj):
+        annotated_value = getattr(obj, "is_recurring", None)
+        if annotated_value is not None:
+            return bool(annotated_value)
+        return obj.recurring_runs.filter(deleted_at__isnull=True).exists()
 
     def validate(self, data):
         if (
@@ -858,6 +1001,7 @@ class IssueListDetailSerializer(serializers.Serializer):
             "sub_issues_count": instance.sub_issues_count,
             "attachment_count": instance.attachment_count,
             "link_count": instance.link_count,
+            "is_recurring": bool(getattr(instance, "is_recurring", False)),
         }
 
         # Handle expanded fields only when requested - using direct field access

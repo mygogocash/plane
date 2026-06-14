@@ -29,7 +29,7 @@ type Props = {
 export const ModuleListItem = observer(function ModuleListItem(props: Props) {
   const { moduleId } = props;
   // refs
-  const parentRef = useRef(null);
+  const parentRef = useRef<HTMLDivElement>(null);
   // router
   const router = useAppRouter();
   const { workspaceSlug, projectId } = useParams();

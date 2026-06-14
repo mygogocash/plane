@@ -6,6 +6,15 @@
       "name": "Nom"
     }
   },
+  "project_initiatives": {
+    "status": {
+      "draft": "Draft",
+      "planned": "Planned",
+      "active": "Active",
+      "completed": "Completed",
+      "closed": "Closed"
+    }
+  },
   "project_cycles": {
     "add_cycle": "Ajouter un cycle",
     "more_details": "Plus de détails",

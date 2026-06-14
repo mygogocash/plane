@@ -63,7 +63,7 @@ export const WidgetItem = observer(function WidgetItem(props: Props) {
     return combine(
       draggable({
         element,
-        dragHandle: elementRef.current,
+        dragHandle: elementRef.current ?? undefined,
         getInitialData: () => initialData,
         onDragStart: () => {
           setIsDragging(true);

@@ -4,7 +4,9 @@
 
 from .asset import urlpatterns as asset_patterns
 from .cycle import urlpatterns as cycle_patterns
+from .epic import urlpatterns as epic_patterns
 from .intake import urlpatterns as intake_patterns
+from .initiative import urlpatterns as initiative_patterns
 from .label import urlpatterns as label_patterns
 from .member import urlpatterns as member_patterns
 from .module import urlpatterns as module_patterns
@@ -14,11 +16,14 @@ from .user import urlpatterns as user_patterns
 from .work_item import urlpatterns as work_item_patterns
 from .invite import urlpatterns as invite_patterns
 from .sticky import urlpatterns as sticky_patterns
+from .workflow import urlpatterns as workflow_patterns
 
 urlpatterns = [
     *asset_patterns,
     *cycle_patterns,
+    *epic_patterns,
     *intake_patterns,
+    *initiative_patterns,
     *label_patterns,
     *member_patterns,
     *module_patterns,
@@ -28,4 +33,5 @@ urlpatterns = [
     *work_item_patterns,
     *invite_patterns,
     *sticky_patterns,
+    *workflow_patterns,
 ]

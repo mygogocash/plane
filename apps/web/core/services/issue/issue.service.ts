@@ -12,6 +12,7 @@ import type {
   IIssueDisplayProperties,
   TBulkOperationsPayload,
   TIssue,
+  TIssueCreatePayload,
   TIssueActivity,
   TIssueLink,
   TIssueServiceType,
@@ -29,8 +30,13 @@ export class IssueService extends APIService {
     this.serviceType = serviceType;
   }
 
-  async createIssue(workspaceSlug: string, projectId: string, data: Partial<TIssue>): Promise<TIssue> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/${this.serviceType}/`, data)
+  async createIssue(workspaceSlug: string, projectId: string, data: TIssueCreatePayload): Promise<TIssue> {
+    const { template_id, ...payload } = data;
+    const templateQuery = template_id ? `?template_id=${template_id}` : "";
+    return this.post(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/${this.serviceType}/${templateQuery}`,
+      payload
+    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

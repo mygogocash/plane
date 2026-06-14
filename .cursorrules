@@ -1,0 +1,12 @@
+# Cursor Rules
+
+Read [AGENTS.md](AGENTS.md) first. It routes agents to the smaller domain files that keep context focused:
+
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [TESTING.md](TESTING.md)
+- [TYPESCRIPT.md](TYPESCRIPT.md)
+- [PYTHON.md](PYTHON.md)
+- [BUILD.md](BUILD.md)
+- [SKILLS.md](SKILLS.md)
+
+Use pnpm and Turbo for the TypeScript workspace. Use the Docker pytest flow for `apps/api`. Do not edit generated output, dependency directories, or secrets.

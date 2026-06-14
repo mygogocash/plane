@@ -31,6 +31,11 @@ from plane.app.views import (
     WorkItemDescriptionVersionEndpoint,
     IssueMetaEndpoint,
     IssueDetailIdentifierEndpoint,
+    IssuePropertyOptionViewSet,
+    IssuePropertyViewSet,
+    RecurringWorkItemViewSet,
+    SimilarIssuesEndpoint,
+    WorkItemTemplateViewSet,
 )
 
 urlpatterns = [
@@ -43,6 +48,11 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/",
         IssueViewSet.as_view({"get": "list", "post": "create"}),
         name="project-issue",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/similar/",
+        SimilarIssuesEndpoint.as_view(),
+        name="project-similar-issues",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues-detail/",
@@ -67,6 +77,64 @@ urlpatterns = [
             }
         ),
         name="project-issue",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-types/<uuid:type_id>/properties/",
+        IssuePropertyViewSet.as_view({"get": "list", "post": "create"}),
+        name="issue-type-properties",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-types/<uuid:type_id>/properties/<uuid:pk>/",
+        IssuePropertyViewSet.as_view(
+            {
+                "get": "retrieve",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="issue-type-properties",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-types/<uuid:type_id>/properties/<uuid:property_id>/options/",
+        IssuePropertyOptionViewSet.as_view({"get": "list", "post": "create"}),
+        name="issue-type-property-options",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/work-item-templates/",
+        WorkItemTemplateViewSet.as_view({"get": "list", "post": "create"}),
+        name="work-item-templates",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/work-item-templates/<uuid:pk>/",
+        WorkItemTemplateViewSet.as_view(
+            {
+                "get": "retrieve",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="work-item-templates",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/recurring-work-items/",
+        RecurringWorkItemViewSet.as_view({"get": "list", "post": "create"}),
+        name="recurring-work-items",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/recurring-work-items/<uuid:pk>/",
+        RecurringWorkItemViewSet.as_view(
+            {
+                "get": "retrieve",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="recurring-work-items",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/recurring-work-items/<uuid:pk>/runs/",
+        RecurringWorkItemViewSet.as_view({"get": "runs"}),
+        name="recurring-work-item-runs",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issue-labels/",

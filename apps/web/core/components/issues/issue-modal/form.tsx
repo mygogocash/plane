@@ -46,7 +46,11 @@ import { useProjectIssueProperties } from "@/hooks/use-project-issue-properties"
 // plane web imports
 import { DeDupeButtonRoot } from "@/plane-web/components/de-dupe/de-dupe-button";
 import { DuplicateModalRoot } from "@/plane-web/components/de-dupe/duplicate-modal";
-import { IssueTypeSelect, WorkItemTemplateSelect } from "@/plane-web/components/issues/issue-modal";
+import {
+  IssueTypeSelect,
+  RecurringWorkItemModalSection,
+  WorkItemTemplateSelect,
+} from "@/plane-web/components/issues/issue-modal";
 import { WorkItemModalAdditionalProperties } from "@/plane-web/components/issues/issue-modal/modal-additional-properties";
 import { useDebouncedDuplicateIssues } from "@/plane-web/hooks/use-debounced-duplicate-issues";
 
@@ -69,6 +73,8 @@ export interface IssueFormProps {
   };
   isDuplicateModalOpen: boolean;
   handleDuplicateIssueModal: (isOpen: boolean) => void;
+  queuedDuplicateIssueIds?: string[];
+  onQueueDuplicateIssue?: (issueId: string) => void;
   handleDraftAndClose?: () => void;
   isProjectSelectionDisabled?: boolean;
   showActionButtons?: boolean;
@@ -96,6 +102,8 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     },
     isDuplicateModalOpen,
     handleDuplicateIssueModal,
+    queuedDuplicateIssueIds = [],
+    onQueueDuplicateIssue,
     handleDraftAndClose,
     isProjectSelectionDisabled = false,
     showActionButtons = true,
@@ -251,29 +259,28 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     // this condition helps to move the issues from draft to project issues
     if (formData.hasOwnProperty("is_draft")) submitData.is_draft = formData.is_draft;
 
-    await onSubmit(submitData, is_draft_issue)
-      .then(() => {
-        setGptAssistantModal(false);
-        if (isCreateMoreToggleEnabled && workItemTemplateId) {
-          handleTemplateChange({
-            workspaceSlug: workspaceSlug?.toString(),
-            reset,
-            editorRef,
-          });
-        } else {
-          reset({
-            ...DEFAULT_WORK_ITEM_FORM_VALUES,
-            ...(isCreateMoreToggleEnabled ? { ...data } : {}),
-            project_id: getValues<"project_id">("project_id"),
-            type_id: getValues<"type_id">("type_id"),
-            description_html: data?.description_html ?? "<p></p>",
-          });
-          editorRef?.current?.clearEditor();
-        }
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    try {
+      await onSubmit(submitData, is_draft_issue);
+      setGptAssistantModal(false);
+      if (isCreateMoreToggleEnabled && workItemTemplateId) {
+        handleTemplateChange({
+          workspaceSlug: workspaceSlug?.toString(),
+          reset,
+          editorRef,
+        });
+      } else {
+        reset({
+          ...DEFAULT_WORK_ITEM_FORM_VALUES,
+          ...(isCreateMoreToggleEnabled ? { ...data } : {}),
+          project_id: getValues<"project_id">("project_id"),
+          type_id: getValues<"type_id">("type_id"),
+          description_html: data?.description_html ?? "<p></p>",
+        });
+        editorRef?.current?.clearEditor();
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleMoveToProjects = async () => {
@@ -334,15 +341,15 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     const issue = getIssueById(parentId);
     if (!issue) return;
 
-    const projectDetails = getProjectById(issue.project_id);
-    if (!projectDetails) return;
+    const parentProjectDetails = getProjectById(issue.project_id);
+    if (!parentProjectDetails) return;
 
     const stateDetails = getStateById(issue.state_id);
 
     setSelectedParentIssue(
-      convertWorkItemDataToSearchResponse(workspaceSlug?.toString(), issue, projectDetails, stateDetails)
+      convertWorkItemDataToSearchResponse(workspaceSlug?.toString(), issue, parentProjectDetails, stateDetails)
     );
-  }, [watch, getIssueById, getProjectById, selectedParentIssue, getStateById]);
+  }, [watch, getIssueById, getProjectById, selectedParentIssue, getStateById, workspaceSlug, setSelectedParentIssue]);
 
   // executing this useEffect when isDirty changes
   useEffect(() => {
@@ -380,7 +387,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
         <div className="w-full rounded-lg">
           <form
             ref={formRef}
-            onSubmit={handleSubmit((data) => handleFormSubmit(data))}
+            onSubmit={handleSubmit((formData) => handleFormSubmit(formData))}
             className="flex w-full flex-col"
           >
             <div className="rounded-t-lg bg-surface-1 p-5">
@@ -485,6 +492,11 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 projectId={projectId}
                 workspaceSlug={workspaceSlug?.toString()}
               />
+              {!data?.id && !isDraft && (
+                <div className="px-5">
+                  <RecurringWorkItemModalSection />
+                </div>
+              )}
             </div>
             <div
               className={cn(
@@ -517,9 +529,10 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                       className="inline-flex cursor-pointer items-center gap-1.5"
                       onClick={() => onCreateMoreToggleChange(!isCreateMoreToggleEnabled)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") onCreateMoreToggleChange(!isCreateMoreToggleEnabled);
+                        if (e.key === "Enter" || e.key === " ") onCreateMoreToggleChange(!isCreateMoreToggleEnabled);
                       }}
-                      role="button"
+                      role="switch"
+                      aria-checked={isCreateMoreToggleEnabled}
                     >
                       <ToggleSwitch value={isCreateMoreToggleEnabled} onChange={() => {}} size="sm" />
                       <span className="text-caption-sm-regular">{t("create_more")}</span>
@@ -584,8 +597,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
           >
             <DuplicateModalRoot
               workspaceSlug={workspaceSlug.toString()}
+              projectId={projectId ?? undefined}
+              rootIssueId={data?.id}
               issues={duplicateIssues}
+              queuedIssueIds={queuedDuplicateIssueIds}
               handleDuplicateIssueModal={handleDuplicateIssueModal}
+              onQueueDuplicateRelation={onQueueDuplicateIssue}
             />
           </div>
         )}

@@ -44,7 +44,7 @@ type Props = {
 export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
   const { moduleId } = props;
   // refs
-  const parentRef = useRef(null);
+  const parentRef = useRef<HTMLAnchorElement>(null);
   // router
   const router = useAppRouter();
   const { workspaceSlug, projectId } = useParams();

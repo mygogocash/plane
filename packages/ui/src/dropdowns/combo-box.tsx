@@ -19,6 +19,7 @@ type Props = {
   onKeyDown?: KeyboardEventHandler<HTMLDivElement> | undefined;
   multiple?: boolean;
   renderByDefault?: boolean;
+  role?: string | undefined;
   button: ReactNode;
   children: ReactNode;
 };
