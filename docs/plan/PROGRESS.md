@@ -112,11 +112,17 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   subsequent transitions and the backend remains authoritative. **7 WF-T11 Vitest helper tests pass**; `pnpm --filter web
 run check:format` and `pnpm turbo run check:types --filter=web` green; `pnpm --filter web run check:lint` passes with
   988 pre-existing warnings and 0 errors.
-- ⬜ Frontend WF-T12–T13 (settings workflow builder → approval banner + AI chip)
+- ✅ **WF-T12** Workflows settings builder — added the project settings `/workflows/` route + sidebar item, lifecycle
+  toggle for `disabled|paused|enabled`, rule-set selector (default + typed rule ids), state-group transition cards,
+  transition editor (roles, approval toggle, fallback state, auto-assign fields), live preview, disabled/unrestricted/paused
+  empty states, admin-disabled editing, and store-backed create/update/delete/status calls. **7 WF-T12 Vitest helper tests pass**;
+  `pnpm turbo run check:types --filter=web`, `pnpm --filter web run check:format`, and strict touched-file
+  `oxlint --deny-warnings` green.
+- ⬜ Frontend WF-T13 (approval banner + AI chip)
   (see `workflows-approvals/tasks.md` for the full card list)
 
-**Tally:** **11 cards done (WF-T1–T11 — backend feature-complete plus frontend store and CE enforcement)**,
-**62 backend workflow tests passing** (24 unit + 38 contract) plus **12 frontend workflow/store tests passing**.
+**Tally:** **12 cards done (WF-T1–T12 — backend feature-complete plus frontend store, CE enforcement, and settings builder)**,
+**62 backend workflow tests passing** (24 unit + 38 contract) plus **19 frontend workflow/store tests passing**.
 Migrations `0125`+`0126` clean. Regression: full contract/app suite green except 8 pre-existing magic-link rate-limit
 flakes (unrelated; pass in isolation).
 
@@ -138,6 +144,7 @@ flakes (unrelated; pass in isolation).
 - `17ed89c` feat: AI-suggested transitions + transition auto-assignment (WF-T9)
 - `59c1217` docs: record WF-T8 + WF-T9 (backend Workflows feature-complete) in PROGRESS
 - `18eb041` feat: workflow types + service + MobX store (WF-T10)
+- `0b5ff14` feat: enforce CE workflow components (WF-T11)
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -157,7 +164,7 @@ flakes (unrelated; pass in isolation).
 
 ## Build order (from README)
 
-1. Work Item Types / custom properties → 2. **Workflows & Approvals (backend done WF-T1–T9; frontend WF-T10–T13 in progress)** →
+1. Work Item Types / custom properties → 2. **Workflows & Approvals (backend done WF-T1–T9; frontend WF-T10–T12 done; WF-T13 pending)** →
 2. Initiatives → 4. Wiki gaps → 5. Plane AI expansion.
 
 > Update this file as cards complete so any session (or subagent) can resume cleanly.

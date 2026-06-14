@@ -1,8 +1,8 @@
 # Workflows & Approvals — Tasks (Claude Code subagent cards)
 
 > **Build status** (see [`../PROGRESS.md`](../PROGRESS.md) for the authoritative tracker):
-> **WF-T1 → WF-T10 are DONE & verified** (backend WF-T1–T9 = 62 tests green; frontend store/service/types WF-T10 = 5 store tests + check:types green).
-> **Remaining: WF-T11, WF-T12, WF-T13** (frontend UI — CE enforcement components, settings workflow builder, approval banner + AI chip).
+> **WF-T1 → WF-T12 are DONE & verified** (backend WF-T1–T9 = 62 tests green; frontend store/service/types WF-T10 = 5 store tests + check:types green; WF-T11/WF-T12 frontend helper tests green).
+> **Remaining: WF-T13** (frontend UI — approval banner + AI chip).
 > Each remaining card is tracked as a GitHub issue in the backlog.
 
 Each card is self-contained: the executing subagent has no memory of this conversation or the companion EPICS/PRD docs, so all context, file paths, and patterns are inline. Conventions for the whole doc:
