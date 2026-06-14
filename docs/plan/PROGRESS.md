@@ -165,6 +165,7 @@ flakes (unrelated; pass in isolation).
 - `7b73d5086` feat(epics): add custom property API
 - `087c8d1d7` feat(epics): add custom property fields
 - `31889ac16` feat(initiatives): add data models
+- `e5ee3c6ef` feat(initiatives): add session API
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -262,8 +263,17 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   tests 4/4 green on a fresh test DB; adjacent initiative/property/workflow model tests 17/17
   green; `manage.py check`; `makemigrations --check --dry-run`; `0131 -> 0130 -> 0131`
   migration rollback/forward; touched-file Ruff check/format and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-19** (initiatives CRUD + member attach + progress +
-  summary API), then TASK-20 v1 parity.
+- ✅ **TASK-19** initiatives CRUD + member attach + progress + summary API — added workspace-scoped
+  session routes for initiative list/create/detail/update/delete, epic/project attach and detach,
+  progress rollups, and five-state summary grouping. Writes require workspace Admin/Member; reads
+  allow active workspace viewers; cross-workspace epic/project references return 400; converted or
+  soft-deleted epic members are skipped and soft-cleaned; description HTML is sanitized on persist.
+  Verified: RED first on missing initiative routes; focused initiative API contracts 6/6 green;
+  adjacent initiative + epic CRUD/progress/bulk contracts and initiative model tests 23/23 green;
+  `manage.py check`; `makemigrations --check --dry-run`; touched-file Ruff check/format and
+  `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-20** (initiatives v1 api-key parity), then TASK-21
+  initiatives frontend data layer.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
