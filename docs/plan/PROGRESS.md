@@ -80,11 +80,29 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   to the key's workspace+project). Reuses the same `enforce_state_transition` gate. Files: `apps/api/plane/api/views/workflow.py`,
   `api/urls/workflow.py`, `api/views/__init__.py`, `api/urls/__init__.py`, `tests/contract/api/test_workflow_v1.py`.
   (Minor follow-up: v1 list returns a bare array like session, not the v1 `{results}` paginated envelope — one-line `paginate()` swap if desired.)
-- ⬜ WF-T8+ type-specific rules, lifecycle controls; then frontend (MobX store, settings workflow builder, gating UI)
+- ✅ **WF-T8** typed rule resolution + lifecycle controls — `resolve_rule_set` now selects the typed rule set for
+  items bound to a _project-linked_ `IssueType` (untyped/unlinked items fall back to the default set); admin-only
+  `maintenance_bypass` kwarg on `enforce_state_transition` skips enforcement + writes an audit `IssueActivity`
+  (non-admins can't escalate); `WorkflowConfigEndpoint` GET/PATCH for `Project.workflow_status` (admin-only writes,
+  validated `disabled|enabled|paused`); `paused` stays non-gating. **11 tests** (7 unit + 4 contract). Files:
+  `utils/workflow.py`, `app/views/workflow/base.py`, `app/urls/workflow.py`, `db/models/__init__.py` (export
+  `ProjectIssueType`), tests `tests/unit/utils/test_rule_resolution_and_lifecycle.py`, `tests/contract/app/test_workflow_config.py`.
+- ✅ **WF-T9** AI-suggested transitions + auto-assignment — `SuggestedTransitionEndpoint`
+  (`GET .../issues/<id>/suggested-transition/`) returns `{to_state, confidence, source}`: rules-first top pick from
+  `rank_legal_transitions` (ranked by recent transition frequency), copilot refinement best-effort + fail-safe
+  (unconfigured/error/timeout → rules-only 200, never 500; prompt carries only names/type/history — no PII/keys; no
+  prompt/model leak). `apply_auto_assignment` assigns the matched rule's `auto_assign_member` on a completed move
+  (active-member-guarded, idempotent, notifies; no-op never corrupts the transition), wired into both WF-T5 apply
+  paths + the WF-T6 approval-apply path (fires only post-final-approval). **9 tests** (4 unit + 5 contract). Files:
+  `app/views/workflow/suggestion.py`, `utils/workflow.py`, `app/views/workflow/base.py`, `app/views/issue/base.py`,
+  `app/urls/workflow.py`, tests `tests/unit/utils/test_auto_assign.py`, `tests/contract/app/test_suggested_transition.py`.
+  (Minor follow-up: `auto_assign_role` field exists but role-based bulk assignment is deferred — member assignment is the tested path.)
+- ⬜ Frontend WF-T10–T13 (MobX store + service + types → CE enforcement components → settings workflow builder → approval banner + AI chip)
   (see `workflows-approvals/tasks.md` for the full card list)
 
-**Tally:** 7 cards done (WF-T1–T7), **42 workflow tests passing** (17 unit + 25 contract), migrations `0125`+`0126` clean.
-Regression: full contract/app suite green except 8 pre-existing magic-link rate-limit flakes (unrelated; pass in isolation).
+**Tally:** **9 cards done (WF-T1–T9 — backend feature-complete)**, **62 workflow tests passing** (24 unit + 38 contract),
+migrations `0125`+`0126` clean. Regression: full contract/app suite green except 8 pre-existing magic-link rate-limit
+flakes (unrelated; pass in isolation).
 
 > Migration note: `0126` reconciles model-state drift from the Django 5.2 + pytz 2026.2 upgrade (timezone `choices` +
 > M2M field re-serialization). `sqlmigrate` confirms it is **state-only / no-op DDL** — non-destructive.
@@ -99,7 +117,9 @@ Regression: full contract/app suite green except 8 pre-existing magic-link rate-
 - `b7ecaea` chore: upgrade zod 3 -> 4
 - `ca9500f` chore: upgrade @headlessui/react 1.7 -> 2
 - `e3b9570` docs: record Headless UI 2 upgrade (done) in PROGRESS
-- _(next)_ docs: record React 19 + Headless UI 2 browser boot smoke result
+- `cb9ade1` docs: record React 19 + Headless UI 2 browser boot smoke result
+- `daacba1` feat: typed workflow rule resolution + lifecycle controls (WF-T8)
+- `17ed89c` feat: AI-suggested transitions + transition auto-assignment (WF-T9)
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -119,7 +139,7 @@ Regression: full contract/app suite green except 8 pre-existing magic-link rate-
 
 ## Build order (from README)
 
-1. Work Item Types / custom properties → 2. **Workflows & Approvals (in progress)** →
+1. Work Item Types / custom properties → 2. **Workflows & Approvals (backend done WF-T1–T9; frontend WF-T10–T13 in progress)** →
 2. Initiatives → 4. Wiki gaps → 5. Plane AI expansion.
 
 > Update this file as cards complete so any session (or subagent) can resume cleanly.
