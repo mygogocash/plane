@@ -83,6 +83,7 @@ Assertions reference the property-type enum members `text/number/date/select/mul
 
 ## CP-2-API — Property-definition CRUD API (ADMIN) + value validation in issue serializer
 
+**Status** ✅ done & verified (12 contract tests pass; full app contracts only fail known magic-link rate-limit baseline)
 **Implements** EPIC-CP / WIT-CUSTOMPROPS (story CP-1, CP-2, CP-4)
 **Depends on** [CP-1-BE]
 **Risk tier** R1 (extends the issue write path under validation; ADMIN-gated definitions)
@@ -134,6 +135,15 @@ Assertions reference the property-type enum members `text/number/date/select/mul
 
 - `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest plane/tests/contract/app/test_issue_property_api.py -m contract -v` (RED then GREEN)
 - Full: `docker compose -f docker-compose-test.yml run --rm api-tests pytest -m "unit or contract"`
+
+**Verified 2026-06-14**
+
+- RED: `docker exec -w /code plane-tests pytest plane/tests/contract/app/test_issue_property_api.py -m contract -v --tb=short` → 11 failed, 1 passed; failures were missing property route and absent issue `property_values` validation/upsert.
+- GREEN: `docker exec -w /code plane-tests pytest plane/tests/contract/app/test_issue_property_api.py -m contract -v --tb=short` → 12 passed.
+- Regression: `docker exec -w /code plane-tests pytest plane/tests/contract/app/test_issue_property_api.py plane/tests/contract/app/test_state_transition_enforcement.py plane/tests/contract/app/test_approvals.py -m contract -v --tb=short` → 25 passed.
+- Unit suite: `docker exec -w /code plane-tests pytest plane/tests/unit -m unit -v --tb=short` → 246 passed, 4 pre-existing factory deprecation warnings.
+- Full app contracts: `docker exec -w /code plane-tests pytest plane/tests/contract/app -m contract -v --tb=short` → 126 passed, 8 pre-existing magic-link rate-limit failures in `test_authentication.py`.
+- Static/system checks: touched-file Ruff check/format clean; `docker exec -w /code plane-tests python manage.py check` clean; `python manage.py makemigrations --check --dry-run` no changes detected.
 
 **Done when** All named contract tests RED→GREEN, suite green, authorization matrix (ADMIN/MEMBER/GUEST/non-member) and cross-type + destructive-change edges covered, value path routed through the existing serializer (no parallel write path).
 

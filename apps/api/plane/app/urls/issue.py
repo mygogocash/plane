@@ -31,6 +31,7 @@ from plane.app.views import (
     WorkItemDescriptionVersionEndpoint,
     IssueMetaEndpoint,
     IssueDetailIdentifierEndpoint,
+    IssuePropertyViewSet,
 )
 
 urlpatterns = [
@@ -67,6 +68,22 @@ urlpatterns = [
             }
         ),
         name="project-issue",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-types/<uuid:type_id>/properties/",
+        IssuePropertyViewSet.as_view({"get": "list", "post": "create"}),
+        name="issue-type-properties",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-types/<uuid:type_id>/properties/<uuid:pk>/",
+        IssuePropertyViewSet.as_view(
+            {
+                "get": "retrieve",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="issue-type-properties",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issue-labels/",

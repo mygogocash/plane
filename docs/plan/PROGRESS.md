@@ -154,6 +154,7 @@ flakes (unrelated; pass in isolation).
 - `0b5ff14` feat: enforce CE workflow components (WF-T11)
 - `c8452f6` feat(workflows): add settings builder
 - `a6d2559` feat(workflows): add detail approval surfaces
+- `0d0ea24` feat(work-items): add custom property models
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -166,7 +167,13 @@ flakes (unrelated; pass in isolation).
   soft-delete-aware uniqueness, same-name/different-type allowance, and JSON value persistence. Verified: RED import
   failure first; targeted 6/6 green; backend unit suite 246/246 green; `makemigrations --check --dry-run`,
   `manage.py check`, touched-file Ruff check/format, and `0126 -> 0127 -> 0126 -> 0127` migration round-trip all clean.
-- ⬜ remaining cards (CP-2-API, CP-3-FE, templates, recurring, duplicates — mostly unlock + finish)
+- ✅ **CP-2-API** property definitions + issue value path — added ADMIN workspace/type-scoped property CRUD,
+  MEMBER+ reads, select option validation, duplicate `409`, destructive type-change `409`, issue serializer
+  `property_values` validation/upsert, text/url sanitization, cross-type rejection, required-property enforcement,
+  issue-detail value serialization, and activity rows for definition/value changes. Verified: RED first; CP-2 contract
+  12/12 green; adjacent issue-transition/approval contracts 25/25 green; backend unit suite 246/246 green; full app
+  contracts 126/134 green with only the known magic-link rate-limit baseline failures.
+- ⬜ remaining cards (CP-3-FE, templates, recurring, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 
