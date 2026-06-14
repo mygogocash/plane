@@ -11,6 +11,7 @@ export * from "./cycle";
 export * from "./dashboard";
 export * from "./epic";
 export * from "./instance";
+export * from "./initiative";
 export * from "./intake";
 export * from "./module";
 export * from "./user";

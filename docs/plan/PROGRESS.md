@@ -281,8 +281,17 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   contract 1/1 green; adjacent initiative session + epic v1 contracts 8/8 green;
   `manage.py check`; `makemigrations --check --dry-run`; touched-file Ruff check/format and
   `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-21** (initiatives frontend data layer), then TASK-22
-  initiatives UI and TASK-23 status-update models.
+- ✅ **TASK-21** initiatives frontend data layer — added typed initiative payload/progress/summary
+  contracts, `InitiativeService` session-route methods for CRUD, progress, summary, and
+  epic/project attach/detach, a CE `InitiativeStore` registered on the root store with observable
+  initiative/progress/summary maps, and the five lifecycle-state constants plus synced i18n labels
+  across all locale `project.json` files. Verified: RED first on missing service/store modules;
+  initiative service Vitest 3/3 green; initiative store Vitest 4/4 green; `@plane/types`,
+  `@plane/constants`, `@plane/services`, and `@plane/i18n` typechecks green; `@plane/i18n`
+  locale sync green; `pnpm turbo run check:types --filter=web` green; touched-file oxfmt/oxlint
+  and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-22** (initiatives route/list/board/timeline/detail + flip flag
+  ON), then TASK-23 status-update models.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
