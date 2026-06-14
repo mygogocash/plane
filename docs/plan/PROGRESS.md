@@ -164,6 +164,7 @@ flakes (unrelated; pass in isolation).
 - `5939b762e` feat(epics): add custom property schema
 - `7b73d5086` feat(epics): add custom property API
 - `087c8d1d7` feat(epics): add custom property fields
+- `31889ac16` feat(initiatives): add data models
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -253,7 +254,16 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   missing option projection; service Vitest 4/4 green; epic properties/modal/additional-properties
   Vitest 11/11 green; property API contracts 16/16 green; web/services/types typechecks green;
   `manage.py check`; touched-file oxfmt/oxlint and Ruff check/format; `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-18** (initiatives data layer), then TASK-19 initiatives API.
+- ✅ **TASK-18** initiatives data layer — added additive `Initiative`, `InitiativeEpic`,
+  `InitiativeProject`, and `InitiativeLabel` models with lifecycle-state choices,
+  description/lead/date/logo/progress/external metadata, partial unique member constraints,
+  same-workspace join validation, and epic-only membership validation. Migration `0131` creates
+  only the new tables/constraints. Verified: RED first on missing `Initiative`; focused model
+  tests 4/4 green on a fresh test DB; adjacent initiative/property/workflow model tests 17/17
+  green; `manage.py check`; `makemigrations --check --dry-run`; `0131 -> 0130 -> 0131`
+  migration rollback/forward; touched-file Ruff check/format and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-19** (initiatives CRUD + member attach + progress +
+  summary API), then TASK-20 v1 parity.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
