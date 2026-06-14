@@ -163,6 +163,7 @@ flakes (unrelated; pass in isolation).
 - `66b548c` feat(work-items): add recurring work item models
 - `5939b762e` feat(epics): add custom property schema
 - `7b73d5086` feat(epics): add custom property API
+- `087c8d1d7` feat(epics): add custom property fields
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -245,8 +246,14 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   definition 403 + missing option/value routes; property API contracts 16/16 green; adjacent
   property/template/epic contracts 44/44 green; `manage.py check`; `makemigrations --check
 --dry-run`; touched-file Ruff check/format and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-17** (epic custom-property fields in detail view), then
-  TASK-18 initiatives data layer.
+- ✅ **TASK-17** epic custom-property fields in detail view — added typed epic property service
+  methods, shared property/value types, option projection on property definitions, and an
+  existing-epic modal section that loads text, option/multi-option, and member values, then saves
+  through the epic property-values endpoint. Verified: RED first on missing service/component and
+  missing option projection; service Vitest 4/4 green; epic properties/modal/additional-properties
+  Vitest 11/11 green; property API contracts 16/16 green; web/services/types typechecks green;
+  `manage.py check`; touched-file oxfmt/oxlint and Ruff check/format; `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-18** (initiatives data layer), then TASK-19 initiatives API.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
