@@ -334,7 +334,19 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   5/5 green; adjacent copilot query + existing copilot messages + status update API + initiative v1
   NLQ-absence contracts 25/25 green; `manage.py check`; `makemigrations --check --dry-run`;
   touched-file Ruff format/check; `git diff --check` clean.
-- ⬜ remaining card is **TASK-27** (AI NLQ Ask AI / Summarize affordance).
+- ✅ **TASK-27** AI NLQ Ask AI / Summarize affordance — added the CE `AskAIAction`
+  prompt/summarize component, scoped `AIService.queryCopilot` client, answer/summary/evidence
+  rendering, and epic + initiative detail mounts. `409 ai_provider_not_configured` renders a
+  disabled "Configure AI provider" state without an error toast; `503 ai_unavailable` renders a
+  non-blocking "AI unavailable" message. Verified: RED first on missing `ask-ai-action` module;
+  focused Ask AI Vitest 3/3 green; adjacent Ask AI + status-update + initiatives board Vitests 7/7
+  green; `pnpm turbo run check:types --filter=web` green; touched-file `oxfmt --check` and strict
+  `oxlint --deny-warnings` clean; `git diff --check` clean; Playwright MCP boot smoke reached
+  `http://127.0.0.1:3000/` and rendered the expected Plane startup-failure screen because the local
+  API service was unavailable at `http://127.0.0.1:8000/api/instances/`.
+- ✅ **Epics & Initiatives task-family local implementation complete through TASK-27.** Production
+  integration is still blocked by safe reconciliation of the divergent local `main` history with
+  `origin/preview`.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 

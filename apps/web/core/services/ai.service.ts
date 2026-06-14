@@ -49,6 +49,28 @@ export type TCopilotMessagePayload = {
   issue_id?: string;
 };
 
+export type TCopilotQueryScope = "epic" | "initiative" | "workspace";
+
+export type TCopilotQueryPayload = {
+  scope: TCopilotQueryScope;
+  object_id?: string | null;
+  question: string;
+};
+
+export type TCopilotQueryEvidence = {
+  entity_type: string;
+  entity_id: string;
+  title: string;
+  url: string;
+  source_text: string;
+};
+
+export type TCopilotQueryResponse = {
+  answer: string;
+  summary: string;
+  evidence: TCopilotQueryEvidence[];
+};
+
 export type TCopilotAction = {
   entity_id?: string;
   error?: unknown;
@@ -118,6 +140,14 @@ export class AIService extends APIService {
 
   async listCopilotConversations(workspaceSlug: string): Promise<TCopilotConversation[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/copilot/conversations/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data ?? error?.response ?? error;
+      });
+  }
+
+  async queryCopilot(workspaceSlug: string, data: TCopilotQueryPayload): Promise<TCopilotQueryResponse> {
+    return this.post(`/api/workspaces/${workspaceSlug}/copilot/query/`, data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data ?? error?.response ?? error;

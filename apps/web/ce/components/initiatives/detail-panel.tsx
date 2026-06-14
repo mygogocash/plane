@@ -9,8 +9,10 @@ import { Link2, Unlink } from "lucide-react";
 import { Button } from "@plane/propel/button";
 import type { TInitiative, TInitiativeMemberResponse, TInitiativeProgress } from "@plane/types";
 // hooks
+import { useInstance } from "@/hooks/store/use-instance";
 import { useUser } from "@/hooks/store/user";
 // plane web components
+import { AskAIAction } from "@/plane-web/components/copilot";
 import { StatusUpdateThread } from "@/plane-web/components/status-updates";
 
 type InitiativeDetailPanelProps = {
@@ -122,6 +124,7 @@ export const InitiativeDetailPanel = ({
   progress,
   workspaceSlug,
 }: InitiativeDetailPanelProps) => {
+  const { config } = useInstance();
   const { data: currentUser } = useUser();
 
   if (!initiative) {
@@ -150,6 +153,11 @@ export const InitiativeDetailPanel = ({
             </span>
           </div>
         </div>
+
+        <AskAIAction
+          owner={{ scope: "initiative", workspaceSlug, objectId: initiative.id, title: initiative.name }}
+          isProviderConfigured={config?.has_llm_configured}
+        />
 
         <div className="rounded-md border border-subtle bg-layer-1 p-4">
           <div className="flex items-center justify-between">

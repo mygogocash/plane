@@ -19,6 +19,7 @@ import { DescriptionVersionsRoot } from "@/components/core/description-versions"
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useInstance } from "@/hooks/store/use-instance";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
@@ -26,6 +27,7 @@ import useReloadConfirmations from "@/hooks/use-reload-confirmation";
 import useSize from "@/hooks/use-window-size";
 // plane web components
 import { DeDupeIssuePopoverRoot } from "@/plane-web/components/de-dupe/duplicate-popover";
+import { AskAIAction } from "@/plane-web/components/copilot";
 import { IssueTypeSwitcher } from "@/plane-web/components/issues/issue-details/issue-type-switcher";
 import { StatusUpdateThread } from "@/plane-web/components/status-updates";
 import { useDebouncedDuplicateIssues } from "@/plane-web/hooks/use-debounced-duplicate-issues";
@@ -60,6 +62,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   const [isSubmitting, setIsSubmitting] = useState<TNameDescriptionLoader>("saved");
   // hooks
   const windowSize = useSize();
+  const { config } = useInstance();
   const { data: currentUser } = useUser();
   const { getUserDetails } = useMember();
   const {
@@ -158,6 +161,14 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
           setIsSubmitting={(value) => setIsSubmitting(value)}
           workspaceSlug={workspaceSlug}
         />
+
+        {issue.is_epic && (
+          <AskAIAction
+            owner={{ scope: "epic", workspaceSlug, objectId: issue.id, title: issue.name }}
+            isProviderConfigured={config?.has_llm_configured}
+            disabled={isArchived}
+          />
+        )}
 
         <div className="flex items-center justify-between gap-2">
           {currentUser && (

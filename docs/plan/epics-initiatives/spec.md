@@ -69,11 +69,11 @@ The delivery epics are `EPIC-1` through `EPIC-7` in `docs/plan/epics-initiatives
 
 # User Stories
 
-User stories live in `docs/plan/epics-initiatives/stories.md`. The current checkpoint implements `EI-7.1`: add a fail-closed, scoped `/copilot/query/` NLQ endpoint for epic, initiative, and workspace evidence.
+User stories live in `docs/plan/epics-initiatives/stories.md`. The current checkpoint completes the EPIC-7 scoped AI workflow: fail-closed `/copilot/query/` NLQ plus the epic and initiative Ask AI / Summarize affordance.
 
 # Tasks
 
-Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution has completed `TASK-26`, following locally completed `TASK-25` threaded status-update UI work. `TASK-27` is the next card.
+Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution has completed `TASK-27`, following locally completed `TASK-25` threaded status-update UI work and `TASK-26` scoped NLQ endpoint work. The feature-family cards are locally complete; production integration still requires safe reconciliation of the divergent local `main` and `origin/preview` histories.
 
 # Acceptance Criteria
 
@@ -83,3 +83,7 @@ Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution has
 - Missing provider config fails closed with `409 ai_provider_not_configured`; provider outage returns graceful `503 ai_unavailable` without leaking provider exception text.
 - Non-members are rejected before provider calls, and project-scoped epic reads require project membership.
 - TASK-26 contracts, adjacent copilot/status-update/v1 contracts, `manage.py check`, `makemigrations --check --dry-run`, touched-file Ruff format/check, and `git diff --check` pass.
+- Epic and initiative details render Ask AI / Summarize controls wired to `POST /api/workspaces/<slug>/copilot/query/`.
+- The frontend renders `409 ai_provider_not_configured` as a disabled "Configure AI provider" state, without an error toast.
+- The frontend renders `503 ai_unavailable` as a non-blocking "AI unavailable" message while manual detail viewing remains available.
+- TASK-27 Ask AI Vitest, adjacent status-update/initiative Vitests, `pnpm turbo run check:types --filter=web`, touched-file `oxfmt`/`oxlint`, `git diff --check`, and a local Playwright MCP boot smoke pass within the known backend-unavailable local constraint.
