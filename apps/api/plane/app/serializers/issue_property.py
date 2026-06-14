@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 # Module imports
 from .base import BaseSerializer
-from plane.db.models import IssueProperty
+from plane.db.models import IssueProperty, IssuePropertyOption
 
 
 class IssuePropertySerializer(BaseSerializer):
@@ -41,11 +41,24 @@ class IssuePropertySerializer(BaseSerializer):
         )
         settings = attrs.get("settings", self.instance.settings if self.instance else {})
 
-        if property_type in [
-            IssueProperty.PropertyType.OPTION,
-            IssueProperty.PropertyType.SELECT,
-            IssueProperty.PropertyType.MULTI_SELECT,
-        ] and not settings.get("options"):
+        if property_type in [IssueProperty.PropertyType.SELECT, IssueProperty.PropertyType.MULTI_SELECT] and not (
+            settings.get("options")
+        ):
             raise serializers.ValidationError({"settings": {"options": "required"}})
 
         return attrs
+
+
+class IssuePropertyOptionSerializer(BaseSerializer):
+    class Meta:
+        model = IssuePropertyOption
+        fields = [
+            "id",
+            "property",
+            "name",
+            "sort_order",
+            "is_default",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["property"]

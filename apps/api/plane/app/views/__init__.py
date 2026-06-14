@@ -33,7 +33,8 @@ from .user.base import (
 
 
 from .base import BaseAPIView, BaseViewSet
-from .epic import EpicConvertEndpoint, EpicDuplicateEndpoint, EpicProgressEndpoint, EpicViewSet, EpicWorkItemsEndpoint
+from .epic import EpicConvertEndpoint, EpicDuplicateEndpoint, EpicProgressEndpoint, EpicPropertyValuesEndpoint
+from .epic import EpicViewSet, EpicWorkItemsEndpoint
 from .epic import WorkItemConvertToEpicEndpoint
 
 from .workspace.base import (
@@ -154,7 +155,7 @@ from .issue.label import LabelViewSet, BulkCreateIssueLabelsEndpoint
 
 from .issue.link import IssueLinkViewSet
 
-from .issue.property import IssuePropertyViewSet
+from .issue.property import IssuePropertyOptionViewSet, IssuePropertyViewSet
 from .issue.recurring import RecurringWorkItemViewSet
 from .issue.similar import SimilarIssuesEndpoint
 from .issue.template import WorkItemTemplateViewSet

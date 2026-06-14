@@ -13,8 +13,10 @@ from rest_framework.response import Response
 
 from plane.app.permissions import ROLE, allow_permission
 from plane.app.serializers import EpicSerializer, EpicWriteSerializer
-from plane.db.models import Issue, IssueActivity, IssueAssignee, IssueLabel, Label, Project, ProjectIssueType
-from plane.db.models import ProjectMember, State
+from plane.db.models import Issue, IssueActivity, IssueAssignee, IssueLabel, IssueProperty, IssuePropertyOption
+from plane.db.models import IssuePropertyValue, Label, Project, ProjectIssueType
+from plane.db.models import ProjectMember, State, WorkspaceMember
+from plane.utils.html_processor import strip_tags
 from .base import BaseAPIView, BaseViewSet
 
 
@@ -346,6 +348,222 @@ class EpicWorkItemsEndpoint(BaseAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class EpicPropertyValuesEndpoint(BaseAPIView):
+    def _get_epic(self, slug, project_id, epic_id):
+        return (
+            Issue.issue_objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                id=epic_id,
+                type__is_epic=True,
+            )
+            .select_related("project", "workspace", "type")
+            .first()
+        )
+
+    def _serialize_value(self, property_value):
+        if property_value.value is not None:
+            return property_value.value
+        if property_value.value_uuid is not None:
+            return str(property_value.value_uuid)
+        if property_value.value_option_id is not None:
+            return str(property_value.value_option_id)
+        return property_value.value_text
+
+    def _property_values(self, epic):
+        values = IssuePropertyValue.objects.filter(issue=epic, deleted_at__isnull=True).select_related(
+            "property", "value_option"
+        )
+        return {str(value.property_id): self._serialize_value(value) for value in values}
+
+    def _is_missing_value(self, value):
+        return value is None or value == "" or value == []
+
+    def _normalize_option_value(self, issue_property, value):
+        raw_option_ids = value if issue_property.is_multi else [value]
+        if not isinstance(raw_option_ids, list):
+            return None, "option_value_must_be_list" if issue_property.is_multi else "option_value_required"
+
+        option_ids = []
+        for option_id in raw_option_ids:
+            try:
+                option_ids.append(str(UUID(str(option_id))))
+            except (TypeError, ValueError, AttributeError):
+                return None, "option_not_found"
+
+        option_ids = list(dict.fromkeys(option_ids))
+        found_option_ids = set(
+            str(option_id)
+            for option_id in IssuePropertyOption.objects.filter(
+                property=issue_property,
+                id__in=option_ids,
+                deleted_at__isnull=True,
+            ).values_list("id", flat=True)
+        )
+        if len(found_option_ids) != len(option_ids):
+            return None, "option_not_found"
+
+        return (option_ids if issue_property.is_multi else option_ids[0]), None
+
+    def _normalize_member_value(self, slug, value):
+        try:
+            member_id = str(UUID(str(value)))
+        except (TypeError, ValueError, AttributeError):
+            return None, "member_not_in_workspace"
+
+        if not WorkspaceMember.objects.filter(
+            workspace__slug=slug,
+            member_id=member_id,
+            is_active=True,
+        ).exists():
+            return None, "member_not_in_workspace"
+
+        return member_id, None
+
+    def _normalize_property_value(self, slug, issue_property, value):
+        if issue_property.property_type in [IssueProperty.PropertyType.TEXT, IssueProperty.PropertyType.URL]:
+            if not isinstance(value, str):
+                return None, "text_value_required"
+            return strip_tags(value), None
+
+        if issue_property.property_type in [
+            IssueProperty.PropertyType.OPTION,
+            IssueProperty.PropertyType.SELECT,
+            IssueProperty.PropertyType.MULTI_SELECT,
+        ]:
+            if issue_property.property_type == IssueProperty.PropertyType.MULTI_SELECT:
+                issue_property.is_multi = True
+            return self._normalize_option_value(issue_property, value)
+
+        if issue_property.property_type == IssueProperty.PropertyType.MEMBER:
+            return self._normalize_member_value(slug, value)
+
+        return value, None
+
+    def _validate_values(self, slug, epic, incoming_values):
+        if not isinstance(incoming_values, dict):
+            return None, {"property_values": "required"}
+
+        properties = {
+            str(issue_property.id): issue_property
+            for issue_property in IssueProperty.objects.filter(
+                issue_type=epic.type,
+                is_active=True,
+                deleted_at__isnull=True,
+            )
+        }
+        existing_values = self._property_values(epic)
+        errors = {}
+        normalized_values = {}
+
+        for property_id, raw_value in incoming_values.items():
+            property_key = str(property_id)
+            issue_property = properties.get(property_key)
+            if issue_property is None:
+                errors[property_key] = "property_not_found"
+                continue
+            if self._is_missing_value(raw_value):
+                errors[property_key] = "value_required" if issue_property.is_required else "value_empty"
+                continue
+
+            normalized_value, error = self._normalize_property_value(slug, issue_property, raw_value)
+            if error:
+                errors[property_key] = error
+                continue
+            normalized_values[property_key] = normalized_value
+
+        missing_required = [
+            issue_property.name
+            for property_key, issue_property in properties.items()
+            if issue_property.is_required
+            and property_key not in normalized_values
+            and self._is_missing_value(existing_values.get(property_key))
+        ]
+        if missing_required:
+            errors["missing_required"] = missing_required
+
+        if errors:
+            return None, {"property_values": errors}
+
+        return normalized_values, None
+
+    def _sync_property_values(self, epic, properties, normalized_values, actor):
+        for property_id, value in normalized_values.items():
+            issue_property = properties[property_id]
+            property_value = IssuePropertyValue.objects.filter(issue=epic, property=issue_property).first()
+            if property_value is None:
+                property_value = IssuePropertyValue(issue=epic, property=issue_property, project=epic.project)
+
+            old_value = self._serialize_value(property_value)
+            property_value.project = epic.project
+            property_value.value = value
+            property_value.value_text = None
+            property_value.value_uuid = None
+            property_value.value_option_id = None
+
+            if issue_property.property_type in [IssueProperty.PropertyType.TEXT, IssueProperty.PropertyType.URL]:
+                property_value.value_text = value
+            elif issue_property.property_type == IssueProperty.PropertyType.MEMBER:
+                property_value.value_uuid = value
+            elif (
+                issue_property.property_type
+                in [
+                    IssueProperty.PropertyType.OPTION,
+                    IssueProperty.PropertyType.SELECT,
+                ]
+                and not issue_property.is_multi
+            ):
+                property_value.value_option_id = value
+
+            property_value.updated_by = actor
+            property_value.save()
+
+            if old_value != value:
+                IssueActivity.objects.create(
+                    issue=epic,
+                    project=epic.project,
+                    workspace=epic.workspace,
+                    actor=actor,
+                    verb="updated",
+                    field="property_values",
+                    old_value=str(old_value) if old_value is not None else None,
+                    new_value=str(value) if value is not None else None,
+                    new_identifier=issue_property.id,
+                    comment=f"updated {issue_property.display_name}",
+                    epoch=int(timezone.now().timestamp()),
+                )
+
+    @project_workspace_match_required
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], level="PROJECT")
+    def get(self, request, slug, project_id, epic_id):
+        epic = self._get_epic(slug, project_id, epic_id)
+        if epic is None:
+            return Response({"error": "Epic not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"property_values": self._property_values(epic)}, status=status.HTTP_200_OK)
+
+    @project_workspace_match_required
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER], level="PROJECT")
+    def post(self, request, slug, project_id, epic_id):
+        epic = self._get_epic(slug, project_id, epic_id)
+        if epic is None:
+            return Response({"error": "Epic not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        normalized_values, errors = self._validate_values(slug, epic, request.data.get("property_values"))
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        properties = {
+            str(issue_property.id): issue_property
+            for issue_property in IssueProperty.objects.filter(id__in=normalized_values.keys())
+        }
+
+        with transaction.atomic():
+            self._sync_property_values(epic, properties, normalized_values, request.user)
+
+        return Response({"property_values": self._property_values(epic)}, status=status.HTTP_200_OK)
 
 
 class EpicConvertEndpoint(BaseAPIView):

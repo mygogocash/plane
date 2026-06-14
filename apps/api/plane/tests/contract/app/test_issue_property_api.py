@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 
-# Python imports
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -12,6 +11,7 @@ from plane.db.models import (
     Issue,
     IssueActivity,
     IssueProperty,
+    IssuePropertyOption,
     IssuePropertyValue,
     IssueType,
     Project,
@@ -28,12 +28,20 @@ def _properties_url(slug, issue_type_id, pk=None):
     return f"{base}{pk}/" if pk else base
 
 
+def _property_options_url(slug, issue_type_id, property_id):
+    return f"/api/workspaces/{slug}/issue-types/{issue_type_id}/properties/{property_id}/options/"
+
+
 def _issue_url(slug, project_id, issue_id):
     return f"/api/workspaces/{slug}/projects/{project_id}/issues/{issue_id}/"
 
 
 def _issues_url(slug, project_id):
     return f"/api/workspaces/{slug}/projects/{project_id}/issues/"
+
+
+def _epic_property_values_url(slug, project_id, epic_id):
+    return f"/api/workspaces/{slug}/projects/{project_id}/epics/{epic_id}/property-values/"
 
 
 @pytest.fixture
@@ -52,6 +60,13 @@ def project(workspace, create_user):
 def issue_type(workspace, project):
     issue_type = IssueType.objects.create(workspace=workspace, name="Bug")
     ProjectIssueType.objects.create(project=project, issue_type=issue_type)
+    return issue_type
+
+
+@pytest.fixture
+def epic_type(workspace, project):
+    issue_type = IssueType.objects.create(workspace=workspace, name="Epic", is_epic=True)
+    ProjectIssueType.objects.create(project=project, issue_type=issue_type, is_default=True)
     return issue_type
 
 
@@ -75,6 +90,18 @@ def issue(workspace, project, state, issue_type, create_user):
         project=project,
         state=state,
         type=issue_type,
+        created_by=create_user,
+    )
+
+
+@pytest.fixture
+def epic(workspace, project, state, epic_type, create_user):
+    return Issue.objects.create(
+        name="Launch mobile rollout",
+        workspace=workspace,
+        project=project,
+        state=state,
+        type=epic_type,
         created_by=create_user,
     )
 
@@ -107,6 +134,11 @@ def guest_client(guest_user):
     client = APIClient()
     client.force_authenticate(user=guest_user)
     return client
+
+
+@pytest.fixture
+def non_member_user(db):
+    return User.objects.create(email="property-outsider@plane.so", username="property_outsider")
 
 
 @pytest.mark.contract
@@ -179,7 +211,7 @@ class TestIssuePropertyAPI:
         assert response.status_code == status.HTTP_409_CONFLICT
 
     @pytest.mark.django_db
-    def test_member_and_guest_cannot_create_property_definition_403(
+    def test_project_member_can_create_property_definition_and_guest_cannot(
         self, member_client, guest_client, workspace, issue_type
     ):
         payload = {"name": "version", "display_name": "Version", "property_type": "text"}
@@ -187,9 +219,143 @@ class TestIssuePropertyAPI:
         member_response = member_client.post(_properties_url(workspace.slug, issue_type.id), payload, format="json")
         guest_response = guest_client.post(_properties_url(workspace.slug, issue_type.id), payload, format="json")
 
-        assert member_response.status_code == status.HTTP_403_FORBIDDEN
+        assert member_response.status_code == status.HTTP_201_CREATED
         assert guest_response.status_code == status.HTTP_403_FORBIDDEN
-        assert not IssueProperty.objects.filter(issue_type=issue_type).exists()
+        assert IssueProperty.objects.filter(issue_type=issue_type, name="version").exists()
+
+    @pytest.mark.django_db
+    def test_define_epic_properties_options_and_set_values_persist_and_reload(
+        self, member_client, workspace, project, epic, epic_type, member_user
+    ):
+        text_response = member_client.post(
+            _properties_url(workspace.slug, epic_type.id),
+            {
+                "name": "launch-summary",
+                "display_name": "Launch summary",
+                "property_type": "text",
+                "is_required": True,
+            },
+            format="json",
+        )
+        option_response = member_client.post(
+            _properties_url(workspace.slug, epic_type.id),
+            {
+                "name": "launch-tier",
+                "display_name": "Launch tier",
+                "property_type": "option",
+                "is_multi": True,
+            },
+            format="json",
+        )
+        member_response = member_client.post(
+            _properties_url(workspace.slug, epic_type.id),
+            {
+                "name": "release-owner",
+                "display_name": "Release owner",
+                "property_type": "member",
+            },
+            format="json",
+        )
+
+        assert text_response.status_code == status.HTTP_201_CREATED
+        assert option_response.status_code == status.HTTP_201_CREATED
+        assert member_response.status_code == status.HTTP_201_CREATED
+
+        text_property_id = str(text_response.data["id"])
+        option_property_id = str(option_response.data["id"])
+        member_property_id = str(member_response.data["id"])
+        beta_option_response = member_client.post(
+            _property_options_url(workspace.slug, epic_type.id, option_property_id),
+            {"name": "Beta", "sort_order": 10, "is_default": True},
+            format="json",
+        )
+        ga_option_response = member_client.post(
+            _property_options_url(workspace.slug, epic_type.id, option_property_id),
+            {"name": "GA", "sort_order": 20},
+            format="json",
+        )
+
+        assert beta_option_response.status_code == status.HTTP_201_CREATED
+        assert ga_option_response.status_code == status.HTTP_201_CREATED
+
+        property_values = {
+            text_property_id: "<b>Launch in Q3</b>",
+            option_property_id: [str(beta_option_response.data["id"]), str(ga_option_response.data["id"])],
+            member_property_id: str(member_user.id),
+        }
+        set_response = member_client.post(
+            _epic_property_values_url(workspace.slug, project.id, epic.id),
+            {"property_values": property_values},
+            format="json",
+        )
+        reload_response = member_client.get(_epic_property_values_url(workspace.slug, project.id, epic.id))
+
+        assert set_response.status_code == status.HTTP_200_OK
+        assert reload_response.status_code == status.HTTP_200_OK
+        assert set_response.data["property_values"][text_property_id] == "Launch in Q3"
+        assert reload_response.data["property_values"] == set_response.data["property_values"]
+        assert IssuePropertyOption.objects.filter(property_id=option_property_id).count() == 2
+        assert IssuePropertyValue.objects.get(issue=epic, property_id=text_property_id).value_text == ("Launch in Q3")
+        assert IssuePropertyValue.objects.get(issue=epic, property_id=member_property_id).value_uuid == member_user.id
+
+    @pytest.mark.django_db
+    def test_epic_required_property_missing_value_rejected(self, member_client, workspace, project, epic, epic_type):
+        required_property = IssueProperty.objects.create(
+            issue_type=epic_type,
+            name="launch-summary",
+            display_name="Launch summary",
+            property_type=IssueProperty.PropertyType.TEXT,
+            is_required=True,
+        )
+
+        response = member_client.post(
+            _epic_property_values_url(workspace.slug, project.id, epic.id),
+            {"property_values": {}},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data["property_values"]["missing_required"] == [required_property.name]
+        assert not IssuePropertyValue.objects.filter(issue=epic, property=required_property).exists()
+
+    @pytest.mark.django_db
+    def test_epic_member_value_uuid_must_be_workspace_member(
+        self, member_client, workspace, project, epic, epic_type, non_member_user
+    ):
+        member_property = IssueProperty.objects.create(
+            issue_type=epic_type,
+            name="release-owner",
+            display_name="Release owner",
+            property_type=IssueProperty.PropertyType.MEMBER,
+        )
+
+        response = member_client.post(
+            _epic_property_values_url(workspace.slug, project.id, epic.id),
+            {"property_values": {str(member_property.id): str(non_member_user.id)}},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data["property_values"][str(member_property.id)] == "member_not_in_workspace"
+        assert not IssuePropertyValue.objects.filter(issue=epic, property=member_property).exists()
+
+    @pytest.mark.django_db
+    def test_epic_property_value_write_requires_edit_role(self, guest_client, workspace, project, epic, epic_type):
+        text_property = IssueProperty.objects.create(
+            issue_type=epic_type,
+            name="launch-summary",
+            display_name="Launch summary",
+            property_type=IssueProperty.PropertyType.TEXT,
+        )
+
+        response = guest_client.post(
+            _epic_property_values_url(workspace.slug, project.id, epic.id),
+            {"property_values": {str(text_property.id): "Launch in Q3"}},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert not IssuePropertyValue.objects.filter(issue=epic, property=text_property).exists()
 
     @pytest.mark.django_db
     def test_empty_properties_list_returns_200_empty(self, member_client, workspace, issue_type):

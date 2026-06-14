@@ -31,6 +31,7 @@ from plane.app.views import (
     WorkItemDescriptionVersionEndpoint,
     IssueMetaEndpoint,
     IssueDetailIdentifierEndpoint,
+    IssuePropertyOptionViewSet,
     IssuePropertyViewSet,
     RecurringWorkItemViewSet,
     SimilarIssuesEndpoint,
@@ -92,6 +93,11 @@ urlpatterns = [
             }
         ),
         name="issue-type-properties",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-types/<uuid:type_id>/properties/<uuid:property_id>/options/",
+        IssuePropertyOptionViewSet.as_view({"get": "list", "post": "create"}),
+        name="issue-type-property-options",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/work-item-templates/",

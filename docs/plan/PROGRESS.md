@@ -162,6 +162,7 @@ flakes (unrelated; pass in isolation).
 - `5e2f4bf` feat(work-items): add template UI
 - `66b548c` feat(work-items): add recurring work item models
 - `5939b762e` feat(epics): add custom property schema
+- `<pending>` feat(epics): add custom property API
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -235,8 +236,17 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   tests 8/8 green; adjacent property/template contracts 24/24 green; `manage.py check`;
   `makemigrations --check --dry-run`; `0130 -> 0129 -> 0130` migration rollback/forward;
   touched-file Ruff check/format and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-16** (epic custom properties API), then TASK-17 detail-view
-  fields.
+- ✅ **TASK-16** epic custom properties API — added project-linked member write permission for
+  issue-type property definitions, `GET|POST /properties/:id/options/`, and
+  `GET|POST /projects/:project_id/epics/:epic_id/property-values/` for text, multi-option,
+  and member values. The endpoint sanitizes text, validates option ownership, validates member
+  UUIDs against workspace membership, enforces required fields, records value activity, and keeps
+  the existing work-item JSON `property_values` path compatible. Verified: RED first on member
+  definition 403 + missing option/value routes; property API contracts 16/16 green; adjacent
+  property/template/epic contracts 44/44 green; `manage.py check`; `makemigrations --check
+--dry-run`; touched-file Ruff check/format and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-17** (epic custom-property fields in detail view), then
+  TASK-18 initiatives data layer.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
