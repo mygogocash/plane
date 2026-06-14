@@ -189,7 +189,13 @@ flakes (unrelated; pass in isolation).
   while `epics` is disabled, and the enabled path mounts the epic issue-layout store root. Verified:
   RED first on the missing route component and missing navigation item; focused route/navigation
   Vitest 3/3 green; full web Vitest 72/72 green; web typecheck green.
-- ⬜ remaining cards start at **TASK-9** (session API), then backend TASK-10+
+- ✅ **TASK-9** epic CRUD session endpoints + authorization — added session `/epics/`
+  list/create/retrieve/patch/delete routes backed by existing `Issue` rows with `IssueType.is_epic`;
+  writes require project Admin/Member, reads allow project viewers, cross-workspace project mismatches
+  return 400 before role checks, and `description_html` is sanitized before persistence. Verified:
+  RED first on missing routes; contract epic CRUD tests 6/6 green; `manage.py check`, touched-file
+  Ruff check, and Ruff format check clean.
+- ⬜ remaining cards start at **TASK-10** (epic progress endpoint), then backend TASK-11+
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`

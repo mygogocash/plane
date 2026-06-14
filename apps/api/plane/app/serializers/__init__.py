@@ -90,6 +90,7 @@ from .issue import (
     IssueDescriptionVersionDetailSerializer,
     IssueListDetailSerializer,
 )
+from .epic import EpicSerializer, EpicWriteSerializer
 
 from .module import (
     ModuleDetailSerializer,
