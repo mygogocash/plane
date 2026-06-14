@@ -25,6 +25,7 @@ from plane.app.serializers import (
 from plane.bgtasks.issue_activities_task import issue_activity
 from plane.db.models import (
     Issue,
+    Project,
     ProjectMember,
     State,
     WorkflowTransition,
@@ -137,6 +138,44 @@ class WorkflowTransitionViewSet(BaseViewSet):
             return Response({"error": "Workflow transition not found"}, status=status.HTTP_404_NOT_FOUND)
         rule.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+WORKFLOW_STATUS_CHOICES = {"disabled", "enabled", "paused"}
+
+
+class WorkflowConfigEndpoint(BaseAPIView):
+    """Read or update a project's workflow lifecycle status (``disabled|enabled|paused``).
+
+    Reads are open to any active project member; writes are admin-only. ``paused`` keeps
+    rules listable/editable but non-enforcing (see ``enforce_state_transition``).
+    """
+
+    def _project(self, slug, project_id):
+        return Project.objects.filter(pk=project_id, workspace__slug=slug).first()
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
+    def get(self, request, slug, project_id):
+        project = self._project(slug, project_id)
+        if project is None:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"workflow_status": project.workflow_status}, status=status.HTTP_200_OK)
+
+    @allow_permission([ROLE.ADMIN])
+    def patch(self, request, slug, project_id):
+        project = self._project(slug, project_id)
+        if project is None:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        new_status = request.data.get("workflow_status")
+        if new_status not in WORKFLOW_STATUS_CHOICES:
+            return Response(
+                {"error": f"workflow_status must be one of {sorted(WORKFLOW_STATUS_CHOICES)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        project.workflow_status = new_status
+        project.save(update_fields=["workflow_status"])
+        return Response({"workflow_status": project.workflow_status}, status=status.HTTP_200_OK)
 
 
 class IssueStateTransitionEndpoint(BaseAPIView):

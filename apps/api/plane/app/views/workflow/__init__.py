@@ -6,5 +6,6 @@ from .base import (
     ApprovalDecisionEndpoint,
     IssueApprovalsEndpoint,
     IssueStateTransitionEndpoint,
+    WorkflowConfigEndpoint,
     WorkflowTransitionViewSet,
 )

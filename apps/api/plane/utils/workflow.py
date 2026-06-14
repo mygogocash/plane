@@ -35,6 +35,7 @@ from plane.db.models import (
     IssueActivity,
     IssueAssignee,
     Notification,
+    ProjectIssueType,
     ProjectMember,
     WorkflowTransition,
     WorkflowTransitionActor,
@@ -89,14 +90,34 @@ class TransitionDecision:
 def resolve_rule_set(issue, project):
     """Return the candidate transition rules governing this issue.
 
-    Only the project-default rule set (``issue_type__isnull=True``) for now. Typed
-    resolution (WF-T8) replaces this helper without changing the enforcement mechanics.
+    Typed resolution: when the issue is bound to an ``IssueType`` that is *linked to this
+    project* (via ``ProjectIssueType``), the typed rule set (``issue_type=<type>``) governs
+    it. Items with no bound type — or whose type is not linked to the project — fall back to
+    the project-default set (``issue_type__isnull=True``). This is the single replacement
+    point; the enforcement mechanics in ``enforce_state_transition`` are unchanged.
     """
+    type_id = getattr(issue, "type_id", None)
+    if type_id is not None and ProjectIssueType.objects.filter(
+        project=project, issue_type_id=type_id, deleted_at__isnull=True
+    ).exists():
+        return WorkflowTransition.objects.filter(
+            project=project,
+            issue_type_id=type_id,
+            deleted_at__isnull=True,
+        )
+
     return WorkflowTransition.objects.filter(
         project=project,
         issue_type__isnull=True,
         deleted_at__isnull=True,
     )
+
+
+def _is_project_admin(project, actor) -> bool:
+    """Whether ``actor`` is an active project admin (role 20 == ROLE.ADMIN)."""
+    return ProjectMember.objects.filter(
+        project=project, member=actor, role=20, is_active=True
+    ).exists()
 
 
 def _actor_allowed(rule, project, actor):
@@ -121,17 +142,35 @@ def _actor_allowed(rule, project, actor):
     return membership.role in (rule.allowed_roles or [])
 
 
-def enforce_state_transition(issue, new_state_id, actor) -> TransitionDecision:
+def enforce_state_transition(
+    issue, new_state_id, actor, maintenance_bypass: bool = False
+) -> TransitionDecision:
     """Decide whether ``actor`` may move ``issue`` to ``new_state_id``.
 
     Returns a ``TransitionDecision`` when allowed; raises ``IllegalTransition`` (409) or
     ``ActorNotAllowed`` (403) when denied.
+
+    ``maintenance_bypass`` lets a *project admin* skip enforcement (e.g. to unstick an item
+    whose rules trap it). The bypass is honored only when ``actor`` is an active project
+    admin — a non-admin passing the flag cannot escalate — and every honored bypass writes
+    an audit ``IssueActivity`` entry naming the actor.
     """
     try:
         project = issue.project
 
-        # Non-enforcing postures allow everything.
+        # Non-enforcing postures (disabled, paused) allow everything.
         if project.workflow_status != "enabled":
+            return TransitionDecision(allowed=True)
+
+        # Admin maintenance bypass: skip enforcement and record an audit entry.
+        if maintenance_bypass and _is_project_admin(project, actor):
+            _record_activity(
+                issue,
+                actor,
+                "bypassed",
+                field="workflow",
+                note="maintenance bypass of workflow enforcement",
+            )
             return TransitionDecision(allowed=True)
 
         rules = resolve_rule_set(issue, project)
@@ -222,20 +261,24 @@ def _notify(receiver_id, *, issue, actor, title, sender):
         logger.exception("Failed to create approval notification: %s", exc)
 
 
-def _record_activity(issue, actor, verb, *, note=""):
-    """Insert an IssueActivity row for an approval/rejection (no mapper exists for these)."""
+def _record_activity(issue, actor, verb, *, note="", field="approval"):
+    """Insert an IssueActivity row for a workflow event (no mapper exists for these).
+
+    ``field`` defaults to ``"approval"`` for the approval/rejection calls; the maintenance
+    bypass path passes ``field="workflow"``.
+    """
     try:
         IssueActivity.objects.create(
             project=issue.project,
             issue=issue,
             actor=actor,
             verb=verb,
-            field="approval",
+            field=field,
             new_value=note,
             epoch=timezone.now().timestamp(),
         )
     except Exception as exc:
-        logger.exception("Failed to record approval activity: %s", exc)
+        logger.exception("Failed to record workflow activity: %s", exc)
 
 
 def create_approval(issue, rule, target_state_id, actor):

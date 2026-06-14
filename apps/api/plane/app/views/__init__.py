@@ -88,6 +88,7 @@ from .workflow.base import (
     ApprovalDecisionEndpoint,
     IssueApprovalsEndpoint,
     IssueStateTransitionEndpoint,
+    WorkflowConfigEndpoint,
     WorkflowTransitionViewSet,
 )
 from .view.base import (

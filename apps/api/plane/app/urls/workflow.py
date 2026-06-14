@@ -8,11 +8,17 @@ from plane.app.views import (
     ApprovalDecisionEndpoint,
     IssueApprovalsEndpoint,
     IssueStateTransitionEndpoint,
+    WorkflowConfigEndpoint,
     WorkflowTransitionViewSet,
 )
 
 
 urlpatterns = [
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/workflow-config/",
+        WorkflowConfigEndpoint.as_view(),
+        name="workflow-config",
+    ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/state-transition/",
         IssueStateTransitionEndpoint.as_view(),
