@@ -4,13 +4,14 @@
 
 from functools import wraps
 
+from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.response import Response
 
 from plane.app.permissions import ROLE, allow_permission
 from plane.app.serializers import EpicSerializer, EpicWriteSerializer
 from plane.db.models import Issue, Project, ProjectIssueType
-from .base import BaseViewSet
+from .base import BaseAPIView, BaseViewSet
 
 
 def project_workspace_match_required(view_func):
@@ -128,3 +129,49 @@ class EpicViewSet(BaseViewSet):
 
         epic.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EpicProgressEndpoint(BaseAPIView):
+    @project_workspace_match_required
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], level="PROJECT")
+    def get(self, request, slug, project_id, epic_id):
+        epic_exists = Issue.objects.filter(
+            workspace__slug=slug,
+            project_id=project_id,
+            id=epic_id,
+            type__is_epic=True,
+        ).exists()
+        if not epic_exists:
+            return Response({"error": "Epic not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        progress = Issue.issue_objects.filter(
+            workspace__slug=slug,
+            project_id=project_id,
+            parent_id=epic_id,
+        ).aggregate(
+            total_count=Count("id"),
+            backlog=Count("id", filter=Q(state__group="backlog")),
+            unstarted=Count("id", filter=Q(state__group="unstarted")),
+            started=Count("id", filter=Q(state__group="started")),
+            completed=Count("id", filter=Q(state__group="completed")),
+            cancelled=Count("id", filter=Q(state__group="cancelled")),
+        )
+
+        counts_by_group = {
+            "backlog": progress["backlog"] or 0,
+            "unstarted": progress["unstarted"] or 0,
+            "started": progress["started"] or 0,
+            "completed": progress["completed"] or 0,
+            "cancelled": progress["cancelled"] or 0,
+        }
+        total_count = progress["total_count"] or 0
+        percent_complete = round((counts_by_group["completed"] / total_count) * 100, 2) if total_count else 0
+
+        return Response(
+            {
+                "counts_by_group": counts_by_group,
+                "percent_complete": percent_complete,
+                "total_count": total_count,
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -195,7 +195,12 @@ flakes (unrelated; pass in isolation).
   return 400 before role checks, and `description_html` is sanitized before persistence. Verified:
   RED first on missing routes; contract epic CRUD tests 6/6 green; `manage.py check`, touched-file
   Ruff check, and Ruff format check clean.
-- ⬜ remaining cards start at **TASK-10** (epic progress endpoint), then backend TASK-11+
+- ✅ **TASK-10** epic progress rollup endpoint — added `GET /epics/:epic_id/progress/`
+  with child work-item counts by state group, `total_count`, and 0-100 `percent_complete`;
+  zero-child epics return 0 without divide-by-zero, and soft-deleted children are excluded.
+  Verified: RED first on missing progress route; epic CRUD + progress contracts 8/8 green;
+  `manage.py check`, touched-file Ruff check, Ruff format check, and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-11** (bulk attach work items), then backend TASK-12+
   foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
