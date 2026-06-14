@@ -92,6 +92,8 @@ from .issue import (
 )
 from .epic import EpicSerializer, EpicWriteSerializer
 
+from .initiative import InitiativeSerializer
+
 from .module import (
     ModuleDetailSerializer,
     ModuleWriteSerializer,

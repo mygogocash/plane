@@ -36,6 +36,13 @@ from .base import BaseAPIView, BaseViewSet
 from .epic import EpicConvertEndpoint, EpicDuplicateEndpoint, EpicProgressEndpoint, EpicPropertyValuesEndpoint
 from .epic import EpicViewSet, EpicWorkItemsEndpoint
 from .epic import WorkItemConvertToEpicEndpoint
+from .initiative import (
+    InitiativeEpicMembersEndpoint,
+    InitiativeProgressEndpoint,
+    InitiativeProjectMembersEndpoint,
+    InitiativesSummaryEndpoint,
+    InitiativeViewSet,
+)
 
 from .workspace.base import (
     WorkSpaceViewSet,

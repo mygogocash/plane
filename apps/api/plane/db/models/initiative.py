@@ -76,7 +76,8 @@ class InitiativeEpic(BaseModel):
             raise ValidationError({"epic": "Initiative members must be epic work items."})
 
     def save(self, *args, **kwargs):
-        self.clean()
+        if self.deleted_at is None:
+            self.clean()
         return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -105,7 +106,8 @@ class InitiativeProject(BaseModel):
             raise ValidationError({"project": "Project must belong to the initiative workspace."})
 
     def save(self, *args, **kwargs):
-        self.clean()
+        if self.deleted_at is None:
+            self.clean()
         return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -134,7 +136,8 @@ class InitiativeLabel(BaseModel):
             raise ValidationError({"label": "Label must belong to the initiative workspace."})
 
     def save(self, *args, **kwargs):
-        self.clean()
+        if self.deleted_at is None:
+            self.clean()
         return super().save(*args, **kwargs)
 
     def __str__(self):
