@@ -155,15 +155,18 @@ Assertions reference the property-type enum members `text/number/date/select/mul
 **Depends on** [CP-2-API]
 **Risk tier** R1 (flag-gated UI; no schema)
 **Worktree isolation** y
+**Status** Done 2026-06-14
 
 **Context** `apps/web/core/components/issues/issue-modal/form.tsx:50` renders `WorkItemModalAdditionalProperties` from `@/plane-web/...`, which aliases to the CE stub `apps/web/ce/components/issues/issue-modal/modal-additional-properties.tsx` returning `null`. This card replaces that stub with a real implementation that loads the selected `IssueType`'s properties and renders one input per `property_type`, gated on `work_item_types`. Submit packs values under `property_values` (consumed by CP-2-API).
 
 **Files**
 
 - Edit: `apps/web/ce/components/issues/issue-modal/modal-additional-properties.tsx` (replace stub)
-- New: `packages/shared-state/src/store/issue/issue-property.store.ts` (`IssuePropertyStore`; grep `packages/shared-state/src/store` for the MobX store base + root-store registration convention)
-- New: `packages/services/src/issue-property/property.service.ts` (extends `APIService` like `ai.service.ts:33`; + barrel export)
+- New: `apps/web/core/store/issue-property.store.ts` (`IssuePropertyStore`, registered in `apps/web/core/store/root.store.ts`; uses the same app-core convention as `WorkflowStore`)
+- New: `apps/web/core/hooks/store/use-issue-property.ts`
+- New: `apps/web/core/services/issue-property.service.ts` (extends the app web `APIService`)
 - New test: `apps/web/ce/components/issues/issue-modal/modal-additional-properties.test.tsx` (Vitest, alongside `apps/web/ce/lib/self-host-entitlements.test.ts` convention)
+- New test: `apps/web/core/store/issue-property.store.test.ts`
 
 **TDD — failing test first**
 Vitest in `modal-additional-properties.test.tsx`:
@@ -188,7 +191,9 @@ Vitest in `modal-additional-properties.test.tsx`:
 
 **Verify**
 
-- `pnpm --filter web vitest run apps/web/ce/components/issues/issue-modal/modal-additional-properties.test.tsx` (RED then GREEN)
+- `pnpm --filter web exec vitest run ce/components/issues/issue-modal/modal-additional-properties.test.tsx core/store/issue-property.store.test.ts` (RED then GREEN)
+- `pnpm --filter web exec oxlint ce/components/issues/issue-modal/modal-additional-properties.tsx ce/components/issues/issue-modal/modal-additional-properties.test.tsx core/services/issue-property.service.ts core/store/issue-property.store.ts core/store/issue-property.store.test.ts core/hooks/store/use-issue-property.ts core/store/root.store.ts ce/types/issue-types/issue-property-values.d.ts --max-warnings=0`
+- `pnpm --filter @plane/types check:types`
 - Types: `pnpm --filter web check:types` (or repo-root `pnpm check` if that is the documented gate — grep `BUILD.md`/`package.json` scripts)
 
 **Done when** Stub replaced, all Vitest cases RED→GREEN, type-check passes, store + service registered, flag-gating verified.

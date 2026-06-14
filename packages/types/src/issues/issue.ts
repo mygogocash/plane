@@ -12,6 +12,36 @@ import type { TIssueLink } from "./issue_link";
 import type { TIssueReaction, IIssuePublicReaction, IPublicVote } from "./issue_reaction";
 import type { TIssueRelationTypes } from "./issue_relation";
 
+export type TIssuePropertyType = "text" | "number" | "date" | "select" | "multi_select" | "boolean" | "member" | "url";
+
+export type TIssuePropertyOption = {
+  label: string;
+  value: string;
+};
+
+export type TIssuePropertySettings = {
+  options?: TIssuePropertyOption[];
+  [key: string]: unknown;
+};
+
+export type TIssuePropertyValue = string | number | boolean | string[] | null;
+
+export type TIssuePropertyValues = Record<string, TIssuePropertyValue>;
+
+export type TIssueProperty = {
+  id: string;
+  workspace_id: string;
+  issue_type: string;
+  name: string;
+  display_name: string;
+  property_type: TIssuePropertyType;
+  settings: TIssuePropertySettings;
+  is_required: boolean;
+  default_value: TIssuePropertyValue;
+  sort_order: number;
+  is_active: boolean;
+};
+
 export enum EIssueLayoutTypes {
   LIST = "list",
   KANBAN = "kanban",
@@ -96,6 +126,7 @@ export type TIssue = TBaseIssue & {
   issue_link?: TIssueLink[];
   issue_relation?: IssueRelation[];
   issue_related?: IssueRelation[];
+  property_values?: TIssuePropertyValues;
   // tempId is used for optimistic updates. It is not a part of the API response.
   tempId?: string;
   // sourceIssueId is used to store the original issue id when creating a copy of an issue. Used in cloning property values. It is not a part of the API response.

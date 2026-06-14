@@ -155,6 +155,7 @@ flakes (unrelated; pass in isolation).
 - `c8452f6` feat(workflows): add settings builder
 - `a6d2559` feat(workflows): add detail approval surfaces
 - `0d0ea24` feat(work-items): add custom property models
+- `10ff9d4` feat(work-items): add custom property API
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -173,7 +174,12 @@ flakes (unrelated; pass in isolation).
   issue-detail value serialization, and activity rows for definition/value changes. Verified: RED first; CP-2 contract
   12/12 green; adjacent issue-transition/approval contracts 25/25 green; backend unit suite 246/246 green; full app
   contracts 126/134 green with only the known magic-link rate-limit baseline failures.
-- ⬜ remaining cards (CP-3-FE, templates, recurring, duplicates — mostly unlock + finish)
+- ✅ **CP-3-FE** dynamic type-scoped property fields in issue modal — replaced the CE stub with a flag-gated
+  `WorkItemModalAdditionalProperties` implementation, added an issue-property API client + MobX cache in the web core
+  store, registered the store on the root store, exported shared issue-property types, and packed rendered field values
+  under `property_values` for the existing submit path. Verified: RED first; component/store Vitest 6/6 green; targeted
+  web lint clean; `@plane/types` typecheck clean; `pnpm --filter web check:types` clean.
+- ⬜ remaining cards (templates, recurring, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 
