@@ -43,6 +43,12 @@ from .initiative import (
     InitiativesSummaryEndpoint,
     InitiativeViewSet,
 )
+from .status_update import (
+    EpicStatusUpdateReactionEndpoint,
+    EpicStatusUpdateViewSet,
+    InitiativeStatusUpdateReactionEndpoint,
+    InitiativeStatusUpdateViewSet,
+)
 
 from .workspace.base import (
     WorkSpaceViewSet,

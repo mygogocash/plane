@@ -94,6 +94,8 @@ from .epic import EpicSerializer, EpicWriteSerializer
 
 from .initiative import InitiativeSerializer
 
+from .status_update import StatusUpdateReactionSerializer, StatusUpdateSerializer
+
 from .module import (
     ModuleDetailSerializer,
     ModuleWriteSerializer,

@@ -5,6 +5,8 @@
 from django.urls import path
 
 from plane.app.views import (
+    InitiativeStatusUpdateReactionEndpoint,
+    InitiativeStatusUpdateViewSet,
     InitiativeEpicMembersEndpoint,
     InitiativeProgressEndpoint,
     InitiativeProjectMembersEndpoint,
@@ -50,5 +52,32 @@ urlpatterns = [
         "workspaces/<str:slug>/initiatives/<uuid:initiative_id>/progress/",
         InitiativeProgressEndpoint.as_view(),
         name="workspace-initiative-progress",
+    ),
+    path(
+        "workspaces/<str:slug>/initiatives/<uuid:initiative_id>/status-updates/",
+        InitiativeStatusUpdateViewSet.as_view({"get": "list", "post": "create"}),
+        name="workspace-initiative-status-updates",
+    ),
+    path(
+        "workspaces/<str:slug>/initiatives/<uuid:initiative_id>/status-updates/<uuid:pk>/",
+        InitiativeStatusUpdateViewSet.as_view(
+            {
+                "get": "retrieve",
+                "put": "partial_update",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="workspace-initiative-status-updates",
+    ),
+    path(
+        "workspaces/<str:slug>/initiatives/<uuid:initiative_id>/status-updates/<uuid:status_update_id>/reactions/",
+        InitiativeStatusUpdateReactionEndpoint.as_view(),
+        name="workspace-initiative-status-update-reactions",
+    ),
+    path(
+        "workspaces/<str:slug>/initiatives/<uuid:initiative_id>/status-updates/<uuid:status_update_id>/reactions/<str:reaction_code>/",
+        InitiativeStatusUpdateReactionEndpoint.as_view(),
+        name="workspace-initiative-status-update-reactions",
     ),
 ]

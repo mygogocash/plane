@@ -309,8 +309,13 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   green through the normal Docker pytest entrypoint; `manage.py check`; `makemigrations --check
 --dry-run`; `0132 -> 0131 -> 0132` migration rollback/forward; touched-file Ruff check/format
   and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-24** (status updates API), then TASK-25 threaded status
-  update UI.
+- ✅ **TASK-24** status updates API — added session routes for epic and initiative status-update
+  list/create/detail/update/delete, threaded replies, HTML sanitization, workspace/project
+  read/write gates, and reaction add/delete with duplicate-active rejection and soft-deleted update
+  rejection. Verified: RED first on missing routes; focused status-update API contracts 10/10 green;
+  adjacent status-update + epic CRUD + initiative API contracts 22/22 green; `manage.py check`;
+  `makemigrations --check --dry-run`; touched-file Ruff check/format; `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-25** (threaded status update UI), then TASK-26 AI NLQ endpoint.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 

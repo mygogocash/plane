@@ -4,6 +4,7 @@
 
 from django.urls import path
 
+from plane.app.views import EpicStatusUpdateReactionEndpoint, EpicStatusUpdateViewSet
 from plane.app.views import EpicConvertEndpoint, EpicDuplicateEndpoint, EpicProgressEndpoint, EpicPropertyValuesEndpoint
 from plane.app.views import EpicViewSet
 from plane.app.views import EpicWorkItemsEndpoint
@@ -32,6 +33,33 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/progress/",
         EpicProgressEndpoint.as_view(),
         name="project-epic-progress",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/status-updates/",
+        EpicStatusUpdateViewSet.as_view({"get": "list", "post": "create"}),
+        name="project-epic-status-updates",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/status-updates/<uuid:pk>/",
+        EpicStatusUpdateViewSet.as_view(
+            {
+                "get": "retrieve",
+                "put": "partial_update",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="project-epic-status-updates",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/status-updates/<uuid:status_update_id>/reactions/",
+        EpicStatusUpdateReactionEndpoint.as_view(),
+        name="project-epic-status-update-reactions",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/status-updates/<uuid:status_update_id>/reactions/<str:reaction_code>/",
+        EpicStatusUpdateReactionEndpoint.as_view(),
+        name="project-epic-status-update-reactions",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/epics/<uuid:epic_id>/work-items/",

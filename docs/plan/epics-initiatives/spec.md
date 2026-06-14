@@ -69,18 +69,19 @@ The delivery epics are `EPIC-1` through `EPIC-7` in `docs/plan/epics-initiatives
 
 # User Stories
 
-User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-6.1`: add first-class structured status-update models for epics and initiatives, including the status-update reaction model and additive migration.
+User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-6.2` and `EI-6.3`: add session-authenticated status-update APIs for epics and initiatives, including threaded replies and reactions.
 
 # Tasks
 
-Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-23`, following locally completed `TASK-22` initiative route/list/board/timeline/detail work.
+Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-24`, following locally completed `TASK-23` status-update model and migration work.
 
 # Acceptance Criteria
 
-- `StatusUpdate` extends `BaseModel` and stores `workspace`, nullable `epic`, nullable `initiative`, `status`, `comment_html`, `comment_stripped`, `comment_json`, `parent`, and `actor`.
-- The database enforces exactly one owning object with a `CheckConstraint`: either `epic` or `initiative`, never both and never neither.
-- `status` supports exactly `ON_TRACK`, `AT_RISK`, and `OFF_TRACK`.
-- Saving a status update strips `comment_html` into `comment_stripped` using the same HTML stripping path as `IssueComment`.
-- `StatusUpdateReaction` stores `status_update`, `actor`, and `reaction`, and rejects duplicate active reactions by the same actor through a partial unique constraint.
-- The additive migration creates only the new status-update tables and can migrate forward and backward cleanly.
-- TASK-23 focused model tests, `manage.py check`, `makemigrations --check --dry-run`, touched-file Ruff checks, and migration rollback/forward checks pass.
+- Project members can create, list, update, and delete status updates under `/api/workspaces/<slug>/projects/<project_id>/epics/<epic_id>/status-updates/`.
+- Workspace members can create and list status updates under `/api/workspaces/<slug>/initiatives/<initiative_id>/status-updates/`.
+- Reads require the matching project/workspace viewer role; writes require Admin or Member roles.
+- Creating an epic status update sets `epic`, leaves `initiative` null, sanitizes `comment_html`, and stores `comment_stripped`/`comment_json`.
+- Creating a reply stores `parent` and enforces the same owning epic or initiative as the parent update.
+- Reactions can be added and removed under the owning status-update route; duplicate active reactions return a validation error.
+- Soft-deleted status updates reject new reactions and do not appear in list/detail responses.
+- TASK-24 contract tests, `manage.py check`, `makemigrations --check --dry-run`, touched-file Ruff checks, and `git diff --check` pass.
