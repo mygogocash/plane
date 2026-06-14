@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { decode } from "html-entities";
 import { MessageSquareReply } from "lucide-react";
 import { EpicService, InitiativeService } from "@plane/services";
 import { stringToEmoji } from "@plane/propel/emoji-icon-picker";
@@ -18,6 +19,7 @@ import type {
   TStatusUpdateReactionPayload,
   TStatusUpdateStatus,
 } from "@plane/types";
+import { sanitizeRichHTML } from "@plane/utils";
 
 export type TStatusUpdateOwner =
   | {
@@ -79,6 +81,7 @@ const STATUS_OPTIONS: {
 
 const epicService = new EpicService();
 const initiativeService = new InitiativeService();
+const DISPLAY_TEXT_BLOCK_TAGS = new Set(["blockquote", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "p", "pre"]);
 
 const escapeHtml = (value: string) =>
   value
@@ -90,17 +93,41 @@ const escapeHtml = (value: string) =>
 
 const toCommentHtml = (value: string) => `<p>${escapeHtml(value).replace(/\n/g, "<br />")}</p>`;
 
-const htmlToDisplayText = (html?: string) =>
-  (html ?? "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+const normalizeDisplayText = (value: string) =>
+  value
+    .replace(/\r\n/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
+
+export const htmlToDisplayText = (html?: string) => {
+  const textParts: string[] = [];
+  const appendLineBreak = () => {
+    const previousPart = textParts.at(-1);
+    if (previousPart && !previousPart.endsWith("\n")) textParts.push("\n");
+  };
+
+  sanitizeRichHTML(html ?? "", {
+    allowedTags: [...DISPLAY_TEXT_BLOCK_TAGS, "br"],
+    allowedAttributes: {},
+    disallowedTagsMode: "discard",
+    nonTextTags: ["script", "style", "textarea"],
+    onOpenTag: (name) => {
+      if (name === "br" || DISPLAY_TEXT_BLOCK_TAGS.has(name)) appendLineBreak();
+    },
+    onCloseTag: (name) => {
+      if (DISPLAY_TEXT_BLOCK_TAGS.has(name)) appendLineBreak();
+    },
+    textFilter: (text) => {
+      textParts.push(decode(text));
+      return text;
+    },
+  });
+
+  return normalizeDisplayText(textParts.join(""));
+};
 
 const statusOption = (status: TStatusUpdateStatus) =>
   STATUS_OPTIONS.find((option) => option.value === status) ?? STATUS_OPTIONS[0];

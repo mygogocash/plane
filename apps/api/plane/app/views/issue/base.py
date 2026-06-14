@@ -80,6 +80,7 @@ from plane.utils.workflow import (
     apply_auto_assignment,
     create_approval,
     enforce_state_transition,
+    workflow_error_message,
 )
 from plane.utils.issue_filters import issue_filters
 from plane.utils.order_queryset import order_issue_queryset
@@ -809,9 +810,9 @@ class IssueViewSet(BaseViewSet):
             try:
                 decision = enforce_state_transition(issue, new_state_id, request.user)
             except IllegalTransition as exc:
-                return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+                return Response({"error": workflow_error_message(exc)}, status=status.HTTP_409_CONFLICT)
             except ActorNotAllowed as exc:
-                return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"error": workflow_error_message(exc)}, status=status.HTTP_403_FORBIDDEN)
 
             # Approval-gated transition: defer the state change here too. Create a pending
             # approval and return 202 instead of silently applying the move.

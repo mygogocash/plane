@@ -55,6 +55,8 @@ describe("approval banner helpers", () => {
   });
 
   it("renders markup comments as sanitized text", () => {
-    expect(sanitizeApprovalComment("<strong>Ship</strong><script>alert(1)</script>")).toBe("Shipalert(1)");
+    expect(sanitizeApprovalComment("<strong>Ship</strong><script>alert(1)</script><p>Ready&nbsp;&amp; clear</p>")).toBe(
+      "Ship\nReady & clear"
+    );
   });
 });

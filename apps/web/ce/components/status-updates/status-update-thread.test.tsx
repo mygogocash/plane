@@ -11,6 +11,7 @@ import type { TStatusUpdate } from "@plane/types";
 import {
   StatusUpdateThread,
   buildStatusUpdateTree,
+  htmlToDisplayText,
   postStatusUpdate,
   toggleStatusUpdateReaction,
 } from "./status-update-thread";
@@ -104,5 +105,11 @@ describe("StatusUpdateThread", () => {
     expect(markup).toContain("At risk");
     expect(markup).toContain("Blocked by beta access");
     expect(markup).toContain("Investigating the blocker");
+  });
+
+  it("converts comment HTML to display text without keeping script content", () => {
+    expect(htmlToDisplayText("<p>Ready&nbsp;&amp; clear</p><script>alert(1)</script><p>Ship</p>")).toBe(
+      "Ready & clear\nShip"
+    );
   });
 });

@@ -287,6 +287,7 @@ class TestApprovalGates:
         )
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["error"] == "Approval request could not be completed"
         issue.refresh_from_db()
         assert issue.state_id == state_a.id  # no silent move
 
@@ -311,6 +312,7 @@ class TestApprovalGates:
             format="json",
         )
         assert forbidden.status_code == status.HTTP_403_FORBIDDEN
+        assert forbidden.data["error"] == "You are not permitted to decide on this approval"
 
         # workspace admin (create_user) is not an assigned approver but may override
         override = _client(create_user).post(
