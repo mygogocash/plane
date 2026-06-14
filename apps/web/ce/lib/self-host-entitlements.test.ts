@@ -21,8 +21,8 @@ describe("self-host entitlements", () => {
     expect(SELF_HOSTED_PLAN_DESCRIPTION).toContain("Available CE features");
   });
 
-  it("enables every tracked self-host feature family", () => {
-    const featureFamilies = [
+  it("enables every shipped self-host feature family", () => {
+    const enabledFeatureFamilies = [
       "active_cycles",
       "ai_copilot",
       "analytics",
@@ -40,11 +40,20 @@ describe("self-host entitlements", () => {
       "workflows_approvals",
       "worklogs_time_tracking",
     ] as const;
+    const disabledFeatureFamilies = ["epics", "initiatives"] as const;
 
     const configuredFeatures = new Set(Object.keys(SELF_HOSTED_FEATURE_FLAGS));
 
-    expect(configuredFeatures.size).toBe(featureFamilies.length);
-    expect(featureFamilies.every((feature) => configuredFeatures.has(feature))).toBe(true);
-    expect(featureFamilies.every((feature) => isSelfHostedFeatureEnabled(feature))).toBe(true);
+    expect(configuredFeatures.size).toBe(enabledFeatureFamilies.length + disabledFeatureFamilies.length);
+    expect(enabledFeatureFamilies.every((feature) => configuredFeatures.has(feature))).toBe(true);
+    expect(disabledFeatureFamilies.every((feature) => configuredFeatures.has(feature))).toBe(true);
+    expect(enabledFeatureFamilies.every((feature) => isSelfHostedFeatureEnabled(feature))).toBe(true);
+  });
+
+  it("registers epics and initiatives feature flags defaulting to false", () => {
+    expect(SELF_HOSTED_FEATURE_FLAGS.epics).toBe(false);
+    expect(SELF_HOSTED_FEATURE_FLAGS.initiatives).toBe(false);
+    expect(isSelfHostedFeatureEnabled("epics")).toBe(false);
+    expect(isSelfHostedFeatureEnabled("initiatives")).toBe(false);
   });
 });

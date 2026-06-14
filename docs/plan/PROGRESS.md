@@ -164,7 +164,10 @@ flakes (unrelated; pass in isolation).
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
-- ⬜ all cards (Initiatives model is greenfield; epics UI completion)
+- ✅ **TASK-1** entitlement flags — added `epics: false` and `initiatives: false` self-host feature
+  flags plus resolver coverage. Verified: RED first (`undefined` in Vitest and TS missing-key errors);
+  focused entitlement Vitest 3/3 green; web typecheck green.
+- ⬜ remaining cards start at **TASK-2** (`EpicService` typed client), then TASK-3..5 frontend foundation.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
