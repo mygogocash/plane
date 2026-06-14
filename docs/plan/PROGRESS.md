@@ -153,6 +153,7 @@ flakes (unrelated; pass in isolation).
 - `18eb041` feat: workflow types + service + MobX store (WF-T10)
 - `0b5ff14` feat: enforce CE workflow components (WF-T11)
 - `c8452f6` feat(workflows): add settings builder
+- `a6d2559` feat(workflows): add detail approval surfaces
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -160,7 +161,12 @@ flakes (unrelated; pass in isolation).
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
-- ⬜ all cards (custom properties, templates, recurring — mostly unlock + finish)
+- ✅ **CP-1-BE** custom-property data layer — added `IssueProperty` + `IssuePropertyValue`, additive migration
+  `0127_custom_properties.py`, model exports, factories, and unit coverage for type-scoped workspace inheritance,
+  soft-delete-aware uniqueness, same-name/different-type allowance, and JSON value persistence. Verified: RED import
+  failure first; targeted 6/6 green; backend unit suite 246/246 green; `makemigrations --check --dry-run`,
+  `manage.py check`, touched-file Ruff check/format, and `0126 -> 0127 -> 0126 -> 0127` migration round-trip all clean.
+- ⬜ remaining cards (CP-2-API, CP-3-FE, templates, recurring, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 

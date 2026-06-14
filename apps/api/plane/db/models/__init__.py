@@ -82,6 +82,8 @@ from .favorite import UserFavorite
 
 from .issue_type import IssueType, ProjectIssueType
 
+from .issue_property import IssueProperty, IssuePropertyValue
+
 from .workflow import (
     WorkflowTransition,
     WorkflowTransitionActor,
