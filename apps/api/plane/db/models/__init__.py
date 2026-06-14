@@ -91,6 +91,8 @@ from .workflow import (
     WorkItemApprovalApprover,
 )
 
+from .work_item_template import WorkItemTemplate
+
 from .recent_visit import UserRecentVisit
 
 from .label import Label

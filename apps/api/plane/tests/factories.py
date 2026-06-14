@@ -15,6 +15,7 @@ from plane.db.models import (
     ProjectMember,
     State,
     User,
+    WorkItemTemplate,
     Workspace,
     WorkspaceMember,
 )
@@ -170,5 +171,23 @@ class IssuePropertyValueFactory(factory.django.DjangoModelFactory):
     workspace = factory.SelfAttribute("issue.workspace")
     property = factory.SubFactory(IssuePropertyFactory)
     value = factory.LazyFunction(lambda: {"text": "value"})
+    created_at = factory.LazyFunction(timezone.now)
+    updated_at = factory.LazyFunction(timezone.now)
+
+
+class WorkItemTemplateFactory(factory.django.DjangoModelFactory):
+    """Factory for creating WorkItemTemplate instances"""
+
+    class Meta:
+        model = WorkItemTemplate
+
+    id = factory.LazyFunction(uuid4)
+    project = factory.SubFactory(ProjectFactory)
+    workspace = factory.SelfAttribute("project.workspace")
+    issue_type = factory.SubFactory(IssueTypeFactory, workspace=factory.SelfAttribute("..workspace"))
+    name = factory.Sequence(lambda n: f"Work item template {n}")
+    description_html = "<p></p>"
+    template_data = factory.LazyFunction(dict)
+    is_active = True
     created_at = factory.LazyFunction(timezone.now)
     updated_at = factory.LazyFunction(timezone.now)

@@ -206,6 +206,7 @@ Vitest in `modal-additional-properties.test.tsx`:
 **Depends on** [CP-1-BE] (template_data carries property values)
 **Risk tier** R1 (additive schema)
 **Worktree isolation** y
+**Status** Done 2026-06-14
 
 **Context** PRD §17: the frontend already threads `templateId` through `apps/web/core/components/issues/issue-modal/modal.tsx`, but no model/API/persistence exists. This card adds `WorkItemTemplate(ProjectBaseModel)` with a `template_data` JSON payload and an optional `issue_type` FK.
 
@@ -237,8 +238,11 @@ Vitest in `modal-additional-properties.test.tsx`:
 
 **Verify**
 
-- `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest plane/tests/unit/db/test_work_item_template_model.py -m unit -v` (RED→GREEN)
-- Migration forward+reverse; full unit suite green.
+- `docker exec -w /code plane-tests pytest plane/tests/unit/db/test_work_item_template_model.py -m unit -v --tb=short` (RED→GREEN)
+- `docker exec -w /code plane-tests pytest plane/tests/unit -m unit -v --tb=short`
+- `docker exec -w /code plane-tests python manage.py check`
+- `docker exec -w /code plane-tests python manage.py makemigrations --check --dry-run`
+- `docker exec -w /code plane-tests python manage.py migrate db 0127 --noinput && docker exec -w /code plane-tests python manage.py migrate db 0128 --noinput`
 
 **Done when** Model + migration + factory exist, tests RED→GREEN, migration round-trips, exports registered.
 

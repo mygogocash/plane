@@ -156,6 +156,7 @@ flakes (unrelated; pass in isolation).
 - `a6d2559` feat(workflows): add detail approval surfaces
 - `0d0ea24` feat(work-items): add custom property models
 - `10ff9d4` feat(work-items): add custom property API
+- `2326318` feat(work-items): render custom property fields
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -179,7 +180,12 @@ flakes (unrelated; pass in isolation).
   store, registered the store on the root store, exported shared issue-property types, and packed rendered field values
   under `property_values` for the existing submit path. Verified: RED first; component/store Vitest 6/6 green; targeted
   web lint clean; `@plane/types` typecheck clean; `pnpm --filter web check:types` clean.
-- ⬜ remaining cards (templates, recurring, duplicates — mostly unlock + finish)
+- ✅ **TPL-1-BE** work-item template data layer — added `WorkItemTemplate(ProjectBaseModel)` with JSON
+  `template_data`, optional `issue_type`, active flag, `(project, issue_type)` index, model export, factory, and unit
+  coverage for project scoping, JSON round-trip, nullable issue type, and active default. Verified: RED import failure
+  first; target 4/4 green; backend unit suite 250/250 green; touched-file Ruff check/format clean; `manage.py check`
+  clean; `makemigrations --check --dry-run` clean; `0128 -> 0127 -> 0128` migration round-trip clean.
+- ⬜ remaining cards (template API/UI, recurring, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 
