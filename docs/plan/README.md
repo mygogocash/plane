@@ -7,8 +7,8 @@ and a four-part build breakdown here under `docs/plan/<feature>/`.
 > **Live build status:** [`PROGRESS.md`](PROGRESS.md) is the single source of truth for what
 > has shipped. As of the latest update: **Workflows & Approvals backend is feature-complete
 > (WF-T1–T9), frontend store/service/types (WF-T10), CE enforcement components (WF-T11),
-> and the settings workflow builder (WF-T12) are done**; the remaining Workflows work is the
-> approval banner + AI chip (WF-T13). All dependency upgrades (Django 5.2, React 19,
+> settings workflow builder (WF-T12), and detail approval/suggestion surfaces (WF-T13) are done**.
+> All dependency upgrades (Django 5.2, React 19,
 > Zod 4, Headless UI 2) are landed. The other four feature families are not yet started.
 
 > Source of truth for _what's already in the fork vs. missing_:
@@ -26,13 +26,13 @@ and a four-part build breakdown here under `docs/plan/<feature>/`.
 
 ## Features
 
-| Feature               | PRD                                             | Epics                                 | Stories                                   | Design                                  | Tasks                                 | Overall gap                                                                                  |
-| --------------------- | ----------------------------------------------- | ------------------------------------- | ----------------------------------------- | --------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Workflows & Approvals | [PRD](../prd-workflows-approvals-2026-06-07.md) | [epics](workflows-approvals/epics.md) | [stories](workflows-approvals/stories.md) | [design](workflows-approvals/design.md) | [tasks](workflows-approvals/tasks.md) | 🟢 Backend done (WF-T1–T9) + frontend store/enforcement/builder (WF-T10–T12); WF-T13 pending |
-| Epics & Initiatives   | [PRD](../prd-epics-initiatives-2026-06-07.md)   | [epics](epics-initiatives/epics.md)   | [stories](epics-initiatives/stories.md)   | [design](epics-initiatives/design.md)   | [tasks](epics-initiatives/tasks.md)   | 🟡 Partial (epics via IssueType; initiatives missing)                                        |
-| Work Items & Types    | [PRD](../prd-work-items-2026-06-07.md)          | [epics](work-items/epics.md)          | [stories](work-items/stories.md)          | [design](work-items/design.md)          | [tasks](work-items/tasks.md)          | 🟢 Mostly present (types/props/templates/recurring)                                          |
-| Wiki & Pages          | [PRD](../prd-wiki-2026-06-07.md)                | [epics](wiki/epics.md)                | [stories](wiki/stories.md)                | [design](wiki/design.md)                | [tasks](wiki/tasks.md)                | 🟡 Partial (templates, comments, export, content search, AI)                                 |
-| Plane AI              | [PRD](../prd-ai-2026-06-07.md)                  | [epics](ai/epics.md)                  | [stories](ai/stories.md)                  | [design](ai/design.md)                  | [tasks](ai/tasks.md)                  | 🟡 Partial (Build mode, connectors, semantic actions)                                        |
+| Feature               | PRD                                             | Epics                                 | Stories                                   | Design                                  | Tasks                                 | Overall gap                                                                       |
+| --------------------- | ----------------------------------------------- | ------------------------------------- | ----------------------------------------- | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------- |
+| Workflows & Approvals | [PRD](../prd-workflows-approvals-2026-06-07.md) | [epics](workflows-approvals/epics.md) | [stories](workflows-approvals/stories.md) | [design](workflows-approvals/design.md) | [tasks](workflows-approvals/tasks.md) | 🟢 Done (WF-T1–T13: backend + frontend store/enforcement/builder/detail surfaces) |
+| Epics & Initiatives   | [PRD](../prd-epics-initiatives-2026-06-07.md)   | [epics](epics-initiatives/epics.md)   | [stories](epics-initiatives/stories.md)   | [design](epics-initiatives/design.md)   | [tasks](epics-initiatives/tasks.md)   | 🟡 Partial (epics via IssueType; initiatives missing)                             |
+| Work Items & Types    | [PRD](../prd-work-items-2026-06-07.md)          | [epics](work-items/epics.md)          | [stories](work-items/stories.md)          | [design](work-items/design.md)          | [tasks](work-items/tasks.md)          | 🟢 Mostly present (types/props/templates/recurring)                               |
+| Wiki & Pages          | [PRD](../prd-wiki-2026-06-07.md)                | [epics](wiki/epics.md)                | [stories](wiki/stories.md)                | [design](wiki/design.md)                | [tasks](wiki/tasks.md)                | 🟡 Partial (templates, comments, export, content search, AI)                      |
+| Plane AI              | [PRD](../prd-ai-2026-06-07.md)                  | [epics](ai/epics.md)                  | [stories](ai/stories.md)                  | [design](ai/design.md)                  | [tasks](ai/tasks.md)                  | 🟡 Partial (Build mode, connectors, semantic actions)                             |
 
 ID prefixes: `WF` (workflows/approvals), `INIT`/`EPIC` (epics & initiatives), `WIT` (work items/types),
 `WIKI`, `AI`.

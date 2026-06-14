@@ -34,6 +34,7 @@ export type TWorkItemStateDropdownBaseProps = TDropdownProps & {
   iconSize?: string;
   isForWorkItemCreation?: boolean;
   isInitializing?: boolean;
+  issueTypeId?: string | null;
   onChange: (val: string) => void;
   onClose?: () => void;
   onDropdownOpen?: () => void;
@@ -214,6 +215,7 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
       onKeyDown={handleKeyDown}
       button={comboButton}
       renderByDefault={renderByDefault}
+      role="group"
     >
       {isOpen && (
         <Combobox.Options className="fixed z-10" static>

@@ -1,9 +1,8 @@
 # Workflows & Approvals — Tasks (Claude Code subagent cards)
 
 > **Build status** (see [`../PROGRESS.md`](../PROGRESS.md) for the authoritative tracker):
-> **WF-T1 → WF-T12 are DONE & verified** (backend WF-T1–T9 = 62 tests green; frontend store/service/types WF-T10 = 5 store tests + check:types green; WF-T11/WF-T12 frontend helper tests green).
-> **Remaining: WF-T13** (frontend UI — approval banner + AI chip).
-> Each remaining card is tracked as a GitHub issue in the backlog.
+> **WF-T1 → WF-T13 are DONE & verified** (backend WF-T1–T9 = 62 tests green; frontend store/service/types WF-T10 = 5 store tests + check:types green; WF-T11/WF-T12/WF-T13 frontend helper tests green).
+> No Workflows & Approvals task cards remain in the local backlog; close the linked GitHub backlog issues after publishing.
 
 Each card is self-contained: the executing subagent has no memory of this conversation or the companion EPICS/PRD docs, so all context, file paths, and patterns are inline. Conventions for the whole doc:
 
@@ -662,6 +661,9 @@ pnpm turbo run check:types --filter=web
 ---
 
 ## WF-T13 — Work-item approval banner + AI suggestion chip on the detail view
+
+**Status:** Done & verified. Implemented in `apps/web/core/components/workflows/approval-banner.tsx`,
+`apps/web/core/components/workflows/ai-suggestion-chip.tsx`, their helper tests, and the work-item detail sidebar mount.
 
 **Implements** WF-5 (epic, approval surface) + WF-6 (chip surface); approver-only actions; sanitized comment render.
 **Depends on** WF-T10, WF-T6, WF-T9.
