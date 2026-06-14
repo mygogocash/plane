@@ -162,7 +162,7 @@ flakes (unrelated; pass in isolation).
 - `5e2f4bf` feat(work-items): add template UI
 - `66b548c` feat(work-items): add recurring work item models
 - `5939b762e` feat(epics): add custom property schema
-- `<pending>` feat(epics): add custom property API
+- `7b73d5086` feat(epics): add custom property API
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
