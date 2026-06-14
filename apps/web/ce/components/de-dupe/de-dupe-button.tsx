@@ -4,8 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
-// local components
+import { SearchCheck } from "lucide-react";
 
 type TDeDupeButtonRoot = {
   workspaceSlug: string;
@@ -14,6 +13,20 @@ type TDeDupeButtonRoot = {
   label: string;
 };
 
-export function DeDupeButtonRoot(_props: TDeDupeButtonRoot) {
-  return <></>;
+export function DeDupeButtonRoot(props: TDeDupeButtonRoot) {
+  const { handleOnClick, isDuplicateModalOpen, label } = props;
+
+  if (!label) return null;
+
+  return (
+    <button
+      type="button"
+      aria-expanded={isDuplicateModalOpen}
+      onClick={handleOnClick}
+      className="inline-flex h-7 items-center gap-1.5 rounded border border-subtle bg-surface-2 px-2 text-caption-sm-medium text-secondary hover:bg-surface-1"
+    >
+      <SearchCheck className="h-3.5 w-3.5" aria-hidden="true" />
+      <span>{label}</span>
+    </button>
+  );
 }

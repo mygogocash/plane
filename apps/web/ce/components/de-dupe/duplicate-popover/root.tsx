@@ -4,17 +4,18 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
 import { observer } from "mobx-react";
 // types
-import type { TDeDupeIssue } from "@plane/types";
 import type { TIssueOperations } from "@/components/issues/issue-detail";
+import type { TSimilarIssue } from "@/types/similar-issue";
+// components
+import { DuplicateModalRoot } from "../duplicate-modal";
 
 type TDeDupeIssuePopoverRootProps = {
   workspaceSlug: string;
   projectId: string;
   rootIssueId: string;
-  issues: TDeDupeIssue[];
+  issues: TSimilarIssue[];
   issueOperations: TIssueOperations;
   disabled?: boolean;
   renderDeDupeActionModals?: boolean;
@@ -22,6 +23,19 @@ type TDeDupeIssuePopoverRootProps = {
 };
 
 export const DeDupeIssuePopoverRoot = observer(function DeDupeIssuePopoverRoot(props: TDeDupeIssuePopoverRootProps) {
-  const {} = props;
-  return <></>;
+  const { workspaceSlug, projectId, rootIssueId, issues, disabled } = props;
+
+  if (disabled) return null;
+
+  return (
+    <div className="rounded-lg border border-subtle bg-surface-1 p-3">
+      <DuplicateModalRoot
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        rootIssueId={rootIssueId}
+        issues={issues}
+        handleDuplicateIssueModal={() => {}}
+      />
+    </div>
+  );
 });

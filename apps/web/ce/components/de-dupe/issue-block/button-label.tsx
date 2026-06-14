@@ -10,5 +10,12 @@ type TDeDupeIssueButtonLabelProps = {
 };
 
 export function DeDupeIssueButtonLabel(_props: TDeDupeIssueButtonLabelProps) {
-  return <></>;
+  const { buttonLabel, isOpen } = _props;
+
+  return (
+    <span className="text-xs inline-flex items-center gap-1 font-medium text-secondary">
+      {buttonLabel}
+      <span aria-hidden="true">{isOpen ? "−" : "+"}</span>
+    </span>
+  );
 }

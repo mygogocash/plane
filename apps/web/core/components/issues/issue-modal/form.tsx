@@ -73,6 +73,8 @@ export interface IssueFormProps {
   };
   isDuplicateModalOpen: boolean;
   handleDuplicateIssueModal: (isOpen: boolean) => void;
+  queuedDuplicateIssueIds?: string[];
+  onQueueDuplicateIssue?: (issueId: string) => void;
   handleDraftAndClose?: () => void;
   isProjectSelectionDisabled?: boolean;
   showActionButtons?: boolean;
@@ -100,6 +102,8 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     },
     isDuplicateModalOpen,
     handleDuplicateIssueModal,
+    queuedDuplicateIssueIds = [],
+    onQueueDuplicateIssue,
     handleDraftAndClose,
     isProjectSelectionDisabled = false,
     showActionButtons = true,
@@ -593,8 +597,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
           >
             <DuplicateModalRoot
               workspaceSlug={workspaceSlug.toString()}
+              projectId={projectId ?? undefined}
+              rootIssueId={data?.id}
               issues={duplicateIssues}
+              queuedIssueIds={queuedDuplicateIssueIds}
               handleDuplicateIssueModal={handleDuplicateIssueModal}
+              onQueueDuplicateRelation={onQueueDuplicateIssue}
             />
           </div>
         )}

@@ -26,7 +26,9 @@ import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 // services
 import { FileService } from "@/services/file.service";
+import { IssueRelationService } from "@/services/issue/issue_relation.service";
 const fileService = new FileService();
+const issueRelationService = new IssueRelationService();
 // local imports
 import { CreateIssueToastActionItems } from "../create-issue-toast-action-items";
 import { DraftIssueLayout } from "./draft-issue-layout";
@@ -89,6 +91,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const [description, setDescription] = useState<string | undefined>(undefined);
   const [uploadedAssetIds, setUploadedAssetIds] = useState<string[]>([]);
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [queuedDuplicateIssueIds, setQueuedDuplicateIssueIds] = useState<string[]>([]);
   // store hooks
   const { t } = useTranslation();
   const {
@@ -191,8 +194,32 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
     setActiveProjectId(null);
     setChangesMade(null);
+    setQueuedDuplicateIssueIds([]);
     onClose();
     handleDuplicateIssueModal(false);
+  };
+
+  const handleQueueDuplicateIssue = (issueId: string) => {
+    setQueuedDuplicateIssueIds((current) => [...new Set([...current, issueId])]);
+  };
+
+  const createQueuedDuplicateRelations = async (issue: TIssue, issueIds: string[]) => {
+    if (!workspaceSlug || !issue.project_id || issueIds.length === 0) return;
+
+    try {
+      await issueRelationService.createIssueRelations(workspaceSlug.toString(), issue.project_id, issue.id, {
+        relation_type: "duplicate",
+        issues: issueIds,
+      });
+      setQueuedDuplicateIssueIds([]);
+    } catch (error) {
+      console.error(error);
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: t("error"),
+        message: "Duplicate relation could not be linked.",
+      });
+    }
   };
 
   const handleCreateIssue = async (
@@ -269,6 +296,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
           projectId: response.project_id,
           parentId: response.id,
         });
+
+        if (!is_draft_issue) await createQueuedDuplicateRelations(response, queuedDuplicateIssueIds);
       }
 
       setToast({
@@ -477,6 +506,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     primaryButtonText: primaryButtonText,
     isDuplicateModalOpen: isDuplicateModalOpen,
     handleDuplicateIssueModal: handleDuplicateIssueModal,
+    queuedDuplicateIssueIds,
+    onQueueDuplicateIssue: handleQueueDuplicateIssue,
     isProjectSelectionDisabled: isProjectSelectionDisabled,
   };
 

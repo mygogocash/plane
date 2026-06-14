@@ -592,6 +592,13 @@ Unit `@pytest.mark.unit`:
 **Depends on** [DUP-1-API]
 **Risk tier** R1 (UI; reuses existing `duplicate` relation)
 **Worktree isolation** y
+**Status** Done 2026-06-14
+
+**Validation** RED first against CE stubs/missing helpers; focused DUP-2 Vitest 4/4 green; full web Vitest 60/60
+green; `pnpm --filter web check:types` green; `pnpm --filter web check:format` green after formatting;
+touched-file `oxlint --fix --deny-warnings` green; full web lint exits 0 with existing repo warnings. Rendered smoke:
+`127.0.0.1:3000` loaded through Playwright fallback after Browser `iab` was unavailable, but the app shell reported
+backend service connection refusal, so issue-modal interaction could not be browser-verified in this local run.
 
 **Context** `form.tsx` already imports `DeDupeButtonRoot` (47), `DuplicateModalRoot` (48), and `useDebouncedDuplicateIssues` (51) from CE stubs (`apps/web/ce/components/de-dupe/*`) that render empty. This card implements a debounced "similar items" banner under the title field that lists matches with confidence %, is dismissible, and links a match via the **existing** `duplicate` `IssueRelation` UI (no new relation type). Empty results → no banner.
 
@@ -599,7 +606,7 @@ Unit `@pytest.mark.unit`:
 
 - Edit: `apps/web/ce/components/de-dupe/de-dupe-button.tsx` and `apps/web/ce/components/de-dupe/duplicate-modal/*` (replace stubs)
 - Edit/confirm: `apps/web/ce/hooks/use-debounced-duplicate-issues` (wire to DUP-1 endpoint via a service)
-- New: similarity service method (extend or add under `packages/services`)
+- New: similarity service method (`apps/web/core/services/similar-issues.service.ts`) plus local similar-issue types
 - New test: `apps/web/ce/components/de-dupe/de-dupe-button.test.tsx` (Vitest)
 
 **TDD — failing test first**
@@ -624,7 +631,7 @@ Vitest:
 
 **Verify**
 
-- `pnpm --filter web vitest run apps/web/ce/components/de-dupe/de-dupe-button.test.tsx` (RED→GREEN); `pnpm --filter web check:types`
+- `pnpm --filter web exec vitest run ce/components/de-dupe/de-dupe-button.test.tsx` (RED→GREEN); `pnpm --filter web check:types`; `pnpm --filter web test`; `pnpm --filter web check:format`; touched-file `pnpm exec oxlint --fix --deny-warnings ...`
 
 **Done when** Stubs replaced, debounced banner wired to DUP-1, link reuses existing `duplicate` relation, all Vitest cases RED→GREEN, type-check passes.
 

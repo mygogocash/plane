@@ -228,7 +228,14 @@ check`, `makemigrations --check --dry-run`, and touched-file Ruff check/format c
   Verified: RED missing scorer first; focused DUP-1 unit+contract tests 7/7 green; full backend unit+contract app
   suite 418/426 green with only the existing authentication/magic-link rate-limit failures; touched-file Ruff
   check/format clean; `manage.py check` clean; `makemigrations --check --dry-run` clean.
-- ⬜ remaining cards (duplicate banner UI — DUP-2-FE)
+- ✅ **DUP-2-FE** inline duplicate banner — replaced CE de-dupe stubs with a self-host similar-items trigger/banner,
+  debounced DUP-1 hook/service wiring, confidence labels, dismiss state, `aria-live="polite"`, immediate duplicate
+  linking for existing issues, and queued duplicate relation creation after a new issue is saved. Verified: RED first;
+  focused DUP-2 Vitest 4/4 green; full web Vitest 60/60 green; web typecheck/format clean; touched-file strict oxlint
+  clean. Rendered smoke loaded `127.0.0.1:3000` through Playwright fallback, but local backend services refused
+  connection so the issue-modal interaction could not be browser-verified in this run.
+- ⬜ remaining cards (Workflows data/API/UI cards in this backlog are already implemented above; next unresolved Work
+  Items card is AI-1-API)
 
 ## Wiki & Pages — `wiki/tasks.md`
 
