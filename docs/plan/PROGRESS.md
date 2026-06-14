@@ -290,8 +290,18 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   `@plane/constants`, `@plane/services`, and `@plane/i18n` typechecks green; `@plane/i18n`
   locale sync green; `pnpm turbo run check:types --filter=web` green; touched-file oxfmt/oxlint
   and `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-22** (initiatives route/list/board/timeline/detail + flip flag
-  ON), then TASK-23 status-update models.
+- ✅ **TASK-22** initiatives route/list/board/timeline/detail + flag flip — added the top-level
+  `/:workspaceSlug/initiatives` route and detail route, workspace navigation entry, CE initiatives
+  board/list/timeline surface with persisted layout/state/lead/label/date filters, detail progress
+  card, epic/project membership attach/detach controls with refetch-on-conflict behavior, and flipped
+  `SELF_HOSTED_FEATURE_FLAGS.initiatives` to `true`. Verified: RED first on missing route/components
+  and false flag; initiatives board/page-root Vitest 3/3 green; entitlement Vitest 3/3 green;
+  `@plane/constants` typecheck green; `@plane/i18n` typecheck + locale sync green; touched-file
+  oxfmt/oxlint clean; `pnpm turbo run check:types --filter=web` green; `pnpm --filter web run build`
+  green. Rendered route smoke reached `http://127.0.0.1:3000/acme/initiatives`, but full route QA
+  was blocked by the local API service being unavailable at `http://localhost:8000/api/instances/`.
+- ⬜ remaining cards start at **TASK-23** (status updates: models + migration), then TASK-24 status
+  update API.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 

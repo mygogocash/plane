@@ -69,15 +69,19 @@ The delivery epics are `EPIC-1` through `EPIC-7` in `docs/plan/epics-initiatives
 
 # User Stories
 
-User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-1.1`: add `epics` and `initiatives` entitlement flags with resolver coverage.
+User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-5.3` through `EI-5.6`: add the Initiatives route, list/board/timeline layouts, detail surface, gated empty state, persisted filters, and flip the `initiatives` entitlement on after the UI is functional.
 
 # Tasks
 
-Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution starts with `TASK-1`, then proceeds through `TASK-2` and the rest of Batch A.
+Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-22`, following locally completed `TASK-21` initiative service/store/types/constants work.
 
 # Acceptance Criteria
 
-- `SELF_HOSTED_FEATURE_FLAGS.epics` and `.initiatives` exist and default to `false` for the foundation milestone.
-- `isSelfHostedFeatureEnabled("epics")` and `isSelfHostedFeatureEnabled("initiatives")` return their configured values.
-- Existing self-host feature flags keep their current values.
-- Web Vitest and type checks pass for the changed entitlement module.
+- The workspace route `/:workspaceSlug/initiatives` renders a gated Initiatives surface.
+- With the `initiatives` flag disabled, the route renders "Create your first initiative" and requests no live initiative data.
+- With the `initiatives` flag enabled, the route renders list, board, and timeline layouts backed by the TASK-21 store/service.
+- The board renders exactly five lifecycle columns: `DRAFT`, `PLANNED`, `ACTIVE`, `COMPLETED`, and `CLOSED`.
+- State and lead filters persist when switching between board and timeline layouts.
+- The detail surface renders initiative progress and attach/detach controls for epic and project membership.
+- `SELF_HOSTED_FEATURE_FLAGS.initiatives` is flipped to `true` after the functional UI tests pass.
+- TASK-22 Vitest coverage, web type check, and web build pass.

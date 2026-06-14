@@ -32,6 +32,7 @@ describe("self-host entitlements", () => {
       "epics",
       "estimates_time",
       "intake",
+      "initiatives",
       "integrations",
       "public_views_pages",
       "recurring_work_items",
@@ -41,7 +42,7 @@ describe("self-host entitlements", () => {
       "workflows_approvals",
       "worklogs_time_tracking",
     ] as const;
-    const disabledFeatureFamilies = ["initiatives"] as const;
+    const disabledFeatureFamilies = [] as const;
 
     const configuredFeatures = new Set(Object.keys(SELF_HOSTED_FEATURE_FLAGS));
 
@@ -51,10 +52,10 @@ describe("self-host entitlements", () => {
     expect(enabledFeatureFamilies.every((feature) => isSelfHostedFeatureEnabled(feature))).toBe(true);
   });
 
-  it("enables epics while initiatives remains disabled", () => {
+  it("enables epics and initiatives", () => {
     expect(SELF_HOSTED_FEATURE_FLAGS.epics).toBe(true);
-    expect(SELF_HOSTED_FEATURE_FLAGS.initiatives).toBe(false);
+    expect(SELF_HOSTED_FEATURE_FLAGS.initiatives).toBe(true);
     expect(isSelfHostedFeatureEnabled("epics")).toBe(true);
-    expect(isSelfHostedFeatureEnabled("initiatives")).toBe(false);
+    expect(isSelfHostedFeatureEnabled("initiatives")).toBe(true);
   });
 });

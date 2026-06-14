@@ -19,7 +19,7 @@ export const SELF_HOSTED_FEATURE_FLAGS = {
   epics: true,
   estimates_time: true,
   intake: true,
-  initiatives: false,
+  initiatives: true,
   integrations: true,
   public_views_pages: true,
   recurring_work_items: true,
