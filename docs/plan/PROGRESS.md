@@ -32,10 +32,21 @@ and gated behind `apps/web/ce/lib/self-host-entitlements.ts` flags.
   it was a ~9-file migration (7 fixes: `Transition as="div"` since v2 root defaults to Fragment; `Combobox.onChange`
   nullable null-guards). react-popper anchoring kept. check:types 28/28 green.
 - ⬜ **Frontend safe minors (not started):** mobx 6.12→6.13, turbo, lucide-react — low-risk within-major bumps.
-- ⚠️ **Runtime verification owed:** React 19 + Headless UI 2 are **type-verified only**. A browser smoke is needed before
-  deploy — priority surfaces: dialogs, dropdowns (`packages/ui/src/dropdowns/custom-menu.tsx`), popovers, `GptAssistantPopover`,
-  and `Transition as="div"` animations (`collapsible.tsx`, `selected-options-display.tsx`).
-  (Lint note: repo has ~1300 pre-existing oxlint warnings, 0 errors — unrelated; dependency-migration commits use `--no-verify`.)
+- ✅ **Browser boot smoke (React 19 + Headless UI 2)** — production build 13/13 green (web+admin+space); web dev server
+  booted and rendered cleanly. After Vite re-optimized the post-install dep cache, the app mounts the full React 19 tree
+  with Headless UI 2 in the bundle and **gracefully renders the instance-failure page** ("Looks like Plane didn't start up
+  correctly!") because no backend was running — i.e. no white-screen / JS crash, the instance-wrapper handled the unreachable
+  API correctly. Console = **2 error types, both expected & benign:** (1) `ERR_CONNECTION_REFUSED @ localhost:8000/api/instances/`
+  (backend not in this frontend-only smoke — it's what triggered the failure page), and (2) a **pre-existing, intentional**
+  hydration mismatch on `HydrateFallback`/`LogoSpinner` (`apps/web/app/root.tsx:135` deliberately branches on
+  `typeof window === "undefined"` → `<div/>` on server vs themed spinner on client to avoid theme FOUC; React auto-recovers).
+  Neither is a React-19/HUI-2 regression. (Lint note: repo has ~1300 pre-existing oxlint warnings, 0 errors — unrelated;
+  dependency-migration commits use `--no-verify`.)
+- ⚠️ **Deeper smoke still owed (full-stack):** interactive Headless UI surfaces — dialogs, dropdowns
+  (`packages/ui/src/dropdowns/custom-menu.tsx`), popovers, `GptAssistantPopover`, and `Transition as="div"` animations
+  (`collapsible.tsx`, `selected-options-display.tsx`) — sit **behind auth** and were **not exercised** in this backend-less
+  boot smoke. The boot smoke proves mount-without-crash, not interaction behavior. Run a logged-in pass against the full
+  Docker stack at deploy time to exercise these.
 
 ## Workflows & Approvals — `workflows-approvals/tasks.md`
 
@@ -87,6 +98,8 @@ Regression: full contract/app suite green except 8 pre-existing magic-link rate-
 - `b816222` feat: migrate monorepo to React 19 (check:types 28/28 green)
 - `b7ecaea` chore: upgrade zod 3 -> 4
 - `ca9500f` chore: upgrade @headlessui/react 1.7 -> 2
+- `e3b9570` docs: record Headless UI 2 upgrade (done) in PROGRESS
+- _(next)_ docs: record React 19 + Headless UI 2 browser boot smoke result
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
