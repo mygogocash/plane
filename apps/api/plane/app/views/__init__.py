@@ -154,6 +154,7 @@ from .issue.link import IssueLinkViewSet
 
 from .issue.property import IssuePropertyViewSet
 from .issue.recurring import RecurringWorkItemViewSet
+from .issue.similar import SimilarIssuesEndpoint
 from .issue.template import WorkItemTemplateViewSet
 
 from .issue.relation import IssueRelationViewSet

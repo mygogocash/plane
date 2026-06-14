@@ -33,6 +33,7 @@ from plane.app.views import (
     IssueDetailIdentifierEndpoint,
     IssuePropertyViewSet,
     RecurringWorkItemViewSet,
+    SimilarIssuesEndpoint,
     WorkItemTemplateViewSet,
 )
 
@@ -46,6 +47,11 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/",
         IssueViewSet.as_view({"get": "list", "post": "create"}),
         name="project-issue",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/similar/",
+        SimilarIssuesEndpoint.as_view(),
+        name="project-similar-issues",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues-detail/",

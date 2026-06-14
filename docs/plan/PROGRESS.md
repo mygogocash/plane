@@ -222,7 +222,13 @@ flakes (unrelated; pass in isolation).
 check`, `makemigrations --check --dry-run`, and touched-file Ruff check/format clean. Full backend unit+contract app
   suite is 411/419 green with only the existing authentication/magic-link rate-limit failures after cache/Redis
   clearing.
-- ⬜ remaining cards (duplicates — mostly unlock + finish)
+- ✅ **DUP-1-API** similar-items endpoint — added deterministic token/trigram title similarity with a minimum
+  confidence floor, read-only `issues/similar/` route, project-membership authorization, same-project candidate
+  scoping, open-state filtering, archived exclusion, result caps, and `{results:[{id,name,confidence}]}` responses.
+  Verified: RED missing scorer first; focused DUP-1 unit+contract tests 7/7 green; full backend unit+contract app
+  suite 418/426 green with only the existing authentication/magic-link rate-limit failures; touched-file Ruff
+  check/format clean; `manage.py check` clean; `makemigrations --check --dry-run` clean.
+- ⬜ remaining cards (duplicate banner UI — DUP-2-FE)
 
 ## Wiki & Pages — `wiki/tasks.md`
 

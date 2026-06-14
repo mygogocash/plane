@@ -539,6 +539,12 @@ Contract `@pytest.mark.contract`:
 **Depends on** none (read-only; reuses existing `duplicate` `IssueRelation` for the link action in DUP-2)
 **Risk tier** R1 (no migration; read-only endpoint on a critical-tenant-isolation path)
 **Worktree isolation** y
+**Status** Done 2026-06-14
+
+**Validation** RED first with missing `plane.utils.similarity`; focused DUP-1 unit+contract suite 7/7 green; full
+backend unit+contract app suite 418/426 green with the 8 residual authentication/magic-link tests returning
+`RATE_LIMIT_EXCEEDED`; touched-file Ruff check/format green; `manage.py check` clean; `makemigrations --check --dry-run`
+clean.
 
 **Context** PRD §Duplicate Detection (lines 106-107, 133): a read-only `GET /.../projects/<project_id>/issues/similar/?title=<q>` returns up to N open issues in the same project with a confidence score, strictly scoped to the requester's authorized project (no cross-project title leakage). No schema — deterministic similarity in v1 (embeddings are a future epic). Short/empty title → empty results.
 
@@ -562,7 +568,7 @@ Unit `@pytest.mark.unit`:
 
 **Implementation outline**
 
-- `similarity.py`: deterministic title similarity (e.g., normalized token/trigram overlap — keep it simple and pure; no external deps unless already present). Returns scored, sorted candidates; enforces a min-title-length threshold.
+- `similarity.py`: deterministic title similarity (e.g., normalized token/trigram overlap — keep it simple and pure; no external deps unless already present). Returns scored, sorted candidates; enforces a min-title-length threshold and filters noise below the similarity floor.
 - View: read permission via `@allow_permission([...], level="PROJECT")`; queryset filtered by project + active membership + open states only (use `StateGroup` from `state.py:14` to exclude completed/cancelled; exclude archived). Cap at N. Never touch other projects.
 
 **Acceptance criteria**
@@ -573,8 +579,8 @@ Unit `@pytest.mark.unit`:
 
 **Verify**
 
-- `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest plane/tests/unit/utils/test_similarity.py plane/tests/contract/app/test_similar_issues_api.py -m "unit or contract" -v` (RED→GREEN)
-- Full: `docker compose -f docker-compose-test.yml run --rm api-tests pytest -m "unit or contract"`
+- `docker exec -w /code plane-tests pytest plane/tests/unit/utils/test_similarity.py plane/tests/contract/app/test_similar_issues_api.py -m "unit or contract" -v --tb=short` (RED→GREEN)
+- Full: `docker exec -w /code plane-tests pytest plane/tests/unit plane/tests/contract/app -m "unit or contract" -v --tb=short`
 
 **Done when** Endpoint + pure scorer live, all named tests RED→GREEN, scope-isolation + open-only + short-title edges proven, suite green, no migration introduced.
 
