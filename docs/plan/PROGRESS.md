@@ -160,6 +160,7 @@ flakes (unrelated; pass in isolation).
 - `f859f5f` feat(work-items): add work item templates
 - `985efa4` feat(work-items): add template API
 - `5e2f4bf` feat(work-items): add template UI
+- `66b548c` feat(work-items): add recurring work item models
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -207,7 +208,13 @@ flakes (unrelated; pass in isolation).
   max-iteration stopping. Verified: RED import/module failures first; focused 6/6 green; backend unit suite 256/256
   green; touched-file Ruff check/format clean; `manage.py check` clean; `makemigrations --check --dry-run` clean;
   `0129 -> 0128 -> 0129` migration round-trip clean.
-- ⬜ remaining cards (recurring worker/API-FE, duplicates — mostly unlock + finish)
+- ✅ **REC-2-WORKER** recurring generation worker — added the `generate_recurring_work_items` Celery task and 5-minute
+  beat schedule entry, idempotent run-row guarded issue creation, no-storm downtime advancement, membership-gated
+  ownership checks, template/inline payload hydration, missing-ref warnings, sub-item creation, end/max deactivation,
+  and per-recurring exception isolation. Verified: RED missing-task import first; focused worker tests 7/7 green;
+  backend unit suite 263/263 green; touched-file Ruff check/format clean; `manage.py check` clean;
+  `makemigrations --check --dry-run` clean.
+- ⬜ remaining cards (recurring API-FE, duplicates — mostly unlock + finish)
 
 ## Wiki & Pages — `wiki/tasks.md`
 

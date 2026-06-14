@@ -424,14 +424,15 @@ Vitest:
 **Depends on** [REC-1-BE, TPL-2-API]
 **Risk tier** R1 (worker; rollback rule: disable beat schedule + flag **before** reverting worker code)
 **Worktree isolation** y
+**Status** Done 2026-06-14
 
 **Context** Generation follows the `@shared_task archive_and_close_old_issues` precedent in `apps/api/plane/bgtasks/issue_automation_task.py:22-23`, registered on `django_celery_beat`. Idempotency is enforced by the `RecurringWorkItemRun` unique `(recurring_work_item, run_at)` constraint from REC-1. After downtime, backfill at most one instance (PRD line 139). Generated issues reuse the issue create path + TPL-2 hydration when `template` is set, else the inline `payload`.
 
 **Files**
 
 - Edit: `apps/api/plane/bgtasks/issue_automation_task.py` (add `generate_recurring_work_items` `@shared_task`)
-- Edit: `apps/api/plane/settings/common.py` (`CELERY_IMPORTS` already includes the module; add the beat schedule entry — grep `CELERYBEAT_SCHEDULE`/`beat_schedule` for the existing pattern)
-- New test: `apps/api/plane/tests/unit/bgtasks/test_recurring_generation.py`
+- Edit: `apps/api/plane/celery.py` (`CELERY_IMPORTS` already includes the module; add the beat schedule entry using the existing `beat_schedule` pattern)
+- New test: `apps/api/plane/tests/unit/bg_tasks/test_recurring_generation.py`
 
 **TDD — failing test first**
 `@pytest.mark.unit` (mock time; call the task function directly, no live broker):
@@ -439,7 +440,9 @@ Vitest:
 - `test_due_recurrence_generates_one_issue_and_run` — `next_run_at` in the past; run task; assert one `Issue` created (hydrated), one `RecurringWorkItemRun`, `next_run_at` advanced.
 - `test_downtime_backfills_at_most_one_instance` — `next_run_at` several windows in the past; run once; assert exactly one issue generated, missed windows skipped forward (no storm).
 - `test_idempotent_no_duplicate_for_same_window` — a `RecurringWorkItemRun` already exists for `(recurring, run_at)`; run task; assert no duplicate issue (constraint-guarded).
-- `test_recurrence_past_end_does_not_generate` — past `end_date`/`max_iterations`; assert no issue, schedule marked `is_active=False`.
+- `test_owner_without_project_membership_skips_generation` — `owned_by` is no longer a project member; assert no issue/run.
+- `test_recurrence_past_end_does_not_generate` — past `end_date`; assert no issue, schedule marked `is_active=False`.
+- `test_recurrence_at_max_iterations_does_not_generate` — generated runs already reached `max_iterations`; assert no issue, schedule marked `is_active=False`.
 - `test_generation_from_template_skips_missing_refs` — template with missing project refs; assert issue created with skip-and-warn semantics (reuse TPL-2 hydration).
 
 **Implementation outline**
@@ -457,8 +460,13 @@ Vitest:
 
 **Verify**
 
-- `docker compose -f docker-compose-test.yml run --rm --build api-tests pytest plane/tests/unit/bgtasks/test_recurring_generation.py -m unit -v` (RED→GREEN)
-- Full unit suite green.
+- RED: `docker exec -w /code plane-tests pytest plane/tests/unit/bg_tasks/test_recurring_generation.py -m unit -v --tb=short` failed on missing `generate_recurring_work_items`.
+- GREEN: `docker exec -w /code plane-tests pytest plane/tests/unit/bg_tasks/test_recurring_generation.py -m unit -v --tb=short` → 7 passed.
+- `docker exec -w /code plane-tests ruff format plane/bgtasks/issue_automation_task.py plane/celery.py plane/tests/unit/bg_tasks/test_recurring_generation.py` → clean.
+- `docker exec -w /code plane-tests ruff check plane/bgtasks/issue_automation_task.py plane/celery.py plane/tests/unit/bg_tasks/test_recurring_generation.py --fix` → clean.
+- `docker exec -w /code plane-tests python manage.py check` → clean.
+- `docker exec -w /code plane-tests python manage.py makemigrations --check --dry-run` → no changes.
+- `docker exec -w /code plane-tests pytest plane/tests/unit -m unit -v --tb=short` → 263 passed, 27 existing factory deprecation warnings.
 
 **Done when** Task + beat registration added, all named unit tests RED→GREEN, idempotency/no-storm/end-conditions proven, suite green. **Rollback note in PR:** disable beat schedule + `recurring_work_items` flag before reverting this worker code.
 
