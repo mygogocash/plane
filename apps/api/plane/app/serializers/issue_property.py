@@ -19,12 +19,16 @@ class IssuePropertySerializer(BaseSerializer):
             "issue_type",
             "name",
             "display_name",
+            "description",
             "property_type",
             "settings",
+            "is_multi",
             "is_required",
             "default_value",
             "sort_order",
             "is_active",
+            "external_source",
+            "external_id",
             "created_at",
             "updated_at",
         ]
@@ -38,6 +42,7 @@ class IssuePropertySerializer(BaseSerializer):
         settings = attrs.get("settings", self.instance.settings if self.instance else {})
 
         if property_type in [
+            IssueProperty.PropertyType.OPTION,
             IssueProperty.PropertyType.SELECT,
             IssueProperty.PropertyType.MULTI_SELECT,
         ] and not settings.get("options"):

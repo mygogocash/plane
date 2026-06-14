@@ -10,7 +10,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 # Module imports
-from plane.db.models import Issue, IssueProperty, IssuePropertyValue, IssueType, Project, State
+from plane.db.models import Issue, IssueProperty, IssuePropertyOption, IssuePropertyValue, IssueType, Project, State
 from plane.tests.factories import IssuePropertyFactory, IssuePropertyValueFactory
 
 
@@ -156,3 +156,69 @@ class TestIssuePropertyModels:
         issue_property_value.refresh_from_db()
         assert issue_property_value.value == {"text": "1.4.0"}
         assert issue_property_value.workspace_id == issue.workspace_id
+
+    @pytest.mark.django_db
+    def test_epic_property_schema_persists_metadata_options_and_typed_values(self, issue):
+        epic_property = IssueProperty.objects.create(
+            issue_type=issue.type,
+            name="launch-tier",
+            display_name="Launch tier",
+            description="Customer-facing release tier",
+            property_type=IssueProperty.PropertyType.OPTION,
+            is_multi=True,
+            settings={"source": "epics"},
+            external_source="linear",
+            external_id="prop-123",
+        )
+        option = IssuePropertyOption.objects.create(
+            property=epic_property,
+            name="Beta",
+            sort_order=10,
+            is_default=True,
+        )
+        value = IssuePropertyValue.objects.create(
+            project=issue.project,
+            issue=issue,
+            property=epic_property,
+            value_text="Beta launch",
+            value_option=option,
+        )
+
+        epic_property.refresh_from_db()
+        option.refresh_from_db()
+        value.refresh_from_db()
+
+        assert epic_property.workspace_id == issue.workspace_id
+        assert epic_property.description == "Customer-facing release tier"
+        assert epic_property.property_type == IssueProperty.PropertyType.OPTION
+        assert epic_property.is_multi is True
+        assert epic_property.external_source == "linear"
+        assert epic_property.external_id == "prop-123"
+        assert option.property_id == epic_property.id
+        assert option.is_default is True
+        assert value.value_text == "Beta launch"
+        assert value.value_option_id == option.id
+
+    @pytest.mark.django_db
+    def test_duplicate_typed_property_value_for_issue_rejected(self, issue):
+        issue_property = IssueProperty.objects.create(
+            issue_type=issue.type,
+            name="confidence",
+            display_name="Confidence",
+            property_type=IssueProperty.PropertyType.TEXT,
+        )
+        IssuePropertyValue.objects.create(
+            project=issue.project,
+            issue=issue,
+            property=issue_property,
+            value_text="High",
+        )
+
+        with pytest.raises(IntegrityError):
+            with transaction.atomic():
+                IssuePropertyValue.objects.create(
+                    project=issue.project,
+                    issue=issue,
+                    property=issue_property,
+                    value_text="High",
+                )

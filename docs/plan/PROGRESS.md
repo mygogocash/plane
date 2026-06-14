@@ -161,6 +161,7 @@ flakes (unrelated; pass in isolation).
 - `985efa4` feat(work-items): add template API
 - `5e2f4bf` feat(work-items): add template UI
 - `66b548c` feat(work-items): add recurring work item models
+- `952f39c5b` feat(epics): add custom property schema
 
 ## Epics & Initiatives — `epics-initiatives/tasks.md`
 
@@ -225,8 +226,17 @@ flakes (unrelated; pass in isolation).
   green; entitlement Vitest 3/3 green; `pnpm turbo run check:types --filter=web`, `manage.py
 check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff --check`
   clean.
-- ⬜ remaining cards start at **TASK-15** (epic custom properties data layer), then EPIC-3
-  foundation.
+- ✅ **TASK-15** epic custom properties data layer — extended the existing work-item custom-property
+  framework with the epic card's missing schema surface: `IssuePropertyOption`, explicit
+  `option` property type, `is_multi`, description/external metadata, and typed
+  `IssuePropertyValue` columns (`value_text`, `value_option`, `value_uuid`) while preserving
+  the existing JSON `value` path used by work items. Migration `0130` is scoped to the custom
+  property tables. Verified: RED first on missing `IssuePropertyOption`; focused model unit
+  tests 8/8 green; adjacent property/template contracts 24/24 green; `manage.py check`;
+  `makemigrations --check --dry-run`; `0130 -> 0129 -> 0130` migration rollback/forward;
+  touched-file Ruff check/format and `git diff --check` clean.
+- ⬜ remaining cards start at **TASK-16** (epic custom properties API), then TASK-17 detail-view
+  fields.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 
