@@ -1,0 +1,384 @@
+name: Plane CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_images:
+        description: "Build and publish GCP Artifact Registry images"
+        required: true
+        default: true
+        type: boolean
+      deploy_gcp:
+        description: "Deploy to GKE after images are published"
+        required: true
+        default: true
+        type: boolean
+  pull_request:
+    branches:
+      - "preview"
+    types:
+      - "opened"
+      - "synchronize"
+      - "reopened"
+      - "ready_for_review"
+  push:
+    branches:
+      - "preview"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GCP_APP_URL: ${{ vars.GCP_APP_URL || 'https://app.manut.xyz' }}
+  GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY || 'affine' }}
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'affine-495114' }}
+  GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
+  GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'plane-ce-gke' }}
+  GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'plane-ce' }}
+  DOCKER_PLATFORMS: linux/amd64
+  NODE_VERSION: "22.18.0"
+
+jobs:
+  metadata:
+    name: Prepare metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      branch_tag: ${{ steps.meta.outputs.branch_tag }}
+      image_namespace: ${{ steps.meta.outputs.image_namespace }}
+      image_registry: ${{ steps.meta.outputs.image_registry }}
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+      version_tag: ${{ steps.meta.outputs.version_tag }}
+    steps:
+      - name: Normalize image metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          raw_ref="${GITHUB_REF_NAME:-preview}"
+          branch_tag="$(printf '%s' "$raw_ref" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_.-]+/-/g; s/^-+//; s/-+$//')"
+          if [ -z "$branch_tag" ]; then
+            branch_tag="preview"
+          fi
+          if [[ ! "$branch_tag" =~ ^[a-z0-9_] ]]; then
+            branch_tag="build-${branch_tag}"
+          fi
+
+          short_sha="${GITHUB_SHA:0:12}"
+          image_namespace="${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPOSITORY}"
+
+          {
+            echo "branch_tag=$branch_tag"
+            echo "image_namespace=$image_namespace"
+            echo "image_registry=${GCP_REGION}-docker.pkg.dev"
+            echo "short_sha=$short_sha"
+            echo "version_tag=${branch_tag}-${short_sha}"
+          } >> "$GITHUB_OUTPUT"
+
+  web-ci:
+    name: Web checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack and pnpm
+        run: corepack enable pnpm
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.ref_name }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm check:format
+
+      - name: Run lint
+        run: pnpm check:lint
+
+      - name: Run type checks
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: pnpm check:types
+
+      - name: Run web tests
+        run: pnpm --filter=web test
+
+      - name: Save Turbo cache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v5
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+
+  api-ci:
+    name: API checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Create API env file
+        run: ./setup.sh
+
+      - name: Run API unit tests
+        run: docker compose -f docker-compose-test.yml run --rm --build api-tests pytest -m unit
+
+      - name: Tear down API test stack
+        if: always()
+        run: docker compose -f docker-compose-test.yml down -v
+
+  build-components:
+    name: Build component image (${{ matrix.image }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    needs:
+      - metadata
+      - web-ci
+      - api-ci
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images) }}
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: plane-admin
+            context: .
+            dockerfile: ./apps/admin/Dockerfile.admin
+          - image: plane-backend
+            context: ./apps/api
+            dockerfile: ./apps/api/Dockerfile.api
+          - image: plane-frontend
+            context: .
+            dockerfile: ./apps/web/Dockerfile.web
+          - image: plane-live
+            context: .
+            dockerfile: ./apps/live/Dockerfile.live
+          - image: plane-proxy
+            context: ./apps/proxy
+            dockerfile: ./apps/proxy/Dockerfile.ce
+          - image: plane-space
+            context: .
+            dockerfile: ./apps/space/Dockerfile.space
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Validate GCP auth configuration
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '' }}
+        run: |
+          echo "GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT repository variables are required for GCP image publishing." >&2
+          exit 1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Configure Artifact Registry Docker auth
+        run: gcloud auth configure-docker "${{ needs.metadata.outputs.image_registry }}" --quiet
+
+      - name: Build and publish component image
+        uses: docker/build-push-action@v7.0.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ env.DOCKER_PLATFORMS }}
+          push: true
+          tags: |
+            ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.metadata.outputs.branch_tag }}
+            ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.metadata.outputs.version_tag }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  deploy-gcp:
+    name: Deploy to GKE
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs:
+      - metadata
+      - build-components
+    if: ${{ (github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_gcp) }}
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: production
+      url: https://app.manut.xyz
+    steps:
+      - name: Validate GCP auth configuration
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '' }}
+        run: |
+          echo "GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT repository variables are required for GKE deployment." >&2
+          exit 1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v3
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GCP_REGION }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Run database migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          backend_image="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-backend:${{ needs.metadata.outputs.version_tag }}"
+          migrate_job="plane-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+
+          kubectl -n "${GKE_NAMESPACE}" delete job "${migrate_job}" --ignore-not-found
+
+          cat <<EOF | kubectl -n "${GKE_NAMESPACE}" apply -f -
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: ${migrate_job}
+            labels:
+              app.name: plane-ce-plane-app-api-migrate
+          spec:
+            backoffLimit: 3
+            template:
+              metadata:
+                labels:
+                  app.name: plane-ce-plane-app-api-migrate
+              spec:
+                containers:
+                  - name: plane-app-api-migrate
+                    image: ${backend_image}
+                    imagePullPolicy: Always
+                    command:
+                      - ./bin/docker-entrypoint-migrator.sh
+                    envFrom:
+                      - configMapRef:
+                          name: plane-app-app-vars
+                          optional: false
+                      - secretRef:
+                          name: plane-app-env
+                          optional: false
+                      - secretRef:
+                          name: plane-doc-store
+                          optional: false
+                    resources:
+                      limits:
+                        ephemeral-storage: 1Gi
+                      requests:
+                        cpu: 500m
+                        ephemeral-storage: 1Gi
+                        memory: 2Gi
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - NET_RAW
+                restartPolicy: OnFailure
+                securityContext:
+                  seccompProfile:
+                    type: RuntimeDefault
+                serviceAccountName: plane-app-srv-account
+                tolerations:
+                  - effect: NoSchedule
+                    key: kubernetes.io/arch
+                    operator: Equal
+                    value: amd64
+          EOF
+
+          if ! kubectl -n "${GKE_NAMESPACE}" wait --for=condition=complete "job/${migrate_job}" --timeout=600s; then
+            kubectl -n "${GKE_NAMESPACE}" describe "job/${migrate_job}" || true
+            kubectl -n "${GKE_NAMESPACE}" logs "job/${migrate_job}" --all-containers=true || true
+            exit 1
+          fi
+
+      - name: Roll out GKE images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          image_base="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}"
+          tag="${{ needs.metadata.outputs.version_tag }}"
+
+          backend_image="${image_base}/plane-backend:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-api-wl plane-app-api="${backend_image}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-worker-wl plane-app-worker="${backend_image}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-beat-worker-wl plane-app-beat-worker="${backend_image}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-web-wl plane-app-web="${image_base}/plane-frontend:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-admin-wl plane-app-admin="${image_base}/plane-admin:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-live-wl plane-app-live="${image_base}/plane-live:${tag}"
+          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-space-wl plane-app-space="${image_base}/plane-space:${tag}"
+
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-api-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-worker-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-beat-worker-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-web-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-admin-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-live-wl --timeout=600s
+          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-space-wl --timeout=600s
+
+      - name: Smoke production endpoint
+        run: curl -fsS --retry 5 --retry-delay 5 "${GCP_APP_URL}/api/instances/" >/tmp/plane-instance.json
+
+      - name: Write GCP deployment summary
+        run: |
+          {
+            echo "### GCP deployment"
+            echo ""
+            echo "GKE cluster: \`${GKE_CLUSTER}\`"
+            echo "Namespace: \`${GKE_NAMESPACE}\`"
+            echo "Image tag: \`${{ needs.metadata.outputs.version_tag }}\`"
+            echo "Smoke URL: \`${GCP_APP_URL}/api/instances/\`"
+          } >> "$GITHUB_STEP_SUMMARY"
