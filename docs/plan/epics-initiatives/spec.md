@@ -69,19 +69,18 @@ The delivery epics are `EPIC-1` through `EPIC-7` in `docs/plan/epics-initiatives
 
 # User Stories
 
-User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-6.2` and `EI-6.3`: add session-authenticated status-update APIs for epics and initiatives, including threaded replies and reactions.
+User stories live in `docs/plan/epics-initiatives/stories.md`. The current task implements `EI-6.4`: add status-update thread UI to epic and initiative detail views.
 
 # Tasks
 
-Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-24`, following locally completed `TASK-23` status-update model and migration work.
+Task cards live in `docs/plan/epics-initiatives/tasks.md`. Current execution is `TASK-25`, following locally completed `TASK-24` status-update API work.
 
 # Acceptance Criteria
 
-- Project members can create, list, update, and delete status updates under `/api/workspaces/<slug>/projects/<project_id>/epics/<epic_id>/status-updates/`.
-- Workspace members can create and list status updates under `/api/workspaces/<slug>/initiatives/<initiative_id>/status-updates/`.
-- Reads require the matching project/workspace viewer role; writes require Admin or Member roles.
-- Creating an epic status update sets `epic`, leaves `initiative` null, sanitizes `comment_html`, and stores `comment_stripped`/`comment_json`.
-- Creating a reply stores `parent` and enforces the same owning epic or initiative as the parent update.
-- Reactions can be added and removed under the owning status-update route; duplicate active reactions return a validation error.
-- Soft-deleted status updates reject new reactions and do not appear in list/detail responses.
-- TASK-24 contract tests, `manage.py check`, `makemigrations --check --dry-run`, touched-file Ruff checks, and `git diff --check` pass.
+- Epic detail renders a status-update section only for epic work items, not ordinary work items.
+- Initiative detail renders the same status-update section in the right-hand detail panel.
+- The section lists top-level updates with nested replies, status chips for `ON_TRACK`, `AT_RISK`, and `OFF_TRACK`, and safe comment text.
+- Members can post an `AT_RISK` update and a threaded reply through `EpicService` or `InitiativeService`.
+- Emoji reactions use the existing reaction UI primitives and toggle through the TASK-24 add/delete endpoints.
+- Empty owners render a "post the first update" state without crashing.
+- TASK-25 component/service Vitests, `pnpm turbo run check:types --filter=web`, touched-file oxfmt/oxlint, and `git diff --check` pass.

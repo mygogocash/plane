@@ -5,7 +5,17 @@
  */
 
 import { API_BASE_URL } from "@plane/constants";
-import type { TEpic, TEpicPayload, TEpicProgress, TEpicPropertyValuesResponse, TIssueProperty } from "@plane/types";
+import type {
+  TEpic,
+  TEpicPayload,
+  TEpicProgress,
+  TEpicPropertyValuesResponse,
+  TIssueProperty,
+  TStatusUpdate,
+  TStatusUpdatePayload,
+  TStatusUpdateReaction,
+  TStatusUpdateReactionPayload,
+} from "@plane/types";
 import { APIService } from "../api.service";
 
 export class EpicService extends APIService {
@@ -55,6 +65,92 @@ export class EpicService extends APIService {
 
   async getProgress(workspaceSlug: string, projectId: string, epicId: string): Promise<TEpicProgress> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/progress/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async listStatusUpdates(workspaceSlug: string, projectId: string, epicId: string): Promise<TStatusUpdate[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/status-updates/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async createStatusUpdate(
+    workspaceSlug: string,
+    projectId: string,
+    epicId: string,
+    data: TStatusUpdatePayload
+  ): Promise<TStatusUpdate> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/status-updates/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async updateStatusUpdate(
+    workspaceSlug: string,
+    projectId: string,
+    epicId: string,
+    statusUpdateId: string,
+    data: Partial<TStatusUpdatePayload>
+  ): Promise<TStatusUpdate> {
+    return this.patch(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/status-updates/${statusUpdateId}/`,
+      data
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async deleteStatusUpdate(
+    workspaceSlug: string,
+    projectId: string,
+    epicId: string,
+    statusUpdateId: string
+  ): Promise<void> {
+    return this.delete(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/status-updates/${statusUpdateId}/`
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async addStatusUpdateReaction(
+    workspaceSlug: string,
+    projectId: string,
+    epicId: string,
+    statusUpdateId: string,
+    data: TStatusUpdateReactionPayload
+  ): Promise<TStatusUpdateReaction> {
+    return this.post(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/status-updates/${statusUpdateId}/reactions/`,
+      data
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async removeStatusUpdateReaction(
+    workspaceSlug: string,
+    projectId: string,
+    epicId: string,
+    statusUpdateId: string,
+    reactionCode: string
+  ): Promise<void> {
+    return this.delete(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/epics/${epicId}/status-updates/${statusUpdateId}/reactions/${reactionCode}/`
+    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

@@ -11,6 +11,10 @@ import type {
   TInitiativePayload,
   TInitiativeProgress,
   TInitiativeSummary,
+  TStatusUpdate,
+  TStatusUpdatePayload,
+  TStatusUpdateReaction,
+  TStatusUpdateReactionPayload,
 } from "@plane/types";
 import { APIService } from "../api.service";
 
@@ -61,6 +65,81 @@ export class InitiativeService extends APIService {
 
   async getProgress(workspaceSlug: string, initiativeId: string): Promise<TInitiativeProgress> {
     return this.get(`/api/workspaces/${workspaceSlug}/initiatives/${initiativeId}/progress/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async listStatusUpdates(workspaceSlug: string, initiativeId: string): Promise<TStatusUpdate[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/initiatives/${initiativeId}/status-updates/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async createStatusUpdate(
+    workspaceSlug: string,
+    initiativeId: string,
+    data: TStatusUpdatePayload
+  ): Promise<TStatusUpdate> {
+    return this.post(`/api/workspaces/${workspaceSlug}/initiatives/${initiativeId}/status-updates/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async updateStatusUpdate(
+    workspaceSlug: string,
+    initiativeId: string,
+    statusUpdateId: string,
+    data: Partial<TStatusUpdatePayload>
+  ): Promise<TStatusUpdate> {
+    return this.patch(
+      `/api/workspaces/${workspaceSlug}/initiatives/${initiativeId}/status-updates/${statusUpdateId}/`,
+      data
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async deleteStatusUpdate(workspaceSlug: string, initiativeId: string, statusUpdateId: string): Promise<void> {
+    return this.delete(`/api/workspaces/${workspaceSlug}/initiatives/${initiativeId}/status-updates/${statusUpdateId}/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async addStatusUpdateReaction(
+    workspaceSlug: string,
+    initiativeId: string,
+    statusUpdateId: string,
+    data: TStatusUpdateReactionPayload
+  ): Promise<TStatusUpdateReaction> {
+    return this.post(
+      `/api/workspaces/${workspaceSlug}/initiatives/${initiativeId}/status-updates/${statusUpdateId}/reactions/`,
+      data
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async removeStatusUpdateReaction(
+    workspaceSlug: string,
+    initiativeId: string,
+    statusUpdateId: string,
+    reactionCode: string
+  ): Promise<void> {
+    return this.delete(
+      `/api/workspaces/${workspaceSlug}/initiatives/${initiativeId}/status-updates/${statusUpdateId}/reactions/${reactionCode}/`
+    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

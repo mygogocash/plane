@@ -8,6 +8,10 @@ import { useState } from "react";
 import { Link2, Unlink } from "lucide-react";
 import { Button } from "@plane/propel/button";
 import type { TInitiative, TInitiativeMemberResponse, TInitiativeProgress } from "@plane/types";
+// hooks
+import { useUser } from "@/hooks/store/user";
+// plane web components
+import { StatusUpdateThread } from "@/plane-web/components/status-updates";
 
 type InitiativeDetailPanelProps = {
   initiative: TInitiative | null;
@@ -19,6 +23,7 @@ type InitiativeDetailPanelProps = {
   onDetachEpic: (epicIds: string[]) => Promise<void>;
   onDetachProject: (projectIds: string[]) => Promise<void>;
   progress?: TInitiativeProgress | null;
+  workspaceSlug: string;
 };
 
 const parseMemberIds = (value: string) =>
@@ -115,7 +120,10 @@ export const InitiativeDetailPanel = ({
   onDetachEpic,
   onDetachProject,
   progress,
+  workspaceSlug,
 }: InitiativeDetailPanelProps) => {
+  const { data: currentUser } = useUser();
+
   if (!initiative) {
     return (
       <aside className="hidden w-96 shrink-0 border-l border-subtle bg-layer-1 p-4 xl:block">
@@ -166,6 +174,11 @@ export const InitiativeDetailPanel = ({
             </div>
           )}
         </div>
+
+        <StatusUpdateThread
+          currentUserId={currentUser?.id}
+          owner={{ type: "initiative", workspaceSlug, id: initiative.id }}
+        />
 
         <div className="flex flex-col gap-3">
           <h3 className="text-13 font-medium text-primary">Members</h3>

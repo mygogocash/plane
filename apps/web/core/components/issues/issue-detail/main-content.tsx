@@ -27,6 +27,7 @@ import useSize from "@/hooks/use-window-size";
 // plane web components
 import { DeDupeIssuePopoverRoot } from "@/plane-web/components/de-dupe/duplicate-popover";
 import { IssueTypeSwitcher } from "@/plane-web/components/issues/issue-details/issue-type-switcher";
+import { StatusUpdateThread } from "@/plane-web/components/status-updates";
 import { useDebouncedDuplicateIssues } from "@/plane-web/hooks/use-debounced-duplicate-issues";
 // services
 import { WorkItemVersionService } from "@/services/issue";
@@ -218,6 +219,14 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
         renderWidgetModals={!isPeekModeActive}
         issueServiceType={EIssueServiceType.ISSUES}
       />
+
+      {issue.is_epic && (
+        <StatusUpdateThread
+          currentUserId={currentUser?.id}
+          disabled={!isEditable || isArchived}
+          owner={{ type: "epic", workspaceSlug, projectId, id: issueId }}
+        />
+      )}
 
       <CopilotPanel
         isOpen={isCopilotOpen}

@@ -315,7 +315,17 @@ check`, touched-file Ruff check/format, touched-file oxfmt/oxlint, and `git diff
   rejection. Verified: RED first on missing routes; focused status-update API contracts 10/10 green;
   adjacent status-update + epic CRUD + initiative API contracts 22/22 green; `manage.py check`;
   `makemigrations --check --dry-run`; touched-file Ruff check/format; `git diff --check` clean.
-- ⬜ remaining cards start at **TASK-25** (threaded status update UI), then TASK-26 AI NLQ endpoint.
+- ✅ **TASK-25** threaded status update UI — added shared CE `StatusUpdateThread`, status chips,
+  safe stripped-text rendering, nested replies, emoji reaction toggles, service adapters for the
+  TASK-24 epic/initiative endpoints, and mounts in initiative detail plus epic-only work item
+  detail. Verified: RED first on missing thread module; focused status-update thread Vitest 1/1;
+  adjacent status-update + initiatives board + epics route Vitests 6/6; epic/initiative service
+  Vitests 9/9; `@plane/types` and `@plane/services` typechecks; `pnpm turbo run check:types
+--filter=web`; TASK-24 API contracts 10/10; touched-file oxfmt/oxlint; `git diff --check`;
+  local dev boot smoke returned `200 text/html` at `http://127.0.0.1:3000/`, and Playwright
+  rendered the expected Plane startup-failure screen because the local API service was unavailable
+  at `http://127.0.0.1:8000/api/instances/`.
+- ⬜ remaining cards start at **TASK-26** (AI NLQ endpoint), then TASK-27 Ask AI affordance.
 
 ## Work Items & Work Item Types — `work-items/tasks.md`
 

@@ -135,4 +135,42 @@ describe("InitiativeService", () => {
     await expect(service.list("acme")).rejects.toBe(apiError);
     expect(response).toBe(summary);
   });
+
+  it("maps initiative status-update methods to the workspace-scoped endpoints", async () => {
+    const service = new InitiativeService("http://unit.test");
+    const updates = [{ id: "status-1", status: "ON_TRACK", comment_html: "<p>Ready</p>" }];
+    const payload = { status: "ON_TRACK" as const, comment_html: "<p>Ready</p>" };
+    const reaction = { id: "reaction-1", reaction: "128077" };
+    http.get.mockResolvedValue({ data: updates });
+    http.post.mockResolvedValueOnce({ data: updates[0] }).mockResolvedValueOnce({ data: reaction });
+    http.delete.mockResolvedValue({ data: undefined });
+
+    const listResponse = await service.listStatusUpdates("acme", "initiative-1");
+    const createResponse = await service.createStatusUpdate("acme", "initiative-1", payload);
+    const reactionResponse = await service.addStatusUpdateReaction("acme", "initiative-1", "status-1", {
+      reaction: "128077",
+    });
+    await service.removeStatusUpdateReaction("acme", "initiative-1", "status-1", "128077");
+
+    expect(http.get).toHaveBeenCalledWith("/api/workspaces/acme/initiatives/initiative-1/status-updates/", {});
+    expect(http.post).toHaveBeenNthCalledWith(
+      1,
+      "/api/workspaces/acme/initiatives/initiative-1/status-updates/",
+      payload,
+      {}
+    );
+    expect(http.post).toHaveBeenNthCalledWith(
+      2,
+      "/api/workspaces/acme/initiatives/initiative-1/status-updates/status-1/reactions/",
+      { reaction: "128077" },
+      {}
+    );
+    expect(http.delete).toHaveBeenCalledWith(
+      "/api/workspaces/acme/initiatives/initiative-1/status-updates/status-1/reactions/128077/",
+      { data: undefined }
+    );
+    expect(listResponse).toBe(updates);
+    expect(createResponse).toBe(updates[0]);
+    expect(reactionResponse).toBe(reaction);
+  });
 });

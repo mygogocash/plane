@@ -180,6 +180,7 @@ export const InitiativesWorkspaceView = observer(function InitiativesWorkspaceVi
             : Promise.resolve()
         }
         progress={selectedProgress}
+        workspaceSlug={workspaceSlug}
       />
     </div>
   );
