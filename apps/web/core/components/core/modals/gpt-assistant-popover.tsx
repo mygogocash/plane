@@ -5,7 +5,7 @@
  */
 
 import type { Ref } from "react";
-import React, { useEffect, useState, useRef, Fragment } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import type { Placement } from "@popperjs/core";
 import { Controller, useForm } from "react-hook-form"; // services
 import { usePopper } from "react-popper";
@@ -198,10 +198,8 @@ export function GptAssistantPopover(props: Props) {
 
   return (
     <Popover as="div" className={`relative w-min text-left`}>
-      <Popover.Button as={Fragment}>
-        <button ref={setReferenceElement} className="flex items-center" tabIndex={-1}>
-          {button}
-        </button>
+      <Popover.Button ref={setReferenceElement} className="flex items-center" tabIndex={-1}>
+        {button}
       </Popover.Button>
       <Transition
         show={isOpen}

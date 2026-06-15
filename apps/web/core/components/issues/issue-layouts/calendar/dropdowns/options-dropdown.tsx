@@ -101,24 +101,22 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
     <Popover className="relative flex items-center">
       {({ open, close: closePopover }) => (
         <>
-          <Popover.Button as={React.Fragment}>
-            <button type="button" ref={setReferenceElement}>
+          <Popover.Button type="button" ref={setReferenceElement}>
+            <div
+              className={`hidden items-center gap-1.5 rounded-sm bg-layer-1 px-2.5 py-1 text-11 outline-none hover:bg-layer-1 md:flex ${
+                open ? "text-primary" : "text-secondary"
+              }`}
+            >
+              <div className="font-medium">{t("common.options")}</div>
               <div
-                className={`hidden items-center gap-1.5 rounded-sm bg-layer-1 px-2.5 py-1 text-11 outline-none hover:bg-layer-1 md:flex ${
-                  open ? "text-primary" : "text-secondary"
-                }`}
+                className={`flex h-3.5 w-3.5 items-center justify-center transition-all ${open ? "" : "rotate-180"}`}
               >
-                <div className="font-medium">{t("common.options")}</div>
-                <div
-                  className={`flex h-3.5 w-3.5 items-center justify-center transition-all ${open ? "" : "rotate-180"}`}
-                >
-                  <ChevronUpIcon width={12} strokeWidth={2} />
-                </div>
+                <ChevronUpIcon width={12} strokeWidth={2} />
               </div>
-              <div className="md:hidden">
-                <MoreVerticalIcon className="h-4 text-secondary" strokeWidth={2} />
-              </div>
-            </button>
+            </div>
+            <div className="md:hidden">
+              <MoreVerticalIcon className="h-4 text-secondary" strokeWidth={2} />
+            </div>
           </Popover.Button>
           <Transition
             as={React.Fragment}

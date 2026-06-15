@@ -61,7 +61,7 @@ export function InputColorPicker(props: InputColorPickerProps) {
       <Popover as="div" className="absolute top-1/2 right-1 z-10 -translate-y-1/2">
         {() => (
           <>
-            <Popover.Button as={React.Fragment}>
+            <Popover.Button as="div">
               <Button ref={setReferenceElement} variant="neutral-primary" className="border-none !bg-transparent">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

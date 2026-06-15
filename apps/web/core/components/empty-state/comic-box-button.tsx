@@ -5,7 +5,7 @@
  */
 
 import type { Ref } from "react";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { usePopper } from "react-popper";
 import { Popover } from "@headlessui/react";
 // plane imports
@@ -48,7 +48,7 @@ export function ComicBoxButton(props: Props) {
 
   return (
     <Popover as="div" className="relative">
-      <Popover.Button as={Fragment}>
+      <Popover.Button as="div">
         <Button variant="primary" size="lg" ref={setReferenceElement} onClick={onClick} disabled={disabled}>
           {icon}
           <span className="leading-4">{label}</span>

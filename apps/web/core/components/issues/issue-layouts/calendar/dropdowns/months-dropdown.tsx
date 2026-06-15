@@ -81,17 +81,15 @@ export const CalendarMonthsDropdown = observer(function CalendarMonthsDropdown(p
 
   return (
     <Popover className="relative">
-      <Popover.Button as={React.Fragment}>
-        <button
-          type="button"
-          ref={setReferenceElement}
-          className="text-18 font-semibold outline-none"
-          disabled={calendarLayout === "week"}
-        >
-          {calendarLayout === "month"
-            ? `${MONTHS_LIST[activeMonthDate.getMonth() + 1].title} ${activeMonthDate.getFullYear()}`
-            : getWeekLayoutHeader()}
-        </button>
+      <Popover.Button
+        type="button"
+        ref={setReferenceElement}
+        className="text-18 font-semibold outline-none"
+        disabled={calendarLayout === "week"}
+      >
+        {calendarLayout === "month"
+          ? `${MONTHS_LIST[activeMonthDate.getMonth() + 1].title} ${activeMonthDate.getFullYear()}`
+          : getWeekLayoutHeader()}
       </Popover.Button>
       <Transition
         as={React.Fragment}

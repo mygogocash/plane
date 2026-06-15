@@ -48,7 +48,7 @@ export function FiltersDropdown(props: Props) {
     <Popover as="div">
       {({ open }) => (
         <>
-          <Popover.Button as={React.Fragment}>
+          <Popover.Button as="div">
             {menuButton ? (
               <button type="button" ref={setReferenceElement}>
                 {menuButton}
