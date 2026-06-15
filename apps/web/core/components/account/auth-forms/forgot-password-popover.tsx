@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { usePopper } from "react-popper";
 import { Popover } from "@headlessui/react";
 // plane imports
@@ -32,14 +32,12 @@ export function ForgotPasswordPopover() {
 
   return (
     <Popover className="relative">
-      <Popover.Button as={Fragment}>
-        <button
-          type="button"
-          ref={setReferenceElement}
-          className="text-11 font-medium text-accent-primary outline-none"
-        >
-          {t("auth.common.forgot_password")}
-        </button>
+      <Popover.Button
+        type="button"
+        ref={setReferenceElement}
+        className="text-11 font-medium text-accent-primary outline-none"
+      >
+        {t("auth.common.forgot_password")}
       </Popover.Button>
       <Popover.Panel className="fixed z-10">
         {({ close }) => (

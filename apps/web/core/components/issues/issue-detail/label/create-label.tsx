@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useState, Fragment, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { TwitterPicker } from "react-color";
 import { Controller, useForm } from "react-hook-form";
 import { usePopper } from "react-popper";
@@ -100,17 +100,19 @@ export function LabelCreate(props: ILabelCreate) {
               render={({ field: { value, onChange } }) => (
                 <Popover>
                   <>
-                    <Popover.Button as={Fragment}>
-                      <button type="button" ref={setReferenceElement} className="grid place-items-center outline-none">
-                        {value && value?.trim() !== "" && (
-                          <span
-                            className="h-5 w-5 rounded-sm"
-                            style={{
-                              backgroundColor: value ?? "black",
-                            }}
-                          />
-                        )}
-                      </button>
+                    <Popover.Button
+                      type="button"
+                      ref={setReferenceElement}
+                      className="grid place-items-center outline-none"
+                    >
+                      {value && value?.trim() !== "" && (
+                        <span
+                          className="h-5 w-5 rounded-sm"
+                          style={{
+                            backgroundColor: value ?? "black",
+                          }}
+                        />
+                      )}
                     </Popover.Button>
                     <Popover.Panel className="fixed z-10">
                       <div
