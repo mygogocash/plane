@@ -109,8 +109,8 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
 
   const handleAddLabel = async (labelName: string) => {
     setSubmitting(true);
-    const label = await onAddLabel(workspaceSlug, projectId, { name: labelName, color: getRandomLabelColor() });
-    onSelect([...values, label.id]);
+    const createdLabel = await onAddLabel(workspaceSlug, projectId, { name: labelName, color: getRandomLabelColor() });
+    onSelect([...values, createdLabel.id]);
     setQuery("");
     setSubmitting(false);
   };
@@ -126,17 +126,16 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
         onChange={(value) => onSelect(value)}
         multiple
       >
-        <Combobox.Button as="div">
-          <Button
-            ref={setReferenceElement}
-            type="button"
-            variant="tertiary"
-            size="sm"
-            prependIcon={<PlusIcon />}
-            onClick={() => !projectLabels && fetchLabels()}
-          >
-            {label}
-          </Button>
+        <Combobox.Button
+          as={Button}
+          ref={setReferenceElement}
+          type="button"
+          variant="tertiary"
+          size="sm"
+          prependIcon={<PlusIcon />}
+          onClick={() => !projectLabels && fetchLabels()}
+        >
+          {label}
         </Combobox.Button>
 
         <Combobox.Options className="fixed z-10">
