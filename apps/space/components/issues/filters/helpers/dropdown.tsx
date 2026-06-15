@@ -34,7 +34,7 @@ export function FiltersDropdown(props: Props) {
         }
         return (
           <>
-            <Popover.Button as={React.Fragment}>
+            <Popover.Button as="div">
               <Button ref={setReferenceElement} variant="secondary">
                 <div className={`${open ? "text-primary" : "text-secondary"}`}>
                   <span>{title}</span>
