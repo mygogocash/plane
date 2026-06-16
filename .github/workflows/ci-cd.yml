@@ -80,6 +80,117 @@ jobs:
             echo "version_tag=${branch_tag}-${short_sha}"
           } >> "$GITHUB_OUTPUT"
 
+  changes:
+    name: Detect changed components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      any: ${{ steps.matrix.outputs.any }}
+      frontend: ${{ steps.flags.outputs.frontend }}
+      space: ${{ steps.flags.outputs.space }}
+      admin: ${{ steps.flags.outputs.admin }}
+      live: ${{ steps.flags.outputs.live }}
+      backend: ${{ steps.flags.outputs.backend }}
+      proxy: ${{ steps.flags.outputs.proxy }}
+      migrations: ${{ steps.flags.outputs.migrations }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Path filter
+        id: filter
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared: &shared
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+              - 'package.json'
+            frontend:
+              - *shared
+              - 'apps/web/**'
+            space:
+              - *shared
+              - 'apps/space/**'
+            admin:
+              - *shared
+              - 'apps/admin/**'
+            live:
+              - *shared
+              - 'apps/live/**'
+            backend:
+              - 'apps/api/**'
+            proxy:
+              - 'apps/proxy/**'
+            migrations:
+              - 'apps/api/**/migrations/**'
+
+      - name: Compute component flags
+        id: flags
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          F_FRONTEND: ${{ steps.filter.outputs.frontend }}
+          F_SPACE: ${{ steps.filter.outputs.space }}
+          F_ADMIN: ${{ steps.filter.outputs.admin }}
+          F_LIVE: ${{ steps.filter.outputs.live }}
+          F_BACKEND: ${{ steps.filter.outputs.backend }}
+          F_PROXY: ${{ steps.filter.outputs.proxy }}
+          F_MIGRATIONS: ${{ steps.filter.outputs.migrations }}
+        run: |
+          set -euo pipefail
+          # workflow_dispatch has no diff base -> force every component (full rebuild escape hatch).
+          force="false"
+          [ "$EVENT" = "workflow_dispatch" ] && force="true"
+          emit() {
+            local name="$1" val="$2"
+            [ "$force" = "true" ] && val="true"
+            [ -z "$val" ] && val="false"
+            echo "${name}=${val}" >> "$GITHUB_OUTPUT"
+          }
+          emit frontend   "${F_FRONTEND:-}"
+          emit space      "${F_SPACE:-}"
+          emit admin      "${F_ADMIN:-}"
+          emit live       "${F_LIVE:-}"
+          emit backend    "${F_BACKEND:-}"
+          emit proxy      "${F_PROXY:-}"
+          emit migrations "${F_MIGRATIONS:-}"
+
+      - name: Build image matrix
+        id: matrix
+        shell: bash
+        env:
+          S_FRONTEND: ${{ steps.flags.outputs.frontend }}
+          S_SPACE: ${{ steps.flags.outputs.space }}
+          S_ADMIN: ${{ steps.flags.outputs.admin }}
+          S_LIVE: ${{ steps.flags.outputs.live }}
+          S_BACKEND: ${{ steps.flags.outputs.backend }}
+          S_PROXY: ${{ steps.flags.outputs.proxy }}
+        run: |
+          set -euo pipefail
+          all='[
+            {"component":"frontend","image":"plane-frontend","context":".","dockerfile":"./apps/web/Dockerfile.web"},
+            {"component":"space","image":"plane-space","context":".","dockerfile":"./apps/space/Dockerfile.space"},
+            {"component":"admin","image":"plane-admin","context":".","dockerfile":"./apps/admin/Dockerfile.admin"},
+            {"component":"live","image":"plane-live","context":".","dockerfile":"./apps/live/Dockerfile.live"},
+            {"component":"backend","image":"plane-backend","context":"./apps/api","dockerfile":"./apps/api/Dockerfile.api"},
+            {"component":"proxy","image":"plane-proxy","context":"./apps/proxy","dockerfile":"./apps/proxy/Dockerfile.ce"}
+          ]'
+          sel="$(jq -nc \
+            --arg frontend "$S_FRONTEND" --arg space "$S_SPACE" --arg admin "$S_ADMIN" \
+            --arg live "$S_LIVE" --arg backend "$S_BACKEND" --arg proxy "$S_PROXY" \
+            '{frontend:$frontend,space:$space,admin:$admin,live:$live,backend:$backend,proxy:$proxy}')"
+          include="$(printf '%s' "$all" | jq -c --argjson sel "$sel" '[ .[] | select($sel[.component] == "true") ]')"
+          echo "matrix={\"include\":${include}}" >> "$GITHUB_OUTPUT"
+          if [ "$include" = "[]" ]; then
+            echo "any=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
+
   web-ci:
     name: Web checks
     runs-on: ubuntu-latest
@@ -166,34 +277,15 @@ jobs:
     timeout-minutes: 60
     needs:
       - metadata
+      - changes
       - web-ci
-      - api-ci
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images) }}
+    if: ${{ needs.changes.outputs.any == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images)) }}
     permissions:
       contents: read
       id-token: write
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - image: plane-admin
-            context: .
-            dockerfile: ./apps/admin/Dockerfile.admin
-          - image: plane-backend
-            context: ./apps/api
-            dockerfile: ./apps/api/Dockerfile.api
-          - image: plane-frontend
-            context: .
-            dockerfile: ./apps/web/Dockerfile.web
-          - image: plane-live
-            context: .
-            dockerfile: ./apps/live/Dockerfile.live
-          - image: plane-proxy
-            context: ./apps/proxy
-            dockerfile: ./apps/proxy/Dockerfile.ce
-          - image: plane-space
-            context: .
-            dockerfile: ./apps/space/Dockerfile.space
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -250,8 +342,10 @@ jobs:
     timeout-minutes: 25
     needs:
       - metadata
+      - changes
       - build-components
-    if: ${{ (github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_gcp) }}
+      - api-ci
+    if: ${{ needs.changes.outputs.any == 'true' && ((github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_gcp)) }}
     permissions:
       contents: read
       id-token: write
@@ -285,6 +379,7 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Run database migrations
+        if: ${{ needs.changes.outputs.migrations == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -355,28 +450,53 @@ jobs:
 
       - name: Roll out GKE images
         shell: bash
+        env:
+          C_FRONTEND: ${{ needs.changes.outputs.frontend }}
+          C_SPACE: ${{ needs.changes.outputs.space }}
+          C_ADMIN: ${{ needs.changes.outputs.admin }}
+          C_LIVE: ${{ needs.changes.outputs.live }}
+          C_BACKEND: ${{ needs.changes.outputs.backend }}
         run: |
           set -euo pipefail
 
           image_base="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}"
           tag="${{ needs.metadata.outputs.version_tag }}"
+          rolled=()
 
-          backend_image="${image_base}/plane-backend:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-api-wl plane-app-api="${backend_image}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-worker-wl plane-app-worker="${backend_image}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-beat-worker-wl plane-app-beat-worker="${backend_image}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-web-wl plane-app-web="${image_base}/plane-frontend:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-admin-wl plane-app-admin="${image_base}/plane-admin:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-live-wl plane-app-live="${image_base}/plane-live:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-space-wl plane-app-space="${image_base}/plane-space:${tag}"
+          # Only set images for components built this run; unchanged deployments keep
+          # their current image (their version_tag was never built, so we must not touch them).
+          if [ "${C_BACKEND}" = "true" ]; then
+            backend_image="${image_base}/plane-backend:${tag}"
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-api-wl plane-app-api="${backend_image}"
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-worker-wl plane-app-worker="${backend_image}"
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-beat-worker-wl plane-app-beat-worker="${backend_image}"
+            rolled+=(plane-app-api-wl plane-app-worker-wl plane-app-beat-worker-wl)
+          fi
+          if [ "${C_FRONTEND}" = "true" ]; then
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-web-wl plane-app-web="${image_base}/plane-frontend:${tag}"
+            rolled+=(plane-app-web-wl)
+          fi
+          if [ "${C_ADMIN}" = "true" ]; then
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-admin-wl plane-app-admin="${image_base}/plane-admin:${tag}"
+            rolled+=(plane-app-admin-wl)
+          fi
+          if [ "${C_LIVE}" = "true" ]; then
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-live-wl plane-app-live="${image_base}/plane-live:${tag}"
+            rolled+=(plane-app-live-wl)
+          fi
+          if [ "${C_SPACE}" = "true" ]; then
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-space-wl plane-app-space="${image_base}/plane-space:${tag}"
+            rolled+=(plane-app-space-wl)
+          fi
 
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-api-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-worker-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-beat-worker-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-web-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-admin-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-live-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-space-wl --timeout=600s
+          if [ "${#rolled[@]}" -eq 0 ]; then
+            echo "No built components to roll out."
+            exit 0
+          fi
+
+          for d in "${rolled[@]}"; do
+            kubectl -n "${GKE_NAMESPACE}" rollout status "deployment/${d}" --timeout=600s
+          done
 
       - name: Smoke production endpoint
         run: curl -fsS --retry 5 --retry-delay 5 "${GCP_APP_URL}/api/instances/" >/tmp/plane-instance.json
