@@ -55,6 +55,21 @@ The live runtime is the GKE Helm deployment, not Railway. Railway project
   - Lifecycle: abort incomplete multipart uploads after `7` days
   - No lifecycle rule deletes completed Plane uploads.
 
+## Turbo Remote Cache (CI build accelerator)
+
+Self-hosted Turbo remote cache that speeds up CI image builds. It is **not** part
+of the runtime — deleting it only disables build caching.
+
+- Cloud Run service: `turbo-cache` (`asia-southeast1`, min-instances 0)
+- URL: `https://turbo-cache-idid7yszzq-as.a.run.app`
+- Bucket: `gs://plane-turbo-cache-affine-495114` (30-day object lifecycle)
+- Runtime SA: `turbo-cache@affine-495114.iam.gserviceaccount.com` (reaches GCS via
+  ADC — no exported key; `roles/storage.objectAdmin` on the bucket only)
+- Token secret: `turbo-cache-token` (Secret Manager; CI-only, not synced to k8s)
+- Consumed by CI via repo var `TURBO_API`, var `TURBO_TEAM=plane`, secret
+  `TURBO_TOKEN`. Token-gated public ingress; fails safe to a local build.
+- Full setup, verify, rotate, and teardown: `deployments/turbo-cache/README.md`.
+
 ## Secrets
 
 Secrets live in Secret Manager. Do not print or commit secret values.
@@ -81,6 +96,8 @@ secret and restart affected Plane deployments.
 - `k8s/plane-uploads-cors.json`: Cloud Storage CORS policy.
 - `docs/gcs-plane-uploads-lifecycle.json`: non-destructive bucket lifecycle.
 - `docs/gke-plane-ce-spec-2026-06-05.md`: rollout evidence and remaining gaps.
+- `deployments/turbo-cache/README.md`: self-hosted CI Turbo remote cache (setup,
+  verify, rotate, teardown).
 
 ## Access
 
