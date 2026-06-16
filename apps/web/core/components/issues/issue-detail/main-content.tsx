@@ -27,7 +27,7 @@ import useReloadConfirmations from "@/hooks/use-reload-confirmation";
 import useSize from "@/hooks/use-window-size";
 // plane web components
 import { DeDupeIssuePopoverRoot } from "@/plane-web/components/de-dupe/duplicate-popover";
-import { AskAIAction } from "@/plane-web/components/copilot";
+import { AIWorkItemActions, AskAIAction } from "@/plane-web/components/copilot";
 import { IssueTypeSwitcher } from "@/plane-web/components/issues/issue-details/issue-type-switcher";
 import { StatusUpdateThread } from "@/plane-web/components/status-updates";
 import { useDebouncedDuplicateIssues } from "@/plane-web/hooks/use-debounced-duplicate-issues";
@@ -167,6 +167,17 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
             owner={{ scope: "epic", workspaceSlug, objectId: issue.id, title: issue.name }}
             isProviderConfigured={config?.has_llm_configured}
             disabled={isArchived}
+          />
+        )}
+
+        {!issue.is_epic && !isArchived && isEditable && issue.project_id && (
+          <AIWorkItemActions
+            workspaceSlug={workspaceSlug}
+            projectId={issue.project_id}
+            issueId={issue.id}
+            isProviderConfigured={config?.has_llm_configured}
+            getDescription={() => getTextContent(issue.description_html) ?? ""}
+            onApplyText={(text) => editorRef.current?.setEditorValueAtCursorPosition(text)}
           />
         )}
 
