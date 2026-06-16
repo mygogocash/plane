@@ -229,11 +229,20 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: ${{ env.DOCKER_PLATFORMS }}
           push: true
+          build-args: |
+            TURBO_API=${{ vars.TURBO_API }}
+            TURBO_TEAM=${{ vars.TURBO_TEAM }}
+          secrets: |
+            turbo_token=${{ secrets.TURBO_TOKEN }}
           tags: |
             ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.metadata.outputs.branch_tag }}
             ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.metadata.outputs.version_tag }}
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          cache-from: |
+            type=gha,scope=${{ matrix.image }}
+            type=registry,ref=${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.image }}
+            type=registry,mode=max,ref=${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:buildcache
 
   deploy-gcp:
     name: Deploy to GKE
