@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Clock, ExternalLink, Loader2, Send, Sparkles, X } from "lucide-react";
+import { Check, Clock, ExternalLink, ListTree, Loader2, Search, Sparkles, Wand2, X } from "lucide-react";
 // plane imports
 import { Button } from "@plane/propel/button";
 import { EPortalPosition, EPortalWidth, ModalPortal } from "@plane/propel/portal";
@@ -13,6 +13,8 @@ import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import type { TIssue, TIssuePriorities } from "@plane/types";
 import { Checkbox, TextArea } from "@plane/ui";
 import { cn } from "@plane/utils";
+// plane web
+import { CopilotPromptBox, type TCopilotPromptMode } from "@/plane-web/components/copilot";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
 // services
@@ -70,6 +72,15 @@ export function CopilotPanel(props: Props) {
     () => draftItems.filter((item) => item.selected && item.name.trim()).length,
     [draftItems]
   );
+  const promptModes = useMemo<TCopilotPromptMode[]>(() => {
+    const items: TCopilotPromptMode[] = [
+      { key: "auto", label: "Auto", icon: Sparkles },
+      { key: "answer", label: "Answer", icon: Search },
+    ];
+    if (hasIssueContext) items.push({ key: "draft_subtasks", label: "Draft subtasks", icon: ListTree });
+    items.push({ key: "command", label: "Command", icon: Wand2 });
+    return items;
+  }, [hasIssueContext]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -384,86 +395,29 @@ export function CopilotPanel(props: Props) {
         </div>
 
         <footer className="space-y-3 border-t border-subtle px-5 py-4">
-          <TextArea
+          {hasIssueContext && draftItems.length > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={applySelectedSubtasks}
+              disabled={selectedDraftCount === 0 || isApplying}
+              prependIcon={isApplying ? <Loader2 className="animate-spin" /> : <Check />}
+              className="w-full justify-center"
+            >
+              Apply selected
+            </Button>
+          )}
+          <CopilotPromptBox
             value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") submitMessage();
-            }}
-            mode="primary"
-            textAreaSize="sm"
-            className="text-sm max-h-32 min-h-20"
-            disabled={!isAiConfigured || isSending || isApplying}
+            onChange={setMessage}
+            mode={mode}
+            onModeChange={setMode}
+            modes={promptModes}
+            onSubmit={() => submitMessage()}
+            isLoading={isSending}
+            disabled={!isAiConfigured || isApplying}
             placeholder={hasIssueContext ? "Ask about this work item" : "Ask about this workspace"}
           />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={cn(
-                  "text-xs rounded border px-3 py-1.5",
-                  mode === "auto" ? "border-accent-primary text-primary" : "border-subtle text-secondary"
-                )}
-                onClick={() => setMode("auto")}
-              >
-                Auto
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  "text-xs rounded border px-3 py-1.5",
-                  mode === "answer" ? "border-accent-primary text-primary" : "border-subtle text-secondary"
-                )}
-                onClick={() => setMode("answer")}
-              >
-                Answer
-              </button>
-              {hasIssueContext && (
-                <button
-                  type="button"
-                  className={cn(
-                    "text-xs rounded border px-3 py-1.5",
-                    mode === "draft_subtasks" ? "border-accent-primary text-primary" : "border-subtle text-secondary"
-                  )}
-                  onClick={() => setMode("draft_subtasks")}
-                >
-                  Draft subtasks
-                </button>
-              )}
-              <button
-                type="button"
-                className={cn(
-                  "text-xs rounded border px-3 py-1.5",
-                  mode === "command" ? "border-accent-primary text-primary" : "border-subtle text-secondary"
-                )}
-                onClick={() => setMode("command")}
-              >
-                Command
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              {hasIssueContext && draftItems.length > 0 && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={applySelectedSubtasks}
-                  disabled={selectedDraftCount === 0 || isApplying}
-                  prependIcon={isApplying ? <Loader2 className="animate-spin" /> : <Check />}
-                >
-                  Apply selected
-                </Button>
-              )}
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => submitMessage()}
-                disabled={!message.trim() || !isAiConfigured || isSending || isApplying}
-                prependIcon={isSending ? <Loader2 className="animate-spin" /> : <Send />}
-              >
-                Send
-              </Button>
-            </div>
-          </div>
         </footer>
       </section>
     </ModalPortal>
