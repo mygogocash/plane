@@ -439,8 +439,39 @@ check`, `makemigrations --check --dry-run`, and touched-file Ruff check/format c
   focused DUP-2 Vitest 4/4 green; full web Vitest 60/60 green; web typecheck/format clean; touched-file strict oxlint
   clean. Rendered smoke loaded `127.0.0.1:3000` through Playwright fallback, but local backend services refused
   connection so the issue-modal interaction could not be browser-verified in this run.
-- ⬜ remaining cards (Workflows data/API/UI cards in this backlog are already implemented above; next unresolved Work
-  Items card is AI-1-API)
+- ✅ **AI-1-API** copilot work-item AI modes — added `create_work_item` (structured draft, returned for review, never
+  persisted), `describe` (draft/simplify/rewrite, invalid action→400), and `summarize_issue` (scoped read-only digest,
+  cross-project evidence excluded, empty issue graceful) to the **existing** copilot pipeline. Fail-closed `400` for every
+  new mode when the provider is unconfigured (LLM never called); `create_work_item` is a write mode so GUEST→`403` (LLM
+  never called); all AI HTML is nh3-sanitized (`<script>` stripped via `validate_html_content`); provider outage→`503`
+  (catch-path). New `call_copilot_workitem_llm` seam keeps the proven answer/command schema path untouched; **no new model,
+  no migration** (`makemigrations --check` clean), no new conversation table. Verified: RED first on missing
+  `call_copilot_workitem_llm`; **11 contract tests pass**; copilot family 25/25; full `contract/app` 211 passed / 8
+  pre-existing magic-link baseline; `manage.py check` + touched-file Ruff check/format clean. Files:
+  `apps/api/plane/app/views/copilot.py`, `tests/contract/app/test_copilot_workitem_modes.py`.
+- ✅ **AI-2-BE** AgentRun model + queued record (no autonomous execution) — added `AgentRun(ProjectBaseModel)` (issue FK,
+  agent_key, requested_by, queued/running/succeeded/failed/cancelled status, input/result/error) + additive migration
+  `0133_agent_run.py` (forward+reverse clean), and issue-scoped request/status/cancel endpoints under
+  `.../issues/<issue_id>/agent-runs/` gated to ADMIN/MEMBER (GUEST→403). v1 is **non-autonomous**: requesting a run only
+  records a queued row + logs `IssueActivity(field="agent_run")` and **never mutates a work item**; provider-unconfigured→400
+  fail-closed; cancel has no side effects. Verified: RED first on missing model/endpoints; **2 unit + 5 contract tests pass**;
+  migration round-trips + `makemigrations --check` clean; full **unit 278 / contract-app 216** (8 known magic-link baseline);
+  `manage.py check` + touched-file Ruff clean. Files: `db/models/agent_run.py`, migration `0133`,
+  `app/views/issue/agent_run.py`, `app/urls/issue.py`, `app/views/__init__.py`, `db/models/__init__.py`,
+  `tests/{factories,unit/db/test_agent_run_model,contract/app/test_agent_run_api}.py`.
+- ✅ **AI-3-FE** AI description actions + summary + agent-run UI — extended the web `AIService` with `describeWorkItem`/
+  `draftDescription`/`simplify`/`rewrite`/`createWorkItem`/`summarizeIssue`/`requestAgentRun` (last wired to AI-2-BE's
+  agent-runs endpoint), added a gated `AIWorkItemActions` component (`apps/web/ce/components/copilot/`) that renders
+  Draft/Simplify/Rewrite + Generate summary + Run agent only when `ai_copilot` is on AND `config.has_llm_configured`
+  (renders **nothing**, not disabled, otherwise), and **mounted** it in `issue-detail/main-content.tsx` for editable
+  non-epic work items. Describe output inserts **non-destructively at the cursor** via `setEditorValueAtCursorPosition`
+  (the existing GPT-affordance primitive — no lossy description replace); fail-soft helpers never throw. Verified: RED
+  first; **9 Vitest pass** (5 gating + 4 service-helper); `check:types --filter=web` green (11/11, incl. the mount);
+  touched-file oxlint 0/0 + oxfmt clean.
+
+**Work Items & Types AI cards — all done:** AI-1-API ✅ · AI-2-BE ✅ · AI-3-FE ✅. The `AI-WORKITEMS` epic is
+complete locally (backend modes + AgentRun record + gated, mounted frontend), all behind the `ai_copilot` flag +
+provider-configured gate, with no autonomous agent execution and no Plane Cloud calls.
 
 ## Wiki & Pages — `wiki/tasks.md`
 

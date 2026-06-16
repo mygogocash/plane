@@ -827,6 +827,7 @@ Vitest:
 
 ## AI-1-API — Copilot `create_work_item` + `describe` + `summarize_issue` modes (fail-closed)
 
+**Status** ✅ done & verified 2026-06-16 (11 contract tests pass; full app contracts 211 passed / 8 known magic-link baseline)
 **Implements** EPIC-AI / AI-WORKITEMS (story AI-1, AI-2, AI-3)
 **Depends on** [CP-2-API] (structured create returns `property_values` validated against the type)
 **Risk tier** R1 overall — **AI-write is an R0 gate**. No merge without failing-then-green tests for provider-unconfigured → `400` and GUEST-blocked.
@@ -875,10 +876,19 @@ Vitest:
 
 **Done when** Three modes added to the existing pipeline, all named tests RED→GREEN (fail-closed + GUEST-block + sanitization shown), suite green, no new conversation table, no Plane Cloud calls.
 
+**Verified 2026-06-16**
+
+- RED: `pytest plane/tests/contract/app/test_copilot_workitem_modes.py` failed `AttributeError: ...copilot... does not have the attribute 'call_copilot_workitem_llm'` (modes/handler unimplemented).
+- GREEN: 11/11 contract tests pass — structured draft (not persisted), describe draft/simplify/rewrite, invalid-action 400, scoped summarize (cross-project evidence excluded), empty-issue graceful, fail-closed 400 for all 3 modes when provider unconfigured (LLM never called), GUEST write→403 (LLM never called), nh3-sanitized `description_html` (`<script>` stripped), and provider-outage→503 (catch-path).
+- Implementation: extended `COPILOT_MODES`/`WRITE_MODES`, added `AI_WORKITEM_MODES`/`DESCRIBE_ACTIONS`, optional `action` serializer field, early `_handle_workitem_ai_mode` branch (before the answer/command flow, after the existing GUEST + provider + project-scope gates), new `call_copilot_workitem_llm` provider seam (openai/gemini/vertex, json_object), `_shape_work_item_draft`, `_sanitize_html` (`validate_html_content`/nh3), `_text_from_html` (`strip_tags`). No new model/migration (`makemigrations --check` clean). No new conversation table; drafts/summaries never auto-saved.
+- Regression: copilot family 25/25 green; full `contract/app` 211 passed / 8 pre-existing magic-link rate-limit failures (documented baseline, unrelated). `manage.py check` clean; touched-file `ruff check`/`ruff format --check` clean.
+- Files: `apps/api/plane/app/views/copilot.py`, `apps/api/plane/tests/contract/app/test_copilot_workitem_modes.py`. (Deviation: provider-unconfigured returns the endpoint's existing `400 "LLM provider API key and model are required"` message, reused as-is rather than the card's literal `"LLM provider not configured"` string.)
+
 ---
 
 ## AI-2-BE — AgentRun model + queued record (no autonomous execution)
 
+**Status** ✅ done & verified 2026-06-16 (2 unit + 5 contract tests pass; migration `0133` round-trips; full unit 278 / contract-app 216 with 8 known magic-link baseline)
 **Implements** EPIC-AI / AI-WORKITEMS (story AI-4 data + status transitions)
 **Depends on** [AI-1-API]
 **Risk tier** R1 — **agent execution is an R0 gate**; v1 ships only an auditable record + queued stub, no autonomous action.
@@ -924,10 +934,18 @@ Unit `@pytest.mark.unit`:
 
 **Done when** `AgentRun` model + migration + queued/cancel/status endpoints live, all named tests RED→GREEN (no-autonomous-action + fail-closed + role-block proven), migration round-trips, suite green.
 
+**Verified 2026-06-16**
+
+- RED: model unit test `ImportError: cannot import name 'AgentRun'`; contract test `module 'plane.app.views.issue' has no attribute 'agent_run'`.
+- GREEN: 2 unit (`defaults_queued`, `status_transitions_recorded`) + 5 contract — request→`201` queued + `IssueActivity(field="agent_run")` logged + **no work-item mutation** (issue name/state unchanged, no new Issue rows); GUEST→`403` (no AgentRun created); provider-unconfigured→`400` fail-closed; cancel→`200` cancelled with no side effects; status GET returns current state.
+- Implementation: `AgentRun(ProjectBaseModel)` (issue FK, agent_key, requested_by, status TextChoices queued/running/succeeded/failed/cancelled default queued, input/result/error) + additive migration `0133_agent_run.py` (forward+reverse round-trip clean, `makemigrations --check` no changes); issue-scoped `AgentRunEndpoint` (POST request / GET status) + `AgentRunCancelEndpoint` (POST cancel) under `.../issues/<issue_id>/agent-runs/`, gated `@allow_permission([ROLE.ADMIN, ROLE.MEMBER])` (PROJECT) so GUEST/below is declaratively blocked; fail-closed provider check; **no autonomous mutation** anywhere. Files: `db/models/agent_run.py`, `db/models/__init__.py`, migration `0133`, `app/views/issue/agent_run.py`, `app/views/__init__.py`, `app/urls/issue.py`, `tests/factories.py`, `tests/unit/db/test_agent_run_model.py`, `tests/contract/app/test_agent_run_api.py`.
+- Regression: full **unit 278 passed**; **contract/app 216 passed / 8 pre-existing magic-link baseline**; `manage.py check` clean; touched-file Ruff check + format clean (migration left Django-generated, matching siblings 0129/0132). (Deviation: cancel of an already-terminal run returns `409 agent_run_not_cancellable`; status read endpoint added beyond the card's named list for coverage.)
+
 ---
 
 ## AI-3-FE — AI buttons in description editor + summary button + agent-run UI (hide when no provider)
 
+**Status** ✅ done & verified 2026-06-16 — `AIService` extended, gated `AIWorkItemActions` component built and **mounted** into the work-item detail editor, 9 Vitest pass, web `check:types` green, oxlint/oxfmt clean.
 **Implements** EPIC-AI / AI-WORKITEMS (story AI-1/AI-2/AI-3/AI-4 UI)
 **Depends on** [AI-1-API, AI-2-BE]
 **Risk tier** R1 (flag-gated UI; fail-closed)
@@ -968,6 +986,15 @@ Vitest:
 - `pnpm --filter web vitest run apps/web/core/components/**/ai-description-actions.test.tsx` (RED→GREEN); `pnpm --filter web check:types`
 
 **Done when** `AIService` extended, editor/summary/agent UI wired, all Vitest cases RED→GREEN, type-check passes, hide-when-no-provider proven (not disabled).
+
+**Verified 2026-06-16**
+
+- RED: `ai-work-item-actions.test.tsx` failed to import the missing component (then the 4 service-helper tests failed before the helpers were exported).
+- GREEN: **9 Vitest** — (gating) renders Draft/Simplify/Rewrite + Generate summary + Run agent only when `ai_copilot` is on AND provider configured, renders **nothing** (empty markup, not disabled) when provider unconfigured OR flag off, summary + agent-run hidden when unconfigured; (helpers) `runDescribeAction` returns the rewritten text on success and a message on failure without throwing, `runSummaryAction` returns the summary, `runAgentRunAction` returns the queued run.
+- `AIService` extended (`apps/web/core/services/ai.service.ts`): `TCopilotMode` + `TCopilotDescribeAction`, `action` on `TCopilotMessagePayload`, response types, and methods `describeWorkItem`/`draftDescription`/`simplify`/`rewrite`/`createWorkItem`/`summarizeIssue`/`requestAgentRun` (the last wired to AI-2-BE's agent-runs endpoint). Gating reuses the real `config?.has_llm_configured` signal + `isSelfHostedFeatureEnabled("ai_copilot")` (overridable via `featureEnabled` prop for tests — no invented flag). Fail-soft: helpers never throw; the component toasts a non-blocking error.
+- New: `apps/web/ce/components/copilot/ai-work-item-actions.tsx` (+ test), exported from the `@/plane-web/components/copilot` barrel.
+- **Mounted** in `apps/web/core/components/issues/issue-detail/main-content.tsx` (non-epic, editable, non-archived work items, after `DescriptionInput`): describe output is inserted **non-destructively at the cursor** via `editorRef.current?.setEditorValueAtCursorPosition` — the same primitive the existing "I'm feeling lucky"/GPT affordance uses (no lossy whole-description replace). `getDescription` feeds the current plain-text description to simplify/rewrite.
+- Verified: `pnpm turbo run check:types --filter=web` green (11/11, incl. the `main-content.tsx` mount); touched-file `oxlint --deny-warnings` 0/0 and `oxfmt --check` clean. (Deviation: lives in `apps/web/ce/components/copilot/` next to `AskAIAction` — the fork's real copilot-UI location — not the card's literal `core/components/.../issue-activity` path.)
 
 ---
 
