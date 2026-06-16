@@ -168,6 +168,7 @@ from .issue.label import LabelViewSet, BulkCreateIssueLabelsEndpoint
 
 from .issue.link import IssueLinkViewSet
 
+from .issue.agent_run import AgentRunCancelEndpoint, AgentRunEndpoint
 from .issue.property import IssuePropertyOptionViewSet, IssuePropertyViewSet
 from .issue.recurring import RecurringWorkItemViewSet
 from .issue.similar import SimilarIssuesEndpoint
