@@ -385,7 +385,28 @@ jobs:
           set -euo pipefail
 
           backend_image="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/manut-backend:${{ needs.metadata.outputs.version_tag }}"
-          migrate_job="manut-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+
+          if kubectl -n "${GKE_NAMESPACE}" get configmap manut-app-app-vars >/dev/null 2>&1; then
+            migrate_job="manut-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+            app_label="manut-ce-manut-app-api-migrate"
+            container_name="manut-app-api-migrate"
+            app_vars="manut-app-app-vars"
+            app_env="manut-app-env"
+            doc_store="manut-doc-store"
+            service_account="manut-app-srv-account"
+          elif kubectl -n "${GKE_NAMESPACE}" get configmap plane-app-app-vars >/dev/null 2>&1; then
+            echo "::warning::Manut runtime ConfigMap not found in ${GKE_NAMESPACE}; using legacy plane-app runtime resources for migration."
+            migrate_job="plane-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+            app_label="plane-ce-plane-app-api-migrate"
+            container_name="plane-app-api-migrate"
+            app_vars="plane-app-app-vars"
+            app_env="plane-app-env"
+            doc_store="plane-doc-store"
+            service_account="plane-app-srv-account"
+          else
+            echo "::error::Neither Manut nor legacy Plane runtime ConfigMaps exist in namespace ${GKE_NAMESPACE}."
+            exit 1
+          fi
 
           kubectl -n "${GKE_NAMESPACE}" delete job "${migrate_job}" --ignore-not-found
 
@@ -395,29 +416,29 @@ jobs:
           metadata:
             name: ${migrate_job}
             labels:
-              app.name: manut-ce-manut-app-api-migrate
+              app.name: ${app_label}
           spec:
             backoffLimit: 3
             template:
               metadata:
                 labels:
-                  app.name: manut-ce-manut-app-api-migrate
+                  app.name: ${app_label}
               spec:
                 containers:
-                  - name: manut-app-api-migrate
+                  - name: ${container_name}
                     image: ${backend_image}
                     imagePullPolicy: Always
                     command:
                       - ./bin/docker-entrypoint-migrator.sh
                     envFrom:
                       - configMapRef:
-                          name: manut-app-app-vars
+                          name: ${app_vars}
                           optional: false
                       - secretRef:
-                          name: manut-app-env
+                          name: ${app_env}
                           optional: false
                       - secretRef:
-                          name: manut-doc-store
+                          name: ${doc_store}
                           optional: false
                     resources:
                       limits:
@@ -434,7 +455,7 @@ jobs:
                 securityContext:
                   seccompProfile:
                     type: RuntimeDefault
-                serviceAccountName: manut-app-srv-account
+                serviceAccountName: ${service_account}
                 tolerations:
                   - effect: NoSchedule
                     key: kubernetes.io/arch
@@ -463,30 +484,51 @@ jobs:
           tag="${{ needs.metadata.outputs.version_tag }}"
           rolled=()
 
+          roll_deployment() {
+            local component="$1"
+            local manut_deployment="$2"
+            local manut_container="$3"
+            local legacy_deployment="$4"
+            local legacy_container="$5"
+            local image="$6"
+            local deployment=""
+            local container=""
+
+            if kubectl -n "${GKE_NAMESPACE}" get deployment "${manut_deployment}" >/dev/null 2>&1; then
+              deployment="${manut_deployment}"
+              container="${manut_container}"
+            elif kubectl -n "${GKE_NAMESPACE}" get deployment "${legacy_deployment}" >/dev/null 2>&1; then
+              echo "::warning::Manut ${component} deployment ${manut_deployment} not found in ${GKE_NAMESPACE}; rolling legacy ${legacy_deployment} until the Manut Helm release is installed."
+              deployment="${legacy_deployment}"
+              container="${legacy_container}"
+            else
+              echo "::error::Neither ${manut_deployment} nor ${legacy_deployment} exists in namespace ${GKE_NAMESPACE}."
+              exit 1
+            fi
+
+            kubectl -n "${GKE_NAMESPACE}" set image "deployment/${deployment}" "${container}=${image}"
+            rolled+=("${deployment}")
+          }
+
           # Only set images for components built this run; unchanged deployments keep
           # their current image (their version_tag was never built, so we must not touch them).
           if [ "${C_BACKEND}" = "true" ]; then
             backend_image="${image_base}/manut-backend:${tag}"
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-api-wl manut-app-api="${backend_image}"
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-worker-wl manut-app-worker="${backend_image}"
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-beat-worker-wl manut-app-beat-worker="${backend_image}"
-            rolled+=(manut-app-api-wl manut-app-worker-wl manut-app-beat-worker-wl)
+            roll_deployment backend-api manut-app-api-wl manut-app-api plane-app-api-wl plane-app-api "${backend_image}"
+            roll_deployment backend-worker manut-app-worker-wl manut-app-worker plane-app-worker-wl plane-app-worker "${backend_image}"
+            roll_deployment backend-beat-worker manut-app-beat-worker-wl manut-app-beat-worker plane-app-beat-worker-wl plane-app-beat-worker "${backend_image}"
           fi
           if [ "${C_FRONTEND}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-web-wl manut-app-web="${image_base}/manut-frontend:${tag}"
-            rolled+=(manut-app-web-wl)
+            roll_deployment frontend manut-app-web-wl manut-app-web plane-app-web-wl plane-app-web "${image_base}/manut-frontend:${tag}"
           fi
           if [ "${C_ADMIN}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-admin-wl manut-app-admin="${image_base}/manut-admin:${tag}"
-            rolled+=(manut-app-admin-wl)
+            roll_deployment admin manut-app-admin-wl manut-app-admin plane-app-admin-wl plane-app-admin "${image_base}/manut-admin:${tag}"
           fi
           if [ "${C_LIVE}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-live-wl manut-app-live="${image_base}/manut-live:${tag}"
-            rolled+=(manut-app-live-wl)
+            roll_deployment live manut-app-live-wl manut-app-live plane-app-live-wl plane-app-live "${image_base}/manut-live:${tag}"
           fi
           if [ "${C_SPACE}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-space-wl manut-app-space="${image_base}/manut-space:${tag}"
-            rolled+=(manut-app-space-wl)
+            roll_deployment space manut-app-space-wl manut-app-space plane-app-space-wl plane-app-space "${image_base}/manut-space:${tag}"
           fi
 
           if [ "${#rolled[@]}" -eq 0 ]; then
