@@ -8,8 +8,9 @@ tests.
 
 # Current Deployment Note
 
-- The production GCP deploy path is active and verified through `Plane CI/CD`
-  run `27065884344`.
+- The production GCP deploy path now runs through `Manut CI/CD`. The rollout
+  evidence below was captured before the workflow rename, when the same
+  workflow was labeled `Plane CI/CD` run `27065884344`.
 - Verified feature rollout tag: `preview-0b80aadd9610`.
 - Live HTTPS smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
 - Responsiveness work still should avoid Kubernetes, Cloudflare, and GCP runtime

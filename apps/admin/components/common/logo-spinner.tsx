@@ -4,18 +4,19 @@
  * See the LICENSE file for details.
  */
 
-import { useTheme } from "next-themes";
-import LogoSpinnerDark from "@/app/assets/images/logo-spinner-dark.gif?url";
-import LogoSpinnerLight from "@/app/assets/images/logo-spinner-light.gif?url";
+import manutLogo from "@/app/assets/manut-logo.jpeg?url";
 
 export function LogoSpinner() {
-  const { resolvedTheme } = useTheme();
-
-  const logoSrc = resolvedTheme === "dark" ? LogoSpinnerLight : LogoSpinnerDark;
-
   return (
-    <div className="flex items-center justify-center">
-      <img src={logoSrc} alt="logo" className="h-6 w-auto sm:h-11" />
+    <div className="relative flex size-16 items-center justify-center" role="status" aria-label="Loading Manut">
+      <span className="absolute inset-1 rounded-[20px] border border-[#9fe7ef]/45 motion-safe:animate-ping motion-reduce:hidden" />
+      <span className="absolute h-16 w-6 -rotate-12 rounded-full bg-[#9fe7ef]/25 blur-sm motion-safe:animate-pulse motion-reduce:hidden" />
+      <img
+        src={manutLogo}
+        alt=""
+        className="relative size-12 rounded-2xl object-cover shadow-[0_16px_42px_-18px_#9fe7ef]"
+      />
+      <span className="sr-only">Loading Manut</span>
     </div>
   );
 }

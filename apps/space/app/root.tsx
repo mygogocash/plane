@@ -5,11 +5,18 @@
  */
 
 import { Links, Meta, Outlet, Scripts } from "react-router";
+import {
+  MANUT_BRAND,
+  SPACE_SITE_DESCRIPTION,
+  SPACE_SITE_KEYWORDS,
+  SPACE_SITE_TITLE,
+  SPACE_SITE_URL,
+  SPACE_TWITTER_USER_NAME,
+} from "@plane/constants";
 // assets
 import appleTouchIcon from "@/app/assets/favicon/apple-touch-icon.png?url";
 import favicon16 from "@/app/assets/favicon/favicon-16x16.png?url";
 import favicon32 from "@/app/assets/favicon/favicon-32x32.png?url";
-import faviconIco from "@/app/assets/favicon/favicon.ico?url";
 import siteWebmanifest from "@/app/assets/favicon/site.webmanifest?url";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import globalStyles from "@/styles/globals.css?url";
@@ -19,19 +26,19 @@ import type { Route } from "./+types/root";
 import ErrorPage from "./error";
 import { AppProviders } from "./providers";
 // fonts
+// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource-variable/inter";
 import interVariableWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource/material-symbols-rounded";
+// eslint-disable-next-line import/no-unassigned-import
 import "@fontsource/ibm-plex-mono";
-
-const APP_TITLE = "Plane Publish | Make your Plane boards public with one-click";
-const APP_DESCRIPTION = "Plane Publish is a customer feedback management tool built on top of plane.so";
 
 export const links: Route.LinksFunction = () => [
   { rel: "apple-touch-icon", sizes: "180x180", href: appleTouchIcon },
   { rel: "icon", type: "image/png", sizes: "32x32", href: favicon32 },
   { rel: "icon", type: "image/png", sizes: "16x16", href: favicon16 },
-  { rel: "shortcut icon", href: faviconIco },
+  { rel: "shortcut icon", type: "image/png", href: favicon32 },
   { rel: "manifest", href: siteWebmanifest },
   { rel: "stylesheet", href: globalStyles },
   {
@@ -56,6 +63,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content={MANUT_BRAND.themeColor} />
+        <meta name="theme-color" content={MANUT_BRAND.darkThemeColor} media="(prefers-color-scheme: dark)" />
+        <meta name="application-name" content="Manut Space" />
+        <meta name="apple-mobile-web-app-title" content="Manut Space" />
         <meta name="robots" content="noindex, nofollow" />
         <Meta />
         <Links />
@@ -70,17 +81,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export const meta: Route.MetaFunction = () => [
-  { title: APP_TITLE },
-  { name: "description", content: APP_DESCRIPTION },
-  { property: "og:title", content: APP_TITLE },
-  { property: "og:description", content: APP_DESCRIPTION },
-  { property: "og:url", content: "https://sites.plane.so/" },
-  {
-    name: "keywords",
-    content:
-      "software development, customer feedback, software, accelerate, code management, release management, project management, work item tracking, agile, scrum, kanban, collaboration",
-  },
-  { name: "twitter:site", content: "@planepowers" },
+  { title: SPACE_SITE_TITLE },
+  { name: "description", content: SPACE_SITE_DESCRIPTION },
+  { property: "og:title", content: SPACE_SITE_TITLE },
+  { property: "og:description", content: SPACE_SITE_DESCRIPTION },
+  { property: "og:url", content: SPACE_SITE_URL },
+  { name: "keywords", content: SPACE_SITE_KEYWORDS },
+  { name: "twitter:site", content: SPACE_TWITTER_USER_NAME },
 ];
 
 export default function Root() {

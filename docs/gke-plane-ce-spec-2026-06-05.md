@@ -429,8 +429,9 @@ plane-ce`, and `kubectl get pvc -n plane-ce`.
   `https://app.manut.xyz/api/instances/`. No Railway deploy hook or Railway AIO
   image build remains in the active workflow.
 - GCP CI/CD feature rollout verification: commit
-  `0b80aadd9610d2446f835d06c872c4283b6ddd83` deployed through `Plane CI/CD` run
-  `27065884344`. CodeQL run `27065883913` also passed. The live GKE workloads
+  `0b80aadd9610d2446f835d06c872c4283b6ddd83` deployed through historical
+  `Plane CI/CD` run `27065884344` before the workflow was renamed to
+  `Manut CI/CD`. CodeQL run `27065883913` also passed. The live GKE workloads
   API, worker, beat-worker, web, admin, live, and space were verified `1/1`
   ready on Artifact Registry tag `preview-0b80aadd9610`, and
   `GET https://app.manut.xyz/api/instances/` returns `200`.

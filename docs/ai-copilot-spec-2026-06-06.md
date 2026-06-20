@@ -9,8 +9,9 @@ Expand Plane Copilot into a Vertex Gemini-first workspace assistant. V1 supports
   pending migrations.
 - The verified feature rollout source commit is
   `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
-- `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
-  successfully.
+- The current workflow name is `Manut CI/CD`; this evidence was captured before
+  the rename, when `Plane CI/CD` run `27065884344` and CodeQL run
+  `27065883913` both completed successfully.
 - Live instance config reports `has_llm_configured=true` from
   `GET https://app.manut.xyz/api/instances/`.
 

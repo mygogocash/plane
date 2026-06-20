@@ -56,15 +56,15 @@ env:
 
 jobs:
   branch_build_redirect:
-    name: Use Plane CI/CD for preview
+    name: Use Manut CI/CD for preview
     if: ${{ !inputs.confirm_upstream_dockerhub_publish }}
     runs-on: ubuntu-22.04
     steps:
       - name: Explain fork CI/CD path
         run: |
-          echo "This fork uses .github/workflows/ci-cd.yml for GHCR/Railway preview builds."
+          echo "This fork uses .github/workflows/ci-cd.yml for Manut GAR/GKE preview builds."
           echo "The legacy Branch Build CE workflow publishes upstream DockerHub images and is guarded by explicit confirmation."
-          echo "Run the Plane CI/CD workflow for preview branch deployment."
+          echo "Run the Manut CI/CD workflow for preview branch deployment."
 
   branch_build_setup:
     name: Build Setup
@@ -113,13 +113,13 @@ jobs:
           BR_NAME=$(printf '%s' "${TARGET_BRANCH}" | tr -cd '[:alnum:].-')
           {
             echo "TARGET_BRANCH=${BR_NAME}"
-            echo "DH_IMG_WEB=plane-frontend"
-            echo "DH_IMG_SPACE=plane-space"
-            echo "DH_IMG_ADMIN=plane-admin"
-            echo "DH_IMG_LIVE=plane-live"
-            echo "DH_IMG_BACKEND=plane-backend"
-            echo "DH_IMG_PROXY=plane-proxy"
-            echo "DH_IMG_AIO=plane-aio-community"
+            echo "DH_IMG_WEB=manut-frontend"
+            echo "DH_IMG_SPACE=manut-space"
+            echo "DH_IMG_ADMIN=manut-admin"
+            echo "DH_IMG_LIVE=manut-live"
+            echo "DH_IMG_BACKEND=manut-backend"
+            echo "DH_IMG_PROXY=manut-proxy"
+            echo "DH_IMG_AIO=manut-aio-community"
             echo "BUILD_TYPE=${BUILD_TYPE}"
           } >> "$GITHUB_OUTPUT"
           BUILD_RELEASE=false

@@ -1,11 +1,11 @@
 {
-  "name": "Plane God Mode",
-  "short_name": "Plane God Mode",
-  "description": "Plane helps you plan your issues, cycles, and product modules.",
+  "name": "Manut Admin",
+  "short_name": "Manut Admin",
+  "description": "Admin controls for Manut self-hosted workspace operations.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#3f76ff",
+  "background_color": "#fafaf2",
+  "theme_color": "#0e0e10",
   "icons": [
     { "src": "/favicon/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/favicon/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }

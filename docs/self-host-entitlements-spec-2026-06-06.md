@@ -7,8 +7,9 @@ Enable self-host entitlement behavior for this Plane CE deployment so the GoGoCa
 - Entitlement and CI/CD changes are included in verified feature rollout commit
   `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
 - Verified feature rollout image tag: `preview-0b80aadd9610`.
-- `Plane CI/CD` run `27065884344` and CodeQL run `27065883913` both completed
-  successfully.
+- The current workflow name is `Manut CI/CD`; this evidence was captured before
+  the rename, when `Plane CI/CD` run `27065884344` and CodeQL run
+  `27065883913` both completed successfully.
 - Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`.
 - GKE workloads API, worker, beat-worker, web, admin, live, and space are ready
   on the same tag.

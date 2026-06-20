@@ -7,9 +7,18 @@
 import Script from "next/script";
 
 // styles
+// eslint-disable-next-line import/no-unassigned-import
 import "@/styles/globals.css";
 
-import { SITE_DESCRIPTION, SITE_NAME } from "@plane/constants";
+import {
+  MANUT_BRAND,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_URL,
+  TWITTER_USER_NAME,
+} from "@plane/constants";
 
 // helpers
 import { cn } from "@plane/utils";
@@ -17,7 +26,6 @@ import { cn } from "@plane/utils";
 // assets
 import favicon16 from "@/app/assets/favicon/favicon-16x16.png?url";
 import favicon32 from "@/app/assets/favicon/favicon-32x32.png?url";
-import faviconIco from "@/app/assets/favicon/favicon.ico?url";
 import icon180 from "@/app/assets/icons/icon-180x180.png?url";
 import icon512 from "@/app/assets/icons/icon-512x512.png?url";
 
@@ -25,34 +33,27 @@ import icon512 from "@/app/assets/icons/icon-512x512.png?url";
 import { AppProvider } from "./provider";
 
 export const meta = () => [
-  { title: "Plane | Simple, extensible, open-source project management tool." },
+  { title: SITE_TITLE },
   { name: "description", content: SITE_DESCRIPTION },
-  {
-    name: "keywords",
-    content:
-      "software development, plan, ship, software, accelerate, code management, release management, project management, work item tracking, agile, scrum, kanban, collaboration",
-  },
+  { name: "keywords", content: SITE_KEYWORDS },
   {
     name: "viewport",
     content:
       "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
   },
-  { property: "og:title", content: "Plane | Simple, extensible, open-source project management tool." },
-  {
-    property: "og:description",
-    content: "Open-source project management tool to manage work items, cycles, and product roadmaps easily",
-  },
-  { property: "og:url", content: "https://app.plane.so/" },
-  { property: "og:image", content: "https://app.plane.so/og-image.png" },
+  { property: "og:title", content: SITE_TITLE },
+  { property: "og:description", content: SITE_DESCRIPTION },
+  { property: "og:url", content: SITE_URL },
+  { property: "og:image", content: `${SITE_URL}og-image.png` },
   { property: "og:image:width", content: "1200" },
   { property: "og:image:height", content: "630" },
-  { property: "og:image:alt", content: "Plane - Modern project management" },
-  { name: "twitter:site", content: "@planepowers" },
+  { property: "og:image:alt", content: SITE_TITLE },
+  { name: "twitter:site", content: TWITTER_USER_NAME },
   { name: "twitter:card", content: "summary_large_image" },
-  { name: "twitter:image", content: "https://app.plane.so/og-image.png" },
+  { name: "twitter:image", content: `${SITE_URL}og-image.png` },
   { name: "twitter:image:width", content: "1200" },
   { name: "twitter:image:height", content: "630" },
-  { name: "twitter:image:alt", content: "Plane - Modern project management" },
+  { name: "twitter:image:alt", content: SITE_TITLE },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -61,13 +62,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#fff" />
+        <meta name="theme-color" content={MANUT_BRAND.themeColor} />
+        <meta name="theme-color" content={MANUT_BRAND.darkThemeColor} media="(prefers-color-scheme: dark)" />
         <link rel="icon" type="image/png" sizes="32x32" href={favicon32} />
         <link rel="icon" type="image/png" sizes="16x16" href={favicon16} />
         <link rel="manifest" href="/site.webmanifest.json" />
-        <link rel="shortcut icon" href={faviconIco} />
+        <link rel="shortcut icon" type="image/png" href={favicon32} />
         {/* Meta info for PWA */}
-        <meta name="application-name" content="Plane" />
+        <meta name="application-name" content={MANUT_BRAND.productName} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content={SITE_NAME} />

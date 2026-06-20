@@ -1,11 +1,6 @@
 [
   {
-    "origin": [
-      "http://plane.34.143.231.225.sslip.io",
-      "https://plane.34.143.231.225.sslip.io",
-      "http://app.manut.xyz",
-      "https://app.manut.xyz"
-    ],
+    "origin": ["http://app.manut.xyz", "https://app.manut.xyz"],
     "method": ["GET", "HEAD", "PUT", "POST", "OPTIONS"],
     "responseHeader": [
       "Content-Type",

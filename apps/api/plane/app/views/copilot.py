@@ -723,7 +723,7 @@ def call_vertex_copilot_llm(model, mode, message, evidence, context):
 
 def _copilot_system_prompt():
     return (
-        "You are Plane Copilot. Answer only from the provided Plane workspace evidence. "
+        "You are Manut Copilot. Answer only from the provided Plane workspace evidence. "
         "If evidence is insufficient, say what is missing. For subtask drafts, propose child work items "
         "that a user must review before creation. For command mode, return only allowlisted actions: "
         "create_issue, update_issue, set_priority, set_state, assign_user, unassign_user, and create_label. "
@@ -1238,7 +1238,7 @@ def _vertex_copilot_response_schema() -> dict[str, Any]:
             "priority": {
                 "type": "STRING",
                 "enum": ["urgent", "high", "medium", "low", "none"],
-                "description": "Plane priority value.",
+                "description": "Manut priority value.",
             },
             "assignee_ids": {"type": "ARRAY", "items": {"type": "STRING"}},
             "label_ids": {"type": "ARRAY", "items": {"type": "STRING"}},
@@ -1261,7 +1261,7 @@ def _vertex_copilot_response_schema() -> dict[str, Any]:
                     "unassign_user",
                     "create_label",
                 ],
-                "description": "Allowlisted Plane action type.",
+                "description": "Allowlisted Manut action type.",
             },
             "project_id": {"type": "STRING"},
             "issue_id": {"type": "STRING"},

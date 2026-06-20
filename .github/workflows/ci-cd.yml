@@ -1,4 +1,4 @@
-name: Plane CI/CD
+name: Manut CI/CD
 
 on:
   workflow_dispatch:
@@ -37,8 +37,8 @@ env:
   GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY || 'affine' }}
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'affine-495114' }}
   GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
-  GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'plane-ce-gke' }}
-  GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'plane-ce' }}
+  GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'manut-ce-gke' }}
+  GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'manut-ce' }}
   DOCKER_PLATFORMS: linux/amd64
   NODE_VERSION: "22.18.0"
 
@@ -172,12 +172,12 @@ jobs:
         run: |
           set -euo pipefail
           all='[
-            {"component":"frontend","image":"plane-frontend","context":".","dockerfile":"./apps/web/Dockerfile.web"},
-            {"component":"space","image":"plane-space","context":".","dockerfile":"./apps/space/Dockerfile.space"},
-            {"component":"admin","image":"plane-admin","context":".","dockerfile":"./apps/admin/Dockerfile.admin"},
-            {"component":"live","image":"plane-live","context":".","dockerfile":"./apps/live/Dockerfile.live"},
-            {"component":"backend","image":"plane-backend","context":"./apps/api","dockerfile":"./apps/api/Dockerfile.api"},
-            {"component":"proxy","image":"plane-proxy","context":"./apps/proxy","dockerfile":"./apps/proxy/Dockerfile.ce"}
+            {"component":"frontend","image":"manut-frontend","context":".","dockerfile":"./apps/web/Dockerfile.web"},
+            {"component":"space","image":"manut-space","context":".","dockerfile":"./apps/space/Dockerfile.space"},
+            {"component":"admin","image":"manut-admin","context":".","dockerfile":"./apps/admin/Dockerfile.admin"},
+            {"component":"live","image":"manut-live","context":".","dockerfile":"./apps/live/Dockerfile.live"},
+            {"component":"backend","image":"manut-backend","context":"./apps/api","dockerfile":"./apps/api/Dockerfile.api"},
+            {"component":"proxy","image":"manut-proxy","context":"./apps/proxy","dockerfile":"./apps/proxy/Dockerfile.ce"}
           ]'
           sel="$(jq -nc \
             --arg frontend "$S_FRONTEND" --arg space "$S_SPACE" --arg admin "$S_ADMIN" \
@@ -384,8 +384,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          backend_image="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-backend:${{ needs.metadata.outputs.version_tag }}"
-          migrate_job="plane-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+          backend_image="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/manut-backend:${{ needs.metadata.outputs.version_tag }}"
+          migrate_job="manut-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
 
           kubectl -n "${GKE_NAMESPACE}" delete job "${migrate_job}" --ignore-not-found
 
@@ -395,29 +395,29 @@ jobs:
           metadata:
             name: ${migrate_job}
             labels:
-              app.name: plane-ce-plane-app-api-migrate
+              app.name: manut-ce-manut-app-api-migrate
           spec:
             backoffLimit: 3
             template:
               metadata:
                 labels:
-                  app.name: plane-ce-plane-app-api-migrate
+                  app.name: manut-ce-manut-app-api-migrate
               spec:
                 containers:
-                  - name: plane-app-api-migrate
+                  - name: manut-app-api-migrate
                     image: ${backend_image}
                     imagePullPolicy: Always
                     command:
                       - ./bin/docker-entrypoint-migrator.sh
                     envFrom:
                       - configMapRef:
-                          name: plane-app-app-vars
+                          name: manut-app-app-vars
                           optional: false
                       - secretRef:
-                          name: plane-app-env
+                          name: manut-app-env
                           optional: false
                       - secretRef:
-                          name: plane-doc-store
+                          name: manut-doc-store
                           optional: false
                     resources:
                       limits:
@@ -434,7 +434,7 @@ jobs:
                 securityContext:
                   seccompProfile:
                     type: RuntimeDefault
-                serviceAccountName: plane-app-srv-account
+                serviceAccountName: manut-app-srv-account
                 tolerations:
                   - effect: NoSchedule
                     key: kubernetes.io/arch
@@ -466,27 +466,27 @@ jobs:
           # Only set images for components built this run; unchanged deployments keep
           # their current image (their version_tag was never built, so we must not touch them).
           if [ "${C_BACKEND}" = "true" ]; then
-            backend_image="${image_base}/plane-backend:${tag}"
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-api-wl plane-app-api="${backend_image}"
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-worker-wl plane-app-worker="${backend_image}"
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-beat-worker-wl plane-app-beat-worker="${backend_image}"
-            rolled+=(plane-app-api-wl plane-app-worker-wl plane-app-beat-worker-wl)
+            backend_image="${image_base}/manut-backend:${tag}"
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-api-wl manut-app-api="${backend_image}"
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-worker-wl manut-app-worker="${backend_image}"
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-beat-worker-wl manut-app-beat-worker="${backend_image}"
+            rolled+=(manut-app-api-wl manut-app-worker-wl manut-app-beat-worker-wl)
           fi
           if [ "${C_FRONTEND}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-web-wl plane-app-web="${image_base}/plane-frontend:${tag}"
-            rolled+=(plane-app-web-wl)
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-web-wl manut-app-web="${image_base}/manut-frontend:${tag}"
+            rolled+=(manut-app-web-wl)
           fi
           if [ "${C_ADMIN}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-admin-wl plane-app-admin="${image_base}/plane-admin:${tag}"
-            rolled+=(plane-app-admin-wl)
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-admin-wl manut-app-admin="${image_base}/manut-admin:${tag}"
+            rolled+=(manut-app-admin-wl)
           fi
           if [ "${C_LIVE}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-live-wl plane-app-live="${image_base}/plane-live:${tag}"
-            rolled+=(plane-app-live-wl)
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-live-wl manut-app-live="${image_base}/manut-live:${tag}"
+            rolled+=(manut-app-live-wl)
           fi
           if [ "${C_SPACE}" = "true" ]; then
-            kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-space-wl plane-app-space="${image_base}/plane-space:${tag}"
-            rolled+=(plane-app-space-wl)
+            kubectl -n "${GKE_NAMESPACE}" set image deployment/manut-app-space-wl manut-app-space="${image_base}/manut-space:${tag}"
+            rolled+=(manut-app-space-wl)
           fi
 
           if [ "${#rolled[@]}" -eq 0 ]; then
@@ -499,12 +499,12 @@ jobs:
           done
 
       - name: Smoke production endpoint
-        run: curl -fsS --retry 5 --retry-delay 5 "${GCP_APP_URL}/api/instances/" >/tmp/plane-instance.json
+        run: curl -fsS --retry 5 --retry-delay 5 "${GCP_APP_URL}/api/instances/" >/tmp/manut-instance.json
 
       - name: Write GCP deployment summary
         run: |
           {
-            echo "### GCP deployment"
+            echo "### Manut GKE deployment"
             echo ""
             echo "GKE cluster: \`${GKE_CLUSTER}\`"
             echo "Namespace: \`${GKE_NAMESPACE}\`"

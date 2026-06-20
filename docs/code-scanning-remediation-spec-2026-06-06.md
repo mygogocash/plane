@@ -10,8 +10,10 @@ missing GitHub Actions workflow permissions.
 
 - CodeQL run `27065883913` completed successfully for JavaScript/TypeScript,
   GitHub Actions, and Python after the GCP CI/CD workflow update.
-- `Plane CI/CD` run `27065884344` completed successfully and verified commit
-  `0b80aadd9610d2446f835d06c872c4283b6ddd83` through production smoke.
+- The current workflow name is `Manut CI/CD`; this evidence was captured before
+  the rename, when `Plane CI/CD` run `27065884344` completed successfully and
+  verified commit `0b80aadd9610d2446f835d06c872c4283b6ddd83` through production
+  smoke.
 - The active CI/CD workflow has no Railway deploy hook, Railway AIO build, GHCR
   production registry, or broad package publish permission.
 
