@@ -13,7 +13,11 @@ Captured: 2026-06-21T08:43:00Z
   - GET object streaming with R2 metadata headers;
   - HEAD object metadata responses.
 - Added `apps/cloudflare/tools/compare-upload-manifests.mjs` and the
-  `pnpm --filter @manut/cloudflare uploads:compare -- <gcs> <r2>` script for non-destructive manifest validation.
+  `pnpm --filter @manut/cloudflare uploads:compare -- <gcs> <r2>` script for
+  exploratory non-destructive manifest validation.
+- Added cutover-grade strict validation through
+  `pnpm --filter @manut/cloudflare uploads:validate -- <gcs> <r2> --out <report>`,
+  which requires a shared checksum for every matched object.
 
 ## Route Behavior
 
@@ -32,7 +36,7 @@ pnpm --filter @manut/cloudflare check
 pnpm --filter @manut/cloudflare test
 pnpm --filter @manut/cloudflare exec wrangler deploy --dry-run --env="" --outdir /tmp/manut-cloudflare-phase3-dry-run
 pnpm --filter @manut/cloudflare baseline
-node apps/cloudflare/tools/compare-upload-manifests.mjs <synthetic-gcs.json> <synthetic-r2.json> --json
+pnpm --filter @manut/cloudflare uploads:validate -- <synthetic-gcs.json> <synthetic-r2.json> --json --out <report.json>
 ```
 
 ## Results
@@ -65,7 +69,8 @@ Synthetic manifest comparison result:
 Blocked. No GCS objects were copied, no R2 bucket state was changed, and no production
 upload routing was switched. The next operator action is to export real GCS/R2 manifests
 from a preview or sampled non-production migration and compare them with
-`uploads:compare`.
+`uploads:validate`. The raw `uploads:compare` command is useful for exploratory
+size/key checks but is not strong enough for Phase 7 cutover evidence.
 
 ## Rollback
 

@@ -24,10 +24,13 @@ Preview:
 Production:
 
 - Worker: `manut-app`
+- Worker URL: `https://manut-app.bettergogocash.workers.dev`
 - D1: `manut-prod`
+- D1 ID: `a29a2712-f899-45ee-8ab9-f64afded7e1c`
 - R2: `manut-uploads-prod`
 - Queue: `manut-jobs-prod`
 - KV: `manut-config-prod`
+- KV ID: `e3fdd6cf29dc4f03a9a240830814c629`
 - Durable Object: `LiveRoomDurableObject`
 
 ## Required Secrets and Variables
@@ -55,7 +58,9 @@ pnpm --filter @manut/cloudflare test
 pnpm --filter @manut/cloudflare baseline
 pnpm --filter @manut/cloudflare d1:inventory -- --root apps/api/plane
 pnpm --filter @manut/cloudflare d1:compare -- <postgres-counts.json> <d1-counts.json>
+pnpm --filter @manut/cloudflare d1:validate-import -- <postgres-counts.json> <d1-counts.json> --relationships <relationship-checks.json> --out process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json
 pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manifest.json>
+pnpm --filter @manut/cloudflare uploads:validate -- <gcs-manifest.json> <r2-manifest.json> --out process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json
 pnpm --filter @manut/cloudflare cutover:readiness
 pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app-preview.bettergogocash.workers.dev
 ```
@@ -104,8 +109,23 @@ Current GitHub repository state:
 - `CLOUDFLARE_ZONE_ID` is not configured.
 - `CLOUDFLARE_API_TOKEN` is not configured.
 - Local Wrangler OAuth is authenticated and was used for the first preview
-  provisioning/deploy, but GitHub Actions still needs a raw API token secret
-  and zone ID variable before manual deploy can run there.
+  and production provisioning/deploy, but GitHub Actions still needs a raw API
+  token secret and zone ID variable before manual deploy can run there.
+
+Current Cloudflare provider state:
+
+- Preview Worker is deployed to
+  `https://manut-app-preview.bettergogocash.workers.dev`.
+- Production Worker is deployed to
+  `https://manut-app.bettergogocash.workers.dev`.
+- Production D1 schema migrations `0001_foundation.sql` and
+  `0002_shadow_core.sql` are applied to `manut-prod`.
+- Production deploy evidence is stored at
+  `process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json`.
+- Production smoke evidence is stored at
+  `process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json`.
+- `app.manut.xyz` DNS has not been changed and still uses the current GKE/GCP
+  production stack.
 
 The deploy job writes `Production DNS changed: false` and does not update
 `app.manut.xyz` routing. DNS cutover remains a separate Phase 7 operator action.
@@ -149,6 +169,11 @@ The preview smoke gate has local evidence at
 The readiness checker uses that default path if
 `CLOUDFLARE_PREVIEW_SMOKE_REPORT` is not set.
 
+The production Worker deploy gate has local evidence at
+`process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json`.
+The readiness checker validates JSON evidence by requiring `ok: true`, including
+for env-provided report paths.
+
 ## Cutover Rule
 
 Do not change `app.manut.xyz` routing until the selected phase report proves:
@@ -173,12 +198,16 @@ Before enabling the flag in any shared environment:
 3. Compare the manifests:
 
 ```bash
-pnpm --filter @manut/cloudflare uploads:compare -- gcs-manifest.json r2-manifest.json
+pnpm --filter @manut/cloudflare uploads:validate -- gcs-manifest.json r2-manifest.json --out process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json
 ```
 
 Accepted manifest rows can include `key`, `name`, `object`, `objectKey`, or
 `path` plus `size` and optional checksum fields such as `crc32c`, `etag`,
 `md5Hash`, or `sha256`.
+
+`uploads:validate` requires at least one shared checksum field per object. Use
+plain `uploads:compare` only for exploratory size/key checks; it is not strong
+enough to satisfy Phase 7 cutover evidence.
 
 The R2 bucket must deny anonymous listing for bare `/uploads` and allow object
 reads only through the Worker route. CORS for `manut-uploads-prod` should allow
@@ -203,13 +232,28 @@ Before any production API route can use this D1 implementation:
 3. Compare counts:
 
 ```bash
-pnpm --filter @manut/cloudflare d1:compare -- postgres-counts.json d1-counts.json
+pnpm --filter @manut/cloudflare d1:validate-import -- postgres-counts.json d1-counts.json --relationships relationship-checks.json --out process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json
 ```
 
 4. Validate relationships such as `projects.workspace_id -> workspaces.id`.
 5. Add contract tests comparing GKE and Worker responses for representative
    workspaces/projects.
 6. Add auth and membership enforcement for any user-facing route.
+
+Relationship check files can use:
+
+```json
+{
+  "checks": [
+    {
+      "name": "projects.workspace_id",
+      "source": "projects",
+      "target": "workspaces",
+      "orphanCount": 0
+    }
+  ]
+}
+```
 
 ## Queue, Cache, Lock, and Live Primitives
 

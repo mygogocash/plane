@@ -8,8 +8,9 @@ Captured: 2026-06-21T09:08:00Z
   adding manual deployment inputs.
 - Kept push and pull request behavior validation-only.
 - Added Worker dry-run bundling to validation.
-- Added synthetic D1 row-count validation to validation.
-- Added synthetic R2 manifest validation to validation.
+- Added synthetic D1 import validation with relationship checks to validation.
+- Added synthetic R2 manifest validation with strict shared checksum checks to
+  validation.
 - Added manual-gated deploy job for:
   - preview Worker deploy;
   - production Worker deploy;
@@ -50,7 +51,8 @@ Result:
 - Workflow YAML parsed successfully.
 - Manual inputs and deploy job are present.
 - TypeScript check passed.
-- Worker tests passed, 6 files and 46 tests.
+- Worker tests passed, 8 files and 51 tests after adding the readiness gate and
+  D1/R2 validation-tool regression coverage.
 - Wrangler dry-run passed, upload size `265.19 KiB`, gzip `55.04 KiB`.
 - Baseline confirmed `app.manut.xyz` still resolves to GKE IP `34.143.231.225`;
   `/api/instances/` is HTTP `200`; `/uploads` remains the current GCS-backed
@@ -76,7 +78,14 @@ Captured after preview provisioning:
 
 Manual GitHub deploy remains blocked until the zone ID variable and raw API
 token secret are configured. Local Wrangler OAuth was used for the first
-preview deploy.
+preview and production Worker deploys.
+
+## Readiness Gate Hardening
+
+The cutover readiness checker now validates every JSON evidence report by
+requiring `ok: true`, including report paths supplied through environment
+variables. This prevents a stale or arbitrary D1/R2 evidence file from
+unblocking Phase 7.
 
 ## Rollback
 

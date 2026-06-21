@@ -1,8 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 function usage() {
-  return `Usage: node apps/cloudflare/tools/compare-upload-manifests.mjs <gcs-manifest.json> <r2-manifest.json> [--json]
+  return `Usage: node apps/cloudflare/tools/compare-upload-manifests.mjs <gcs-manifest.json> <r2-manifest.json> [--json] [--out <report.json>] [--require-checksum]
 
 Compares exported GCS and R2 upload manifests. Exit codes:
   0  manifests match by key, size, and shared checksum fields
@@ -18,15 +19,26 @@ Accepted JSON shapes:
 
 function parseArgs(argv) {
   const positional = [];
-  const options = { json: false };
+  const options = { json: false, outPath: null, requireChecksum: false };
 
-  for (const arg of argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+
     if (arg === "--") {
       continue;
     } else if (arg === "--help" || arg === "-h") {
       options.help = true;
     } else if (arg === "--json") {
       options.json = true;
+    } else if (arg === "--out") {
+      const outPath = argv[index + 1];
+      if (!outPath) {
+        throw new Error("--out requires a path");
+      }
+      options.outPath = outPath;
+      index += 1;
+    } else if (arg === "--require-checksum") {
+      options.requireChecksum = true;
     } else {
       positional.push(arg);
     }
@@ -138,7 +150,7 @@ function manifestRows(json) {
   return Object.entries(json);
 }
 
-function normalizeManifest(json, label) {
+export function normalizeManifest(json, label) {
   const objects = new Map();
 
   for (const [fallbackKey, row] of manifestRows(json)) {
@@ -152,7 +164,7 @@ function normalizeManifest(json, label) {
   return objects;
 }
 
-async function loadManifest(filePath, label) {
+export async function loadManifest(filePath, label) {
   const content = await readFile(filePath, "utf8");
   let json;
 
@@ -165,9 +177,10 @@ async function loadManifest(filePath, label) {
   return normalizeManifest(json, label);
 }
 
-function compareChecksums(source, target) {
+function compareChecksums(source, target, options = {}) {
   const fields = [...new Set([...Object.keys(source.checksums), ...Object.keys(target.checksums)])].toSorted();
   const mismatches = [];
+  let sharedChecksumCount = 0;
 
   for (const field of fields) {
     const sourceValue = source.checksums[field];
@@ -177,15 +190,26 @@ function compareChecksums(source, target) {
       continue;
     }
 
+    sharedChecksumCount += 1;
+
     if (sourceValue !== targetValue) {
       mismatches.push({ field, sourceValue, targetValue });
     }
   }
 
+  if (options.requireChecksum && sharedChecksumCount === 0) {
+    mismatches.push({
+      field: "shared-checksum",
+      sourceValue: null,
+      targetValue: null,
+      status: "missing_shared_checksum",
+    });
+  }
+
   return mismatches;
 }
 
-function compareManifests(sourceObjects, targetObjects) {
+export function compareManifests(sourceObjects, targetObjects, options = {}) {
   const keys = [...new Set([...sourceObjects.keys(), ...targetObjects.keys()])].toSorted();
   const mismatches = [];
   let matchedObjectCount = 0;
@@ -204,7 +228,7 @@ function compareManifests(sourceObjects, targetObjects) {
       continue;
     }
 
-    const checksumMismatches = compareChecksums(source, target);
+    const checksumMismatches = compareChecksums(source, target, options);
     if (source.size !== target.size || checksumMismatches.length > 0) {
       mismatches.push({
         key,
@@ -221,12 +245,34 @@ function compareManifests(sourceObjects, targetObjects) {
 
   return {
     ok: mismatches.length === 0,
+    checksumPolicy: {
+      requireSharedChecksum: Boolean(options.requireChecksum),
+    },
     sourceObjectCount: sourceObjects.size,
     targetObjectCount: targetObjects.size,
     matchedObjectCount,
     mismatchedObjectCount: mismatches.length,
     mismatches,
   };
+}
+
+async function writeReport(outPath, report, sourcePath, targetPath) {
+  const absoluteOutPath = path.resolve(outPath);
+  await mkdir(path.dirname(absoluteOutPath), { recursive: true });
+  await writeFile(
+    absoluteOutPath,
+    `${JSON.stringify(
+      {
+        generated_at: new Date().toISOString(),
+        ok: report.ok,
+        source_manifest: path.normalize(sourcePath),
+        target_manifest: path.normalize(targetPath),
+        ...report,
+      },
+      null,
+      2
+    )}\n`
+  );
 }
 
 function printHumanReport(report, sourcePath, targetPath) {
@@ -259,7 +305,13 @@ async function main() {
 
   const sourceManifest = await loadManifest(options.sourcePath, "source");
   const targetManifest = await loadManifest(options.targetPath, "target");
-  const report = compareManifests(sourceManifest, targetManifest);
+  const report = compareManifests(sourceManifest, targetManifest, {
+    requireChecksum: options.requireChecksum,
+  });
+
+  if (options.outPath) {
+    await writeReport(options.outPath, report, options.sourcePath, options.targetPath);
+  }
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
@@ -270,7 +322,9 @@ async function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-main().catch((error) => {
-  console.error(`Upload manifest comparison failed: ${error.message}`);
-  process.exitCode = 2;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`Upload manifest comparison failed: ${error.message}`);
+    process.exitCode = 2;
+  });
+}

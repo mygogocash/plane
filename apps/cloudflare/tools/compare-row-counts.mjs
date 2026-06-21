@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/compare-row-counts.mjs <source-counts.json> <target-counts.json> [--json]
@@ -52,7 +53,7 @@ function coerceCount(value, tableName) {
   return numberValue;
 }
 
-function normalizeCounts(json, label) {
+export function normalizeCounts(json, label) {
   const candidate = json && typeof json === "object" && !Array.isArray(json) && json.counts ? json.counts : json;
   const counts = new Map();
 
@@ -87,7 +88,7 @@ function normalizeCounts(json, label) {
   return counts;
 }
 
-async function loadCounts(filePath, label) {
+export async function loadCounts(filePath, label) {
   const content = await readFile(filePath, "utf8");
   let json;
 
@@ -100,7 +101,7 @@ async function loadCounts(filePath, label) {
   return normalizeCounts(json, label);
 }
 
-function compareCounts(sourceCounts, targetCounts) {
+export function compareCounts(sourceCounts, targetCounts) {
   const tableNames = [...new Set([...sourceCounts.keys(), ...targetCounts.keys()])].toSorted();
   const mismatches = [];
   const matches = [];
@@ -170,7 +171,9 @@ async function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-main().catch((error) => {
-  console.error(`Row count comparison failed: ${error.message}`);
-  process.exitCode = 2;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`Row count comparison failed: ${error.message}`);
+    process.exitCode = 2;
+  });
+}

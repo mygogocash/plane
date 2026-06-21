@@ -147,7 +147,7 @@ async function envFileCheck({ id, label, phase, root, envName, relativePath, rem
 
   const absolutePath = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
   const status = await fileStatus(absolutePath);
-  const jsonValidation = status.exists && relativePath ? await validateEvidenceJson(absolutePath) : { ok: true };
+  const jsonValidation = status.exists ? await validateEvidenceJson(absolutePath) : { ok: true };
 
   return {
     id,
@@ -288,6 +288,8 @@ async function buildReport(root, selectedPhase) {
       label: "Cloudflare production deploy evidence",
       phase: "phase-07",
       envName: "CLOUDFLARE_PRODUCTION_DEPLOY_REPORT",
+      relativePath:
+        "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json",
       remediation: "Record the manually dispatched Cloudflare production deploy run.",
     },
     {
@@ -295,6 +297,7 @@ async function buildReport(root, selectedPhase) {
       label: "D1 import validation",
       phase: "phase-07",
       envName: "D1_IMPORT_VALIDATION_REPORT",
+      relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json",
       remediation: "Import the final Postgres delta into D1 and record row-count and relationship checks.",
     },
     {
@@ -302,6 +305,7 @@ async function buildReport(root, selectedPhase) {
       label: "R2 upload manifest validation",
       phase: "phase-07",
       envName: "R2_MANIFEST_VALIDATION_REPORT",
+      relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json",
       remediation: "Compare final GCS and R2 manifests and record object count/checksum results.",
     },
     {
@@ -309,6 +313,7 @@ async function buildReport(root, selectedPhase) {
       label: "Live shadow validation",
       phase: "phase-07",
       envName: "LIVE_SHADOW_TEST_REPORT",
+      relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json",
       remediation: "Run Durable Object live shadow tests against representative rooms.",
     },
     {
@@ -316,6 +321,7 @@ async function buildReport(root, selectedPhase) {
       label: "Authenticated production smoke",
       phase: "phase-07",
       envName: "AUTHENTICATED_SMOKE_REPORT",
+      relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json",
       remediation: "Record login, workspace, project, work-item, upload, admin, and public-space smoke evidence.",
     },
     {
@@ -323,6 +329,7 @@ async function buildReport(root, selectedPhase) {
       label: "Better Stack cutover monitors green",
       phase: "phase-07",
       envName: "BETTERSTACK_CUTOVER_REPORT",
+      relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json",
       remediation: "Record green monitors for manut.xyz, app.manut.xyz, and /api/instances/.",
     },
     {
@@ -330,6 +337,7 @@ async function buildReport(root, selectedPhase) {
       label: "Seven green days before decommission",
       phase: "phase-08",
       envName: "SEVEN_GREEN_DAYS_REPORT",
+      relativePath: "process/features/cloudflare-stack-migration/reports/phase-08-seven-green-days_21-06-26.json",
       remediation: "Wait 7 green days after cutover and record Better Stack/runtime evidence.",
     },
   ];

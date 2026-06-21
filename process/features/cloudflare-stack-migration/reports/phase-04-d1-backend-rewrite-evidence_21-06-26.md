@@ -15,7 +15,8 @@ Captured: 2026-06-21T08:58:00Z
 - Kept production `/api/v1/*` routes legacy-proxied.
 - Updated migration status to report `active_phase: d1-backend-rewrite` and
   `d1_shadow_domains: ["workspaces", "projects"]`.
-- Added `d1:inventory` and `d1:compare` package scripts.
+- Added `d1:inventory`, `d1:compare`, and cutover-grade
+  `d1:validate-import` package scripts.
 
 ## Route Behavior
 
@@ -30,7 +31,7 @@ Captured: 2026-06-21T08:58:00Z
 
 ```bash
 pnpm --filter @manut/cloudflare test -- --run src/index.test.ts
-pnpm --filter @manut/cloudflare d1:compare -- <synthetic-postgres-counts.json> <synthetic-d1-counts.json> --json
+pnpm --filter @manut/cloudflare d1:validate-import -- <synthetic-postgres-counts.json> <synthetic-d1-counts.json> --relationships <relationship-checks.json> --json --out <report.json>
 node apps/cloudflare/tools/django-model-inventory.mjs --root apps/api/plane --json
 ```
 
@@ -72,7 +73,9 @@ Synthetic row-count comparison result:
 Blocked. No production Cloud SQL export/import was run, no D1 production
 migration was applied, and no user-facing API route was switched to D1. The next
 operator action is to export/import a non-production or sampled dataset and
-compare `workspaces` / `projects` row counts and relationships.
+compare `workspaces` / `projects` row counts and relationships with
+`d1:validate-import`. The raw `d1:compare` command is useful for exploratory
+counts-only checks but is not sufficient for Phase 7 cutover evidence.
 
 ## Rollback
 

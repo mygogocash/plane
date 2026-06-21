@@ -50,11 +50,12 @@ name = "manut-app"
 APP_ENV = "production"
 APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-production"
+LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
 
 [[env.production.d1_databases]]
 binding = "MANUT_DB"
 database_name = "manut-prod"
-database_id = "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID"
+database_id = "a29a2712-f899-45ee-8ab9-f64afded7e1c"
 migrations_dir = "migrations"
 
 [[env.production.r2_buckets]]
@@ -63,7 +64,7 @@ bucket_name = "manut-uploads-prod"
 
 [[env.production.kv_namespaces]]
 binding = "CONFIG"
-id = "REPLACE_WITH_PRODUCTION_KV_NAMESPACE_ID"
+id = "e3fdd6cf29dc4f03a9a240830814c629"
 
 [[env.production.queues.producers]]
 binding = "JOBS"

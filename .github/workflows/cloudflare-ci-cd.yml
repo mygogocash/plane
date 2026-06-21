@@ -101,7 +101,10 @@ jobs:
           cat > "$tmp_dir/d1-counts.json" <<'JSON'
           [{"table":"workspaces","count":1},{"table":"projects","rows":"2"}]
           JSON
-          pnpm --filter @manut/cloudflare d1:compare -- "$tmp_dir/postgres-counts.json" "$tmp_dir/d1-counts.json" --json
+          cat > "$tmp_dir/relationships.json" <<'JSON'
+          {"checks":[{"name":"projects.workspace_id","orphanCount":0}]}
+          JSON
+          pnpm --filter @manut/cloudflare d1:validate-import -- "$tmp_dir/postgres-counts.json" "$tmp_dir/d1-counts.json" --relationships "$tmp_dir/relationships.json" --json --out "$tmp_dir/d1-import-validation.json"
 
       - name: Run synthetic R2 manifest validation
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_r2_manifest_validation }}
@@ -115,7 +118,7 @@ jobs:
           cat > "$tmp_dir/r2-manifest.json" <<'JSON'
           {"objects":[{"name":"workspace/logo.png","metadata":{"size":"12","crc32c":"abc"}}]}
           JSON
-          pnpm --filter @manut/cloudflare uploads:compare -- "$tmp_dir/gcs-manifest.json" "$tmp_dir/r2-manifest.json" --json
+          pnpm --filter @manut/cloudflare uploads:validate -- "$tmp_dir/gcs-manifest.json" "$tmp_dir/r2-manifest.json" --json --out "$tmp_dir/r2-manifest-validation.json"
 
       - name: Run live baseline
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_baseline }}

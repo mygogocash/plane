@@ -71,5 +71,18 @@ Captured during Phase 7 preview provisioning:
 - Max wait time: `30000ms`
 
 The Worker now exports a Cloudflare `queue` handler and the preview deploy
-attached both producer and consumer triggers. This is still preview-only; no
-production queue traffic has moved.
+attached both producer and consumer triggers.
+
+## Production Queue Consumer Evidence
+
+Captured during Phase 7 production Worker provisioning:
+
+- Queue: `manut-jobs-prod`
+- Worker consumer script: `manut-app`
+- Consumer ID: `b3887f5cee1c4f45917aef4f49c42958`
+- Batch size: `10`
+- Max retries: `3`
+- Max wait time: `30000ms`
+
+This is deployment readiness evidence only. No production queue traffic has
+moved to Cloudflare.
