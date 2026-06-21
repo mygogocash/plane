@@ -64,6 +64,7 @@ pnpm --filter @manut/cloudflare uploads:validate -- <gcs-manifest.json> <r2-mani
 pnpm --filter @manut/cloudflare live:shadow -- https://manut-app.bettergogocash.workers.dev --out process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json
 pnpm --filter @manut/cloudflare auth:smoke-report -- --input <manual-auth-smoke.json> --out process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json
 pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json
+pnpm --filter @manut/cloudflare seven-green-days:report -- --input <phase8-stability-evidence.json> --out process/features/cloudflare-stack-migration/reports/phase-08-seven-green-days_21-06-26.json
 pnpm --filter @manut/cloudflare cutover:readiness
 pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app-preview.bettergogocash.workers.dev
 ```
@@ -197,11 +198,39 @@ shape:
   `app-root`, and `api-instances` monitor checks, and every monitor check must
   be `up`.
 - Phase 8 seven-green-days evidence must set `green_days_verified: true` and
-  include `cutover_at` and `verified_through`.
+  include `cutover_at`, `verified_through`, at least seven full days between
+  those timestamps, and passing evidence checks for Better Stack monitors,
+  Cloudflare Worker logs, D1 backup/export, R2 backup/export, and rollback
+  retention.
 
 Evidence paths supplied through env vars use the gate definition for validation,
 so arbitrary file names do not bypass these contracts. High-risk evidence files
 must be JSON.
+
+## Phase 8 Seven Green Days Evidence
+
+After Cloudflare cutover, build the decommission gate report from operator
+evidence:
+
+```bash
+pnpm --filter @manut/cloudflare seven-green-days:report -- \
+  --input phase8-stability-evidence.json \
+  --out process/features/cloudflare-stack-migration/reports/phase-08-seven-green-days_21-06-26.json
+pnpm --filter @manut/cloudflare cutover:readiness -- --phase phase-08
+```
+
+The input must cover at least seven full days from `cutover_at` through
+`verified_through` and include these passing check IDs with evidence:
+
+- `betterstack-monitors`
+- `cloudflare-worker-logs`
+- `d1-backup-export`
+- `r2-backup-export`
+- `rollback-retention`
+
+This report does not approve destructive work by itself. Each provider resource
+class still needs a separate destructive-action approval before GKE/GCP
+resources are disabled or removed.
 
 ## Cutover Rule
 

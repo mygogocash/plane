@@ -35,6 +35,10 @@ Decommission cannot begin until:
 
 - `SEVEN_GREEN_DAYS_REPORT` points to evidence covering the full post-cutover
   stability window.
+- `pnpm --filter @manut/cloudflare seven-green-days:report -- --input <phase8-stability-evidence.json> --out process/features/cloudflare-stack-migration/reports/phase-08-seven-green-days_21-06-26.json`
+  passes with required check IDs `betterstack-monitors`,
+  `cloudflare-worker-logs`, `d1-backup-export`, `r2-backup-export`, and
+  `rollback-retention`.
 - `pnpm --filter @manut/cloudflare cutover:readiness -- --phase phase-08` reports
   `Phase 8 decommission ready: yes`.
 - A separate destructive-action checklist is approved for each provider

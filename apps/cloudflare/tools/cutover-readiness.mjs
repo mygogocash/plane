@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { validateAuthenticatedSmokeReport } from "./authenticated-smoke-report.mjs";
+import { validateSevenGreenDaysReport } from "./seven-green-days-report.mjs";
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/cutover-readiness.mjs [--json] [--root <repo-root>] [--phase phase-07|phase-08|all]
@@ -358,18 +359,6 @@ function validateBetterStackCutoverReport(report) {
 
   if (report.monitor_checks.some((check) => check?.ok !== true || check.status !== "up")) {
     return { ok: false, message: "Better Stack monitor checks must all be up." };
-  }
-
-  return { ok: true };
-}
-
-function validateSevenGreenDaysReport(report) {
-  if (report.green_days_verified !== true) {
-    return { ok: false, message: "Seven green days report must set green_days_verified: true." };
-  }
-
-  if (!report.cutover_at || !report.verified_through) {
-    return { ok: false, message: "Seven green days report must include cutover_at and verified_through." };
   }
 
   return { ok: true };
