@@ -776,6 +776,7 @@ jobs:
         run: |
           node apps/cloudflare/tools/betterstack-cutover-report.mjs \
             --json \
+            --soft-fail \
             --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
 
       - name: Summarize Better Stack cutover report

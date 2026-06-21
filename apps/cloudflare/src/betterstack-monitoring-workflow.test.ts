@@ -11,5 +11,6 @@ describe("Better Stack Monitoring workflow", () => {
 
     expect(workflow).toContain(".github/ops/betterstack/summarize-cutover-report.sh");
     expect(workflow).toContain("phase-07-betterstack-cutover_21-06-26.json");
+    expect(workflow).toContain("--soft-fail");
   });
 });

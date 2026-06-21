@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { resolveRepoPath } from "./path-utils.mjs";
 
 function usage() {
-  return `Usage: node apps/cloudflare/tools/betterstack-cutover-report.mjs [--json] [--out <report.json>] [--require-endpoint-probes]
+  return `Usage: node apps/cloudflare/tools/betterstack-cutover-report.mjs [--json] [--out <report.json>] [--require-endpoint-probes] [--soft-fail]
 
 Captures Phase 7 Better Stack cutover evidence for manut.xyz, app.manut.xyz,
 and app.manut.xyz/api/instances/. The command also records live endpoint probes
@@ -23,7 +23,7 @@ Environment:
 
 Exit codes:
   0  Better Stack monitors are up and live endpoint probes pass
-  1  evidence was captured but one or more gates failed
+  1  evidence was captured but one or more gates failed, unless --soft-fail is set
   2  usage or request error`;
 }
 
@@ -32,6 +32,7 @@ function parseArgs(argv) {
     json: false,
     outPath: null,
     requireEndpointProbes: false,
+    softFail: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -53,6 +54,11 @@ function parseArgs(argv) {
 
     if (arg === "--require-endpoint-probes") {
       options.requireEndpointProbes = true;
+      continue;
+    }
+
+    if (arg === "--soft-fail") {
+      options.softFail = true;
       continue;
     }
 
@@ -374,7 +380,7 @@ async function main() {
     printHumanReport(report);
   }
 
-  process.exitCode = report.ok ? 0 : 1;
+  process.exitCode = report.ok || options.softFail ? 0 : 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

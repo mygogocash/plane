@@ -1,3 +1,9 @@
+import { spawn } from "node:child_process";
+import { mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,6 +14,10 @@ import {
   requiredMonitorDefinitions,
 } from "../tools/betterstack-cutover-report.mjs";
 
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(currentDir, "..", "..", "..");
+const reportCli = path.join(repoRoot, "apps", "cloudflare", "tools", "betterstack-cutover-report.mjs");
+
 const env = {
   BETTERSTACK_APP_URL: "https://app.manut.xyz/",
   BETTERSTACK_SITE_URL: "https://manut.xyz/",
@@ -15,6 +25,33 @@ const env = {
   BETTERSTACK_SITE_MONITOR_NAME: "manut.xyz",
   BETTERSTACK_API_MONITOR_NAME: "app.manut.xyz API instances",
 };
+
+function runReportCli(args: string[], outPath: string) {
+  return new Promise<{ stdout: string; stderr: string; code: number | null }>((resolve) => {
+    const child = spawn("node", [reportCli, ...args, "--out", outPath], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        BETTERSTACK_API_TOKEN: "",
+        BETTERSTACK_APP_URL: "http://127.0.0.1:9",
+        BETTERSTACK_SITE_URL: "http://127.0.0.1:9",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("close", (code) => {
+      resolve({ stdout, stderr, code });
+    });
+  });
+}
 
 describe("Better Stack cutover report helpers", () => {
   it("normalizes monitor URLs for trailing-slash matching", () => {
@@ -192,6 +229,32 @@ describe("Better Stack cutover report helpers", () => {
           remediation: "Better Stack API request failed with HTTP 401.",
         })
       )
+    );
+  });
+
+  it("can write blocked evidence without failing CI capture when soft-fail is enabled", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "betterstack-report-"));
+    const reportPath = path.join(tempDir, "report.json");
+
+    const result = await runReportCli(["--json", "--soft-fail"], reportPath);
+    const report = JSON.parse(await readFile(reportPath, "utf8"));
+
+    expect(result.code, `${result.stdout}\n${result.stderr}`).toBe(0);
+    expect(report).toMatchObject({
+      ok: false,
+      monitor_summary: {
+        total: 3,
+        passed: 0,
+        failed: 3,
+      },
+    });
+    expect(report.monitor_checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ok: false,
+          remediation: "BETTERSTACK_API_TOKEN is required to verify monitor state.",
+        }),
+      ])
     );
   });
 });
