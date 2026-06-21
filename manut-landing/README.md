@@ -21,6 +21,9 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+The parent repository ignores `package-lock.json`; keep the generated lockfile
+local unless this app is later promoted into the root pnpm workspace.
+
 ## Validation
 
 ```bash
