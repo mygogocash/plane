@@ -52,6 +52,7 @@ The Cloudflare token must be a raw API token, not a Global API Key, not a
 pnpm --filter @manut/cloudflare check
 pnpm --filter @manut/cloudflare test
 pnpm --filter @manut/cloudflare baseline
+pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manifest.json>
 ```
 
 ## Provisioning Order
@@ -72,3 +73,27 @@ Do not change `app.manut.xyz` routing until the selected phase report proves:
 - R2 object checks pass.
 - live/update and upload smoke pass.
 - Better Stack preview checks are green.
+
+## R2 Upload Validation
+
+`/uploads/*` R2 reads are disabled by default. A Worker environment must set
+`R2_UPLOADS_READ_ENABLED=true` before the route enters the R2 compatibility
+handler. Without that flag, upload requests remain legacy-proxied to GKE/GCS.
+
+Before enabling the flag in any shared environment:
+
+1. Export a GCS manifest from `plane-affine-495114-uploads`.
+2. Export an R2 manifest from `manut-uploads-preview` or `manut-uploads-prod`.
+3. Compare the manifests:
+
+```bash
+pnpm --filter @manut/cloudflare uploads:compare -- gcs-manifest.json r2-manifest.json
+```
+
+Accepted manifest rows can include `key`, `name`, `object`, `objectKey`, or
+`path` plus `size` and optional checksum fields such as `crc32c`, `etag`,
+`md5Hash`, or `sha256`.
+
+The R2 bucket must deny anonymous listing for bare `/uploads` and allow object
+reads only through the Worker route. CORS for `manut-uploads-prod` should allow
+`https://app.manut.xyz` for the methods used by the app upload flow.

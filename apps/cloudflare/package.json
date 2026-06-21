@@ -6,6 +6,7 @@
   "scripts": {
     "baseline": "node tools/capture-baseline.mjs",
     "check": "tsc --noEmit",
+    "uploads:compare": "node tools/compare-upload-manifests.mjs",
     "deploy:preview": "wrangler deploy --env=\"\"",
     "deploy:production": "wrangler deploy --env production",
     "dev": "wrangler dev",

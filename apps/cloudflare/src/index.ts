@@ -4,6 +4,7 @@ import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
 import { buildInstancePayload } from "./instance";
 import { LiveRoomDurableObject } from "./live-room";
 import type { CloudflareBindings } from "./types";
+import { handleUploadsRequest } from "./uploads";
 
 export { LiveRoomDurableObject };
 
@@ -45,6 +46,10 @@ function describeRoute(path: string, purpose: string, appOrigin: string) {
   };
 }
 
+function isR2UploadsReadEnabled(env: CloudflareBindings): boolean {
+  return env.R2_UPLOADS_READ_ENABLED?.toLowerCase() === "true";
+}
+
 app.get("/healthz", (c) =>
   c.json({
     ok: true,
@@ -61,6 +66,7 @@ app.get("/api/cloudflare/migration-status", (c) =>
     active_phase: "frontend-edge-routing",
     app_origin: c.env.APP_ORIGIN ?? "https://app.manut.xyz",
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
+    r2_uploads_read_enabled: isR2UploadsReadEnabled(c.env),
     data_target: "d1",
     upload_target: "r2",
     queue_target: "cloudflare-queues",
@@ -78,6 +84,7 @@ app.get("/api/cloudflare/routes", (c) => {
     app_origin: appOrigin,
     cutover_ready: false,
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
+    r2_uploads_read_enabled: isR2UploadsReadEnabled(c.env),
     routes: routeMapSamples.map((route) => describeRoute(route.path, route.purpose, appOrigin)),
     notes: [
       "This route map is a shadow-routing contract only.",
@@ -91,6 +98,10 @@ app.all("*", async (c) => {
   const classification = classifyEdgeRoute(c.req.raw);
 
   if (classification.action === "legacy-proxy") {
+    if (classification.contract === "uploads" && isR2UploadsReadEnabled(c.env)) {
+      return handleUploadsRequest(c.req.raw, c.env);
+    }
+
     return proxyToLegacyOrigin(c.req.raw, c.env, classification.contract);
   }
 

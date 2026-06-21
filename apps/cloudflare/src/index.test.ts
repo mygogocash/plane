@@ -97,6 +97,23 @@ describe("Manut Cloudflare Worker foundation", () => {
     });
   });
 
+  it("routes uploads to R2 only when the read flag is explicitly enabled", async () => {
+    const response = await app.request(
+      "/uploads/workspace/logo.png",
+      {},
+      {
+        ...env,
+        R2_UPLOADS_READ_ENABLED: "true",
+      }
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "R2_UPLOADS_BINDING_MISSING",
+      key: "workspace/logo.png",
+    });
+  });
+
   it("defines the live room durable object health path", async () => {
     const durableObject = new LiveRoomDurableObject({ id: { toString: () => "test-room" } } as DurableObjectState, env);
     const response = await durableObject.fetch(new Request("https://app.manut.xyz/live/room/health"));
