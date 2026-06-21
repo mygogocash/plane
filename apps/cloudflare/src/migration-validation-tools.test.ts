@@ -71,10 +71,32 @@ describe("migration validation tools", () => {
     expect(fileReport).toMatchObject({ ok: true });
   });
 
+  it("fails D1 import validation when relationship checks are missing", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const outPath = path.join(root, "report.json");
+
+    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1 } }));
+    await writeFile(targetPath, JSON.stringify([{ table: "workspaces", count: 1 }]));
+
+    const result = runTool(["tools/validate-d1-import.mjs", sourcePath, targetPath, "--json", "--out", outPath]);
+    const stdoutReport = JSON.parse(result.stdout);
+    const fileReport = JSON.parse(await readFile(outPath, "utf8"));
+
+    expect(result.exitCode).toBe(1);
+    expect(stdoutReport).toMatchObject({
+      ok: false,
+      validation_errors: ["D1 import validation requires at least one relationship check."],
+    });
+    expect(fileReport).toMatchObject({ ok: false });
+  });
+
   it("writes relative D1 import reports from the repository root when run through the package", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
     const sourcePath = path.join(root, "postgres-counts.json");
     const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
     const relativeOutPath = `.tmp/${path.basename(root)}/d1-report.json`;
     const repoOutPath = path.join(repoRoot, relativeOutPath);
     const packageOutPath = path.join(packageRoot, relativeOutPath);
@@ -83,11 +105,14 @@ describe("migration validation tools", () => {
     await rm(path.dirname(packageOutPath), { recursive: true, force: true });
     await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1 } }));
     await writeFile(targetPath, JSON.stringify([{ table: "workspaces", count: 1 }]));
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphanCount: 0 }]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
       sourcePath,
       targetPath,
+      "--relationships",
+      relationshipsPath,
       "--json",
       "--out",
       relativeOutPath,

@@ -6,10 +6,10 @@ import { compareCounts, loadCounts } from "./compare-row-counts.mjs";
 import { resolveRepoPath } from "./path-utils.mjs";
 
 function usage() {
-  return `Usage: node apps/cloudflare/tools/validate-d1-import.mjs <postgres-counts.json> <d1-counts.json> [--relationships <checks.json>] [--json] [--out <report.json>]
+  return `Usage: node apps/cloudflare/tools/validate-d1-import.mjs <postgres-counts.json> <d1-counts.json> --relationships <checks.json> [--json] [--out <report.json>]
 
 Builds canonical Phase 7 D1 import evidence from exported Postgres and D1 row
-counts plus optional relationship checks. Exit codes:
+counts plus relationship checks. Exit codes:
   0  counts and relationship checks pass
   1  one or more checks fail
   2  usage or input error
@@ -129,10 +129,12 @@ async function loadRelationshipChecks(filePath) {
 
 function buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks) {
   const failedRelationshipChecks = relationshipChecks.filter((check) => !check.ok);
+  const validationErrors =
+    relationshipChecks.length === 0 ? ["D1 import validation requires at least one relationship check."] : [];
 
   return {
     generated_at: new Date().toISOString(),
-    ok: countReport.ok && failedRelationshipChecks.length === 0,
+    ok: countReport.ok && failedRelationshipChecks.length === 0 && validationErrors.length === 0,
     source_counts: path.normalize(sourcePath),
     target_counts: path.normalize(targetPath),
     summary: {
@@ -141,6 +143,7 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
       relationship_checks_total: relationshipChecks.length,
       relationship_checks_failed: failedRelationshipChecks.length,
     },
+    validation_errors: validationErrors,
     count_report: countReport,
     relationship_checks: relationshipChecks,
   };
@@ -158,6 +161,12 @@ function printHumanReport(report) {
   console.log(`Mismatched count tables: ${report.summary.count_tables_mismatched}`);
   console.log(`Relationship checks: ${report.summary.relationship_checks_total}`);
   console.log(`Failed relationship checks: ${report.summary.relationship_checks_failed}`);
+  if (report.validation_errors.length > 0) {
+    console.log("Validation errors:");
+    for (const error of report.validation_errors) {
+      console.log(`- ${error}`);
+    }
+  }
 }
 
 async function main() {

@@ -287,6 +287,10 @@ function validateD1ImportReport(report) {
     return { ok: false, message: "D1 import count_report must pass." };
   }
 
+  if (Array.isArray(report.validation_errors) && report.validation_errors.length > 0) {
+    return { ok: false, message: "D1 import report must not include validation_errors." };
+  }
+
   if (!Array.isArray(report.relationship_checks) || report.relationship_checks.length === 0) {
     return { ok: false, message: "D1 import report must include relationship_checks." };
   }

@@ -182,6 +182,38 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
+  it("rejects D1 reports with validation errors even when ok is true", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_mismatched: 0,
+          relationship_checks_failed: 0,
+        },
+        validation_errors: ["operator overrode missing relationship checks"],
+        count_report: {
+          ok: true,
+          mismatchedTableCount: 0,
+        },
+        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import report must not include validation_errors.",
+    });
+  });
+
   it("rejects R2 validation reports that do not enforce shared checksums", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
