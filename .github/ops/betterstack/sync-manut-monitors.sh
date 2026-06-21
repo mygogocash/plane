@@ -98,17 +98,23 @@ request() {
   local payload="${3:-}"
   local body_file
   local http_code
+  local url
   body_file="$(mktemp)"
+  if [[ "$path" == http://* || "$path" == https://* ]]; then
+    url="$path"
+  else
+    url="${api_base}${path}"
+  fi
 
   if [ -n "$payload" ]; then
     http_code="$(curl -sS -o "$body_file" -w "%{http_code}" \
-      -X "$method" "${api_base}${path}" \
+      -X "$method" "$url" \
       -H "Authorization: Bearer ${BETTERSTACK_API_TOKEN}" \
       -H "Content-Type: application/json" \
       --data "$payload")"
   else
     http_code="$(curl -sS -o "$body_file" -w "%{http_code}" \
-      -X "$method" "${api_base}${path}" \
+      -X "$method" "$url" \
       -H "Authorization: Bearer ${BETTERSTACK_API_TOKEN}" \
       -H "Content-Type: application/json")"
   fi
@@ -119,11 +125,32 @@ request() {
     return 0
   fi
 
-  echo "::error::Better Stack API ${method} ${path} failed with HTTP ${http_code}." >&2
+  echo "::error::Better Stack API ${method} ${url} failed with HTTP ${http_code}." >&2
   sed -e 's/[[:cntrl:]]//g' "$body_file" >&2 || true
   echo >&2
   rm -f "$body_file"
   return 1
+}
+
+list_monitors() {
+  local next="${api_base}/monitors"
+  local combined="[]"
+  local page_count=0
+  local page_body
+
+  while [ -n "$next" ]; do
+    page_count=$((page_count + 1))
+    if [ "$page_count" -gt 50 ]; then
+      echo "::error::Better Stack monitor pagination exceeded 50 pages; aborting to avoid an infinite loop." >&2
+      return 1
+    fi
+
+    page_body="$(request GET "$next")"
+    combined="$(printf '%s\n%s\n' "$combined" "$page_body" | jq -sc '.[0] + (.[1].data // [])')"
+    next="$(jq -r '.pagination.next // ""' <<<"$page_body")"
+  done
+
+  jq -nc --argjson data "$combined" '{data: $data}'
 }
 
 if [ "$dry_run" = "true" ]; then
@@ -142,7 +169,7 @@ if [ -z "${BETTERSTACK_API_TOKEN:-}" ]; then
   exit 0
 fi
 
-monitors="$(request GET "/monitors")"
+monitors="$(list_monitors)"
 
 monitor_definitions | jq -c '.[]' | while IFS= read -r definition; do
   name="$(jq -r '.pronounceable_name' <<<"$definition")"

@@ -59,6 +59,18 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
+  it("requires production Worker smoke evidence in addition to deploy evidence", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "cloudflare-production-smoke");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      evidence:
+        "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json",
+    });
+  });
+
   it("blocks empty local evidence files", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");

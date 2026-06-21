@@ -17,6 +17,7 @@ Exit codes:
 Optional evidence environment variables:
   CLOUDFLARE_PREVIEW_SMOKE_REPORT
   CLOUDFLARE_PRODUCTION_DEPLOY_REPORT
+  CLOUDFLARE_PRODUCTION_SMOKE_REPORT
   D1_IMPORT_VALIDATION_REPORT
   R2_MANIFEST_VALIDATION_REPORT
   LIVE_SHADOW_TEST_REPORT
@@ -307,6 +308,15 @@ async function buildReport(root, selectedPhase) {
       relativePath:
         "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json",
       remediation: "Record the manually dispatched Cloudflare production deploy run.",
+    },
+    {
+      id: "cloudflare-production-smoke",
+      label: "Cloudflare production smoke",
+      phase: "phase-07",
+      envName: "CLOUDFLARE_PRODUCTION_SMOKE_REPORT",
+      relativePath:
+        "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json",
+      remediation: "Run production Worker smoke and record HTTP/status/header contract evidence.",
     },
     {
       id: "d1-import-validation",

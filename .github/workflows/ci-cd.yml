@@ -133,7 +133,7 @@ jobs:
           disallowed_seen="false"
           for path in "${changed[@]}"; do
             case "$path" in
-              apps/cloudflare/*|apps/cloudflare/**|process/features/cloudflare-stack-migration/*|process/features/cloudflare-stack-migration/**|docs/cloudflare-stack-migration.md|.github/workflows/cloudflare-ci-cd.yml|.github/workflows/ci-cd.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)
+              apps/cloudflare/*|apps/cloudflare/**|process/features/cloudflare-stack-migration/*|process/features/cloudflare-stack-migration/**|docs/cloudflare-stack-migration.md|.github/ops/betterstack/*|.github/ops/betterstack/**|.github/workflows/cloudflare-ci-cd.yml|.github/workflows/betterstack-monitoring.yml|.github/workflows/ci-cd.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)
                 cloudflare_seen="true"
                 ;;
               *)
