@@ -15,10 +15,16 @@ permissions:
 env:
   BETTERSTACK_API_BASE: ${{ vars.BETTERSTACK_API_BASE || 'https://uptime.betterstack.com/api/v2' }}
   BETTERSTACK_APP_URL: ${{ vars.BETTERSTACK_APP_URL || vars.GCP_APP_URL || 'https://app.manut.xyz' }}
-  BETTERSTACK_CHECK_FREQUENCY: ${{ vars.BETTERSTACK_CHECK_FREQUENCY || '60' }}
+  BETTERSTACK_SITE_URL: ${{ vars.BETTERSTACK_SITE_URL || 'https://manut.xyz' }}
+  BETTERSTACK_CHECK_FREQUENCY: ${{ vars.BETTERSTACK_CHECK_FREQUENCY || '180' }}
   BETTERSTACK_REQUEST_TIMEOUT: ${{ vars.BETTERSTACK_REQUEST_TIMEOUT || '30' }}
+  BETTERSTACK_APP_MONITOR_NAME: ${{ vars.BETTERSTACK_APP_MONITOR_NAME || 'app.manut.xyz' }}
+  BETTERSTACK_SITE_MONITOR_NAME: ${{ vars.BETTERSTACK_SITE_MONITOR_NAME || 'manut.xyz' }}
+  BETTERSTACK_API_MONITOR_NAME: ${{ vars.BETTERSTACK_API_MONITOR_NAME || 'app.manut.xyz API instances' }}
   BETTERSTACK_APP_KEYWORD: ${{ vars.BETTERSTACK_APP_KEYWORD || 'Manut' }}
+  BETTERSTACK_SITE_KEYWORD: ${{ vars.BETTERSTACK_SITE_KEYWORD || 'Manut' }}
   BETTERSTACK_API_KEYWORD: ${{ vars.BETTERSTACK_API_KEYWORD || 'current_version' }}
+  BETTERSTACK_INCLUDE_API_MONITOR: ${{ vars.BETTERSTACK_INCLUDE_API_MONITOR || 'false' }}
   BETTERSTACK_POLICY_ID: ${{ vars.BETTERSTACK_POLICY_ID }}
   BETTERSTACK_MONITOR_GROUP_ID: ${{ vars.BETTERSTACK_MONITOR_GROUP_ID }}
 
@@ -49,6 +55,8 @@ jobs:
             echo "### Better Stack monitoring"
             echo ""
             echo "App URL: \`${BETTERSTACK_APP_URL}\`"
+            echo "Site URL: \`${BETTERSTACK_SITE_URL}\`"
             echo "Check frequency: \`${BETTERSTACK_CHECK_FREQUENCY}s\`"
-            echo "Monitors: app root and /api/instances/"
+            echo "Monitors: \`${BETTERSTACK_APP_MONITOR_NAME}\` and \`${BETTERSTACK_SITE_MONITOR_NAME}\`"
+            echo "API monitor enabled: \`${BETTERSTACK_INCLUDE_API_MONITOR}\`"
           } >> "$GITHUB_STEP_SUMMARY"

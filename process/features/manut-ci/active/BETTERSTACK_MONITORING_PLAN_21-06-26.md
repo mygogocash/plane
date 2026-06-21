@@ -1,7 +1,8 @@
 # Executive Summary
 
-Add Better Stack uptime monitoring as a GitHub-managed operational integration for
-`https://app.manut.xyz` without storing Better Stack credentials in the repository.
+Add Better Stack uptime monitoring as a GitHub-managed operational integration aligned
+with the existing `Manut XYZ` Better Stack monitor group for `app.manut.xyz` and
+`manut.xyz`, without storing Better Stack credentials in the repository.
 
 # Business Goals
 
@@ -19,8 +20,10 @@ Add Better Stack uptime monitoring as a GitHub-managed operational integration f
 # Requirements
 
 - Do not commit Better Stack API tokens or monitor IDs.
-- Monitor `https://app.manut.xyz/` for HTTP `200` and Manut branding.
-- Monitor `https://app.manut.xyz/api/instances/` for HTTP `200` and the instance JSON shape.
+- Monitor `https://app.manut.xyz` for HTTP `200` and Manut branding.
+- Monitor `https://manut.xyz` for HTTP `200` and Manut branding.
+- Keep the deeper `https://app.manut.xyz/api/instances/` monitor opt-in through
+  `BETTERSTACK_INCLUDE_API_MONITOR=true`.
 - Make monitor provisioning safe to rerun.
 - If the token is missing, warn and skip instead of failing production deploys.
 
@@ -45,8 +48,9 @@ resources keyed by monitor name and URL.
 # API Contracts
 
 - Better Stack Uptime API base: `https://uptime.betterstack.com/api/v2`.
-- Manut root: `GET /` returns HTTP `200` and contains `Manut`.
-- Manut instance smoke: `GET /api/instances/` returns HTTP `200` and contains
+- Manut app root: `GET https://app.manut.xyz` returns HTTP `200` and contains `Manut`.
+- Manut public site: `GET https://manut.xyz` returns HTTP `200` and contains `Manut`.
+- Optional Manut instance smoke: `GET /api/instances/` returns HTTP `200` and contains
   `current_version`.
 
 # Security
@@ -59,7 +63,7 @@ resources keyed by monitor name and URL.
 # Edge Cases
 
 - Better Stack token absent during the first deploy after this integration.
-- Existing monitors may already exist by name or URL.
+- Existing monitors may already exist by name or URL. URL matching ignores trailing slashes.
 - Operator may want a different escalation policy or monitor group.
 - App URL may change through `GCP_APP_URL` or `BETTERSTACK_APP_URL`.
 
@@ -102,8 +106,8 @@ resources keyed by monitor name and URL.
 
 # User Stories
 
-As an operator, I want Better Stack to monitor Manut root and API health so that production
-availability regressions are visible outside GKE and GitHub.
+As an operator, I want Better Stack to monitor the existing `Manut XYZ` app and site
+monitors so that production availability regressions are visible outside GKE and GitHub.
 
 Acceptance criteria:
 

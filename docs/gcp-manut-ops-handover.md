@@ -116,10 +116,19 @@ Better Stack monitor provisioning is tracked in:
 - `.github/ops/betterstack/sync-manut-monitors.sh`
 - `.github/workflows/betterstack-monitoring.yml`
 
-The script creates or updates two uptime monitors:
+The script is aligned with the current Better Stack `Manut XYZ` setup shown in the
+dashboard. It creates or updates two visible uptime monitors by default:
 
-- `Manut production app`: `https://app.manut.xyz/`, expects `200` and keyword `Manut`.
-- `Manut production API instances`: `https://app.manut.xyz/api/instances/`, expects `200`
+- `app.manut.xyz`: `https://app.manut.xyz`, expects `200` and keyword `Manut`.
+- `manut.xyz`: `https://manut.xyz`, expects `200` and keyword `Manut`.
+
+The sync matches existing monitors by name or by URL after removing trailing slashes, so it
+does not create a duplicate when Better Stack stores `https://app.manut.xyz` and the script
+uses `https://app.manut.xyz/`.
+
+An optional API endpoint monitor can also be enabled:
+
+- `app.manut.xyz API instances`: `https://app.manut.xyz/api/instances/`, expects `200`
   and keyword `current_version`.
 
 Required GitHub secret:
@@ -130,10 +139,16 @@ Optional repository variables:
 
 - `BETTERSTACK_API_BASE`, default `https://uptime.betterstack.com/api/v2`
 - `BETTERSTACK_APP_URL`, default `GCP_APP_URL` or `https://app.manut.xyz`
-- `BETTERSTACK_CHECK_FREQUENCY`, default `60`
+- `BETTERSTACK_SITE_URL`, default `https://manut.xyz`
+- `BETTERSTACK_CHECK_FREQUENCY`, default `180`
 - `BETTERSTACK_REQUEST_TIMEOUT`, default `30`
+- `BETTERSTACK_APP_MONITOR_NAME`, default `app.manut.xyz`
+- `BETTERSTACK_SITE_MONITOR_NAME`, default `manut.xyz`
+- `BETTERSTACK_API_MONITOR_NAME`, default `app.manut.xyz API instances`
 - `BETTERSTACK_APP_KEYWORD`, default `Manut`
+- `BETTERSTACK_SITE_KEYWORD`, default `Manut`
 - `BETTERSTACK_API_KEYWORD`, default `current_version`
+- `BETTERSTACK_INCLUDE_API_MONITOR`, default `false`
 - `BETTERSTACK_POLICY_ID`
 - `BETTERSTACK_MONITOR_GROUP_ID`
 

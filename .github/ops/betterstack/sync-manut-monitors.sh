@@ -9,10 +9,17 @@ fi
 api_base="${BETTERSTACK_API_BASE:-https://uptime.betterstack.com/api/v2}"
 app_url="${BETTERSTACK_APP_URL:-${GCP_APP_URL:-https://app.manut.xyz}}"
 app_url="${app_url%/}"
-check_frequency="${BETTERSTACK_CHECK_FREQUENCY:-60}"
+site_url="${BETTERSTACK_SITE_URL:-https://manut.xyz}"
+site_url="${site_url%/}"
+check_frequency="${BETTERSTACK_CHECK_FREQUENCY:-180}"
 request_timeout="${BETTERSTACK_REQUEST_TIMEOUT:-30}"
+app_name="${BETTERSTACK_APP_MONITOR_NAME:-app.manut.xyz}"
+site_name="${BETTERSTACK_SITE_MONITOR_NAME:-manut.xyz}"
+api_name="${BETTERSTACK_API_MONITOR_NAME:-app.manut.xyz API instances}"
 app_keyword="${BETTERSTACK_APP_KEYWORD:-Manut}"
+site_keyword="${BETTERSTACK_SITE_KEYWORD:-Manut}"
 api_keyword="${BETTERSTACK_API_KEYWORD:-current_version}"
+include_api_monitor="${BETTERSTACK_INCLUDE_API_MONITOR:-false}"
 policy_id="${BETTERSTACK_POLICY_ID:-}"
 monitor_group_id="${BETTERSTACK_MONITOR_GROUP_ID:-}"
 
@@ -29,22 +36,36 @@ need jq
 monitor_definitions() {
   jq -nc \
     --arg app_url "$app_url" \
+    --arg site_url "$site_url" \
+    --arg app_name "$app_name" \
+    --arg site_name "$site_name" \
+    --arg api_name "$api_name" \
     --arg app_keyword "$app_keyword" \
+    --arg site_keyword "$site_keyword" \
     --arg api_keyword "$api_keyword" \
+    --arg include_api_monitor "$include_api_monitor" \
     '[
       {
         key: "app-root",
-        pronounceable_name: "Manut production app",
-        url: ($app_url + "/"),
+        pronounceable_name: $app_name,
+        url: $app_url,
         required_keyword: $app_keyword
       },
       {
+        key: "public-site",
+        pronounceable_name: $site_name,
+        url: $site_url,
+        required_keyword: $site_keyword
+      }
+    ]
+    + (if $include_api_monitor == "true" then [
+      {
         key: "api-instances",
-        pronounceable_name: "Manut production API instances",
+        pronounceable_name: $api_name,
         url: ($app_url + "/api/instances/"),
         required_keyword: $api_keyword
       }
-    ]'
+    ] else [] end)'
 }
 
 build_payload() {
@@ -130,7 +151,10 @@ monitor_definitions | jq -c '.[]' | while IFS= read -r definition; do
   existing_id="$(jq -r --arg name "$name" --arg url "$url" '
     [
       .data[]?
-      | select((.attributes.pronounceable_name == $name) or (.attributes.url == $url))
+      | select(
+          (.attributes.pronounceable_name == $name)
+          or ((.attributes.url // "" | sub("/+$"; "")) == ($url | sub("/+$"; "")))
+        )
       | .id
     ][0] // ""
   ' <<<"$monitors")"
