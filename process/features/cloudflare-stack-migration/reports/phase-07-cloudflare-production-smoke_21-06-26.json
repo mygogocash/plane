@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-21T09:53:04.163Z",
+  "generated_at": "2026-06-21T11:37:03.869Z",
   "base_url": "https://manut-app.bettergogocash.workers.dev/",
   "ok": true,
   "summary": {
@@ -13,9 +13,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/healthz",
       "status": 200,
-      "duration_ms": 205,
+      "duration_ms": 157,
       "content_type": "application/json",
-      "cf_ray": "a0f21fbdad07ce69-SIN",
+      "cf_ray": "a0f2b813dc13ce76-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -37,9 +37,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/instances/",
       "status": 200,
-      "duration_ms": 695,
+      "duration_ms": 674,
       "content_type": "application/json",
-      "cf_ray": "a0f21fbdfaa33da5-SIN",
+      "cf_ray": "a0f2b813dc65ff7d-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -61,9 +61,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/migration-status",
       "status": 200,
-      "duration_ms": 183,
+      "duration_ms": 139,
       "content_type": "application/json",
-      "cf_ray": "a0f21fbdbf3e44c9-SIN",
+      "cf_ray": "a0f2b813ddc3d8e3-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -85,9 +85,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/routes",
       "status": 200,
-      "duration_ms": 182,
+      "duration_ms": 139,
       "content_type": "application/json",
-      "cf_ray": "a0f21fbdcb7dfd84-SIN",
+      "cf_ray": "a0f2b813db3e5fab-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -109,9 +109,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/d1/workspaces",
       "status": 200,
-      "duration_ms": 572,
+      "duration_ms": 570,
       "content_type": "application/json",
-      "cf_ray": "a0f21fbda99440c8-SIN",
+      "cf_ray": "a0f2b813df3dab47-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -135,7 +135,7 @@
       "status": 401,
       "duration_ms": 287,
       "content_type": "application/json",
-      "cf_ray": "a0f21fbdaa959ca7-SIN",
+      "cf_ray": "a0f2b813deab3dc5-SIN",
       "edge_route": "legacy-gke",
       "edge_contract": "api",
       "assertions": [
@@ -157,9 +157,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/uploads",
       "status": 403,
-      "duration_ms": 318,
+      "duration_ms": 234,
       "content_type": "application/xml; charset=UTF-8",
-      "cf_ray": "a0f21fbde8ea5ce4-SIN",
+      "cf_ray": "a0f2b813dcef3f4b-SIN",
       "edge_route": "legacy-gke",
       "edge_contract": "uploads",
       "assertions": [

@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { resolveRepoPath } from "./path-utils.mjs";
+
 function usage() {
   return `Usage: node apps/cloudflare/tools/smoke-worker.mjs <worker-base-url> [--json] [--out <report.json>]
 
@@ -248,8 +250,9 @@ async function main() {
   };
 
   if (options.outPath) {
-    await mkdir(path.dirname(options.outPath), { recursive: true });
-    await writeFile(options.outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    const outPath = resolveRepoPath(options.outPath);
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   }
 
   if (options.json) {

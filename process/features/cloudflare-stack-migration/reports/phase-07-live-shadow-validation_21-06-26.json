@@ -1,0 +1,156 @@
+{
+  "generated_at": "2026-06-21T11:38:58.489Z",
+  "base_url": "https://manut-app.bettergogocash.workers.dev/",
+  "room": "phase-07-shadow-room",
+  "lock_key": "phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08",
+  "ok": true,
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "id": "live-room-health",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/phase-07-shadow-room/health",
+      "status": 200,
+      "duration_ms": 464,
+      "content_type": "application/json",
+      "cf_ray": "a0f2baddec158408-SIN",
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"ok\":true,\"service\":\"manut-live-room\",\"storage\":\"durable-object\",\"env\":\"production\",\"id\":\"3bddb9fa66454b3e46fd42cb6b40aec7f5632540e11dd13767d2a62975b5f229\",\"room\":{\"id\":\"3bddb9fa66454b3e46fd42cb6b40a"
+    },
+    {
+      "id": "live-room-metadata",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/phase-07-shadow-room/metadata",
+      "status": 200,
+      "duration_ms": 504,
+      "content_type": "application/json",
+      "cf_ray": "a0f2baddefa4406a-SIN",
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"service\":\"manut-live-room\",\"room\":{\"id\":\"3bddb9fa66454b3e46fd42cb6b40aec7f5632540e11dd13767d2a62975b5f229\",\"env\":\"production\",\"status\":\"planned\",\"phase\":\"queues-cron-cache-live\",\"storage\":\"durable-o"
+    },
+    {
+      "id": "live-room-planned-response",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/phase-07-shadow-room",
+      "status": 202,
+      "duration_ms": 505,
+      "content_type": "application/json",
+      "cf_ray": "a0f2baddef5ffd27-SIN",
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [202],
+          "actual": 202
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"status\":\"planned\",\"service\":\"manut-live-room\",\"phase\":\"queues-cron-cache-live\",\"room\":{\"id\":\"3bddb9fa66454b3e46fd42cb6b40aec7f5632540e11dd13767d2a62975b5f229\",\"env\":\"production\",\"status\":\"planned\",\""
+    },
+    {
+      "id": "live-room-lock-acquire",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/phase-07-shadow-room/locks/phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08/acquire",
+      "status": 200,
+      "duration_ms": 272,
+      "content_type": "application/json",
+      "cf_ray": "a0f2bae089f38408-SIN",
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"ok\":true,\"lock\":{\"key\":\"phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08\",\"holder\":\"phase-07-validator-a\",\"expires_at\":\"2026-06-21T11:39:58.020Z\",\"ttl_seconds\":60}}"
+    },
+    {
+      "id": "live-room-lock-conflict",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/phase-07-shadow-room/locks/phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08/acquire",
+      "status": 409,
+      "duration_ms": 59,
+      "content_type": "application/json",
+      "cf_ray": "a0f2bae23e0d8408-SIN",
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [409],
+          "actual": 409
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"error\":\"LIVE_ROOM_LOCK_CONFLICT\",\"message\":\"The Durable Object lock is already held.\",\"lock\":{\"key\":\"phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08\",\"holder\":\"phase-07-validator-a\",\"expires_at"
+    },
+    {
+      "id": "live-room-lock-release",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/phase-07-shadow-room/locks/phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08/release",
+      "status": 200,
+      "duration_ms": 64,
+      "content_type": "application/json",
+      "cf_ray": "a0f2bae29b69406a-SIN",
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"ok\":true,\"lock\":{\"key\":\"phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08\",\"released\":true}}"
+    },
+    {
+      "id": "live-room-websocket-echo",
+      "ok": true,
+      "url": "wss://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/phase-07-shadow-room/socket",
+      "duration_ms": 144,
+      "messages": [
+        "{\"type\":\"room.ready\",\"service\":\"manut-live-room\",\"room\":{\"id\":\"3bddb9fa66454b3e46fd42cb6b40aec7f5632540e11dd13767d2a62975b5f229\",\"env\":\"production\",\"status\":\"planned\",\"phase\":\"queues-cron-cache-live\",",
+        "{\"type\":\"room.message\",\"service\":\"manut-live-room\",\"room\":{\"id\":\"3bddb9fa66454b3e46fd42cb6b40aec7f5632540e11dd13767d2a62975b5f229\",\"env\":\"production\",\"status\":\"planned\",\"phase\":\"queues-cron-cache-live"
+      ]
+    }
+  ]
+}

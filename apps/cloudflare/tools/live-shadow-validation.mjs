@@ -1,5 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { resolveRepoPath } from "./path-utils.mjs";
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/live-shadow-validation.mjs <worker-base-url> [--room <room-name>] [--json] [--out <report.json>]
@@ -164,66 +168,77 @@ function validateCapabilities(json) {
   );
 }
 
-const jsonChecks = [
-  {
-    id: "live-room-health",
-    path: "/health",
-    expectedStatuses: [200],
-    validateJson: (json) =>
-      json.ok === true &&
-      json.service === "manut-live-room" &&
-      json.storage === "durable-object" &&
-      validateCapabilities(json),
-  },
-  {
-    id: "live-room-metadata",
-    path: "/metadata",
-    expectedStatuses: [200],
-    validateJson: (json) =>
-      json.service === "manut-live-room" &&
-      json.room?.storage === "durable-object" &&
-      json.room?.collaboration === "shadow-websocket" &&
-      validateCapabilities(json),
-  },
-  {
-    id: "live-room-planned-response",
-    path: "",
-    expectedStatuses: [202],
-    validateJson: (json) =>
-      json.status === "planned" && json.service === "manut-live-room" && validateCapabilities(json),
-  },
-  {
-    id: "live-room-lock-acquire",
-    path: "/locks/phase-07-shadow/acquire",
-    method: "POST",
-    body: { holder: "phase-07-validator-a", ttl_seconds: 60 },
-    expectedStatuses: [200],
-    validateJson: (json) =>
-      json.ok === true &&
-      json.lock?.key === "phase-07-shadow" &&
-      json.lock?.holder === "phase-07-validator-a" &&
-      json.lock?.ttl_seconds === 60,
-  },
-  {
-    id: "live-room-lock-conflict",
-    path: "/locks/phase-07-shadow/acquire",
-    method: "POST",
-    body: { holder: "phase-07-validator-b", ttl_seconds: 60 },
-    expectedStatuses: [409],
-    validateJson: (json) =>
-      json.error === "LIVE_ROOM_LOCK_CONFLICT" &&
-      json.lock?.key === "phase-07-shadow" &&
-      json.lock?.holder === "phase-07-validator-a",
-  },
-  {
-    id: "live-room-lock-release",
-    path: "/locks/phase-07-shadow/release",
-    method: "POST",
-    body: { holder: "phase-07-validator-a" },
-    expectedStatuses: [200],
-    validateJson: (json) => json.ok === true && json.lock?.key === "phase-07-shadow" && json.lock?.released === true,
-  },
-];
+export function buildLockKey() {
+  return `phase-07-shadow-${randomUUID()}`;
+}
+
+export function buildCapabilityChecks() {
+  return [
+    {
+      id: "live-room-health",
+      path: "/health",
+      expectedStatuses: [200],
+      validateJson: (json) =>
+        json.ok === true &&
+        json.service === "manut-live-room" &&
+        json.storage === "durable-object" &&
+        validateCapabilities(json),
+    },
+    {
+      id: "live-room-metadata",
+      path: "/metadata",
+      expectedStatuses: [200],
+      validateJson: (json) =>
+        json.service === "manut-live-room" &&
+        json.room?.storage === "durable-object" &&
+        json.room?.collaboration === "shadow-websocket" &&
+        validateCapabilities(json),
+    },
+    {
+      id: "live-room-planned-response",
+      path: "",
+      expectedStatuses: [202],
+      validateJson: (json) =>
+        json.status === "planned" && json.service === "manut-live-room" && validateCapabilities(json),
+    },
+  ];
+}
+
+export function buildLockChecks(lockKey) {
+  return [
+    {
+      id: "live-room-lock-acquire",
+      path: `/locks/${encodeURIComponent(lockKey)}/acquire`,
+      method: "POST",
+      body: { holder: "phase-07-validator-a", ttl_seconds: 60 },
+      expectedStatuses: [200],
+      validateJson: (json) =>
+        json.ok === true &&
+        json.lock?.key === lockKey &&
+        json.lock?.holder === "phase-07-validator-a" &&
+        json.lock?.ttl_seconds === 60,
+    },
+    {
+      id: "live-room-lock-conflict",
+      path: `/locks/${encodeURIComponent(lockKey)}/acquire`,
+      method: "POST",
+      body: { holder: "phase-07-validator-b", ttl_seconds: 60 },
+      expectedStatuses: [409],
+      validateJson: (json) =>
+        json.error === "LIVE_ROOM_LOCK_CONFLICT" &&
+        json.lock?.key === lockKey &&
+        json.lock?.holder === "phase-07-validator-a",
+    },
+    {
+      id: "live-room-lock-release",
+      path: `/locks/${encodeURIComponent(lockKey)}/release`,
+      method: "POST",
+      body: { holder: "phase-07-validator-a" },
+      expectedStatuses: [200],
+      validateJson: (json) => json.ok === true && json.lock?.key === lockKey && json.lock?.released === true,
+    },
+  ];
+}
 
 function buildWebSocketUrl(baseUrl, room) {
   const url = new URL(roomPath(room, "/socket"), baseUrl);
@@ -343,14 +358,24 @@ async function main() {
   }
 
   const baseUrl = normalizeBaseUrl(options.baseUrl);
-  const httpChecks = await Promise.all(jsonChecks.map((check) => requestJson(baseUrl, options.room, check)));
+  const lockKey = buildLockKey();
+  const capabilityChecks = await Promise.all(
+    buildCapabilityChecks().map((check) => requestJson(baseUrl, options.room, check))
+  );
+  const lockChecks = [];
+  for (const check of buildLockChecks(lockKey)) {
+    // Lock acquire/conflict/release must run in order to validate Durable Object semantics.
+    // eslint-disable-next-line no-await-in-loop
+    lockChecks.push(await requestJson(baseUrl, options.room, check));
+  }
   const webSocketCheck = await runWebSocketCheck(baseUrl, options.room);
-  const checks = [...httpChecks, webSocketCheck];
+  const checks = [...capabilityChecks, ...lockChecks, webSocketCheck];
   const failed = checks.filter((check) => !check.ok);
   const report = {
     generated_at: new Date().toISOString(),
     base_url: baseUrl.toString(),
     room: options.room,
+    lock_key: lockKey,
     ok: failed.length === 0,
     summary: {
       total: checks.length,
@@ -361,8 +386,9 @@ async function main() {
   };
 
   if (options.outPath) {
-    await mkdir(path.dirname(options.outPath), { recursive: true });
-    await writeFile(options.outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    const outPath = resolveRepoPath(options.outPath);
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   }
 
   if (options.json) {
@@ -374,7 +400,9 @@ async function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-main().catch((error) => {
-  console.error(`Live shadow validation failed: ${error.message}`);
-  process.exitCode = 2;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`Live shadow validation failed: ${error.message}`);
+    process.exitCode = 2;
+  });
+}

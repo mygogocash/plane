@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-06-21T09:53:30.000Z",
+  "generated_at": "2026-06-21T11:34:34.000Z",
   "ok": true,
   "environment": "production",
   "dns_changed": false,
   "worker": {
     "name": "manut-app",
     "url": "https://manut-app.bettergogocash.workers.dev",
-    "version_id": "6549b2cf-5254-495c-a407-549242cb7595"
+    "version_id": "053b5b6c-4a64-41ed-ab68-9c2eabe9f924"
   },
   "resources": {
     "d1": {
@@ -39,12 +39,12 @@
     "production_smoke": true
   },
   "evidence": {
-    "smoke_report": "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json"
+    "smoke_report": "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json",
+    "live_shadow_report": "process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json"
   },
   "blocked_cutover_gates_remaining": [
     "d1-import-validation",
     "r2-manifest-validation",
-    "live-shadow-validation",
     "authenticated-smoke",
     "betterstack-cutover-green",
     "operator-cutover-approval"

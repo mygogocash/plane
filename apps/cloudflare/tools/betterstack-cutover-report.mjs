@@ -2,6 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { resolveRepoPath } from "./path-utils.mjs";
+
 function usage() {
   return `Usage: node apps/cloudflare/tools/betterstack-cutover-report.mjs [--json] [--out <report.json>] [--require-endpoint-probes]
 
@@ -262,7 +264,7 @@ async function probeEndpoint(definition) {
 }
 
 async function writeReport(outPath, report) {
-  const absoluteOutPath = path.resolve(outPath);
+  const absoluteOutPath = resolveRepoPath(outPath);
   await mkdir(path.dirname(absoluteOutPath), { recursive: true });
   await writeFile(absoluteOutPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }

@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { compareCounts, loadCounts } from "./compare-row-counts.mjs";
+import { resolveRepoPath } from "./path-utils.mjs";
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/validate-d1-import.mjs <postgres-counts.json> <d1-counts.json> [--relationships <checks.json>] [--json] [--out <report.json>]
@@ -146,7 +147,7 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
 }
 
 async function writeReport(outPath, report) {
-  const absoluteOutPath = path.resolve(outPath);
+  const absoluteOutPath = resolveRepoPath(outPath);
   await mkdir(path.dirname(absoluteOutPath), { recursive: true });
   await writeFile(absoluteOutPath, `${JSON.stringify(report, null, 2)}\n`);
 }
@@ -166,11 +167,14 @@ async function main() {
     return;
   }
 
-  const sourceCounts = await loadCounts(options.sourcePath, "source");
-  const targetCounts = await loadCounts(options.targetPath, "target");
+  const sourcePath = resolveRepoPath(options.sourcePath);
+  const targetPath = resolveRepoPath(options.targetPath);
+  const relationshipsPath = options.relationshipsPath ? resolveRepoPath(options.relationshipsPath) : null;
+  const sourceCounts = await loadCounts(sourcePath, "source");
+  const targetCounts = await loadCounts(targetPath, "target");
   const countReport = compareCounts(sourceCounts, targetCounts);
-  const relationshipChecks = await loadRelationshipChecks(options.relationshipsPath);
-  const report = buildValidationReport(options.sourcePath, options.targetPath, countReport, relationshipChecks);
+  const relationshipChecks = await loadRelationshipChecks(relationshipsPath);
+  const report = buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks);
 
   if (options.outPath) {
     await writeReport(options.outPath, report);

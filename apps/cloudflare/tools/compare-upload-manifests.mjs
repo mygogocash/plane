@@ -2,6 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { resolveRepoPath } from "./path-utils.mjs";
+
 function usage() {
   return `Usage: node apps/cloudflare/tools/compare-upload-manifests.mjs <gcs-manifest.json> <r2-manifest.json> [--json] [--out <report.json>] [--require-checksum]
 
@@ -257,7 +259,7 @@ export function compareManifests(sourceObjects, targetObjects, options = {}) {
 }
 
 async function writeReport(outPath, report, sourcePath, targetPath) {
-  const absoluteOutPath = path.resolve(outPath);
+  const absoluteOutPath = resolveRepoPath(outPath);
   await mkdir(path.dirname(absoluteOutPath), { recursive: true });
   await writeFile(
     absoluteOutPath,
@@ -303,20 +305,22 @@ async function main() {
     return;
   }
 
-  const sourceManifest = await loadManifest(options.sourcePath, "source");
-  const targetManifest = await loadManifest(options.targetPath, "target");
+  const sourcePath = resolveRepoPath(options.sourcePath);
+  const targetPath = resolveRepoPath(options.targetPath);
+  const sourceManifest = await loadManifest(sourcePath, "source");
+  const targetManifest = await loadManifest(targetPath, "target");
   const report = compareManifests(sourceManifest, targetManifest, {
     requireChecksum: options.requireChecksum,
   });
 
   if (options.outPath) {
-    await writeReport(options.outPath, report, options.sourcePath, options.targetPath);
+    await writeReport(options.outPath, report, sourcePath, targetPath);
   }
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    printHumanReport(report, options.sourcePath, options.targetPath);
+    printHumanReport(report, sourcePath, targetPath);
   }
 
   process.exitCode = report.ok ? 0 : 1;

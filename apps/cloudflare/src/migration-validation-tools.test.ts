@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 const packageRoot = path.resolve(__dirname, "..");
+const repoRoot = path.resolve(packageRoot, "..", "..");
 
 function runTool(args: string[]) {
   try {
@@ -67,6 +68,36 @@ describe("migration validation tools", () => {
         relationship_checks_failed: 0,
       },
     });
+    expect(fileReport).toMatchObject({ ok: true });
+  });
+
+  it("writes relative D1 import reports from the repository root when run through the package", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relativeOutPath = ".tmp/manut-cloudflare-test/d1-report.json";
+    const repoOutPath = path.join(repoRoot, relativeOutPath);
+    const packageOutPath = path.join(packageRoot, relativeOutPath);
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+    await rm(path.dirname(packageOutPath), { recursive: true, force: true });
+    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1 } }));
+    await writeFile(targetPath, JSON.stringify([{ table: "workspaces", count: 1 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--json",
+      "--out",
+      relativeOutPath,
+    ]);
+    const fileReport = JSON.parse(await readFile(repoOutPath, "utf8"));
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+    await rm(path.dirname(packageOutPath), { recursive: true, force: true });
+
+    expect(result.exitCode).toBe(0);
     expect(fileReport).toMatchObject({ ok: true });
   });
 
