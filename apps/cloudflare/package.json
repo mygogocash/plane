@@ -11,6 +11,7 @@
     "d1:inventory": "node tools/django-model-inventory.mjs",
     "uploads:compare": "node tools/compare-upload-manifests.mjs",
     "uploads:validate": "node tools/compare-upload-manifests.mjs --require-checksum",
+    "betterstack:cutover-report": "node tools/betterstack-cutover-report.mjs",
     "cutover:readiness": "node tools/cutover-readiness.mjs",
     "smoke:worker": "node tools/smoke-worker.mjs",
     "deploy:preview": "wrangler deploy --env=\"\"",

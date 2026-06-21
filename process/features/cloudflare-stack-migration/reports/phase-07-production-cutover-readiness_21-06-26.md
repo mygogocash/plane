@@ -37,6 +37,16 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 10/16`
 
+Better Stack cutover evidence command:
+
+```bash
+pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json
+```
+
+That report requires `BETTERSTACK_API_TOKEN` and expects all three Better Stack
+monitors to be `up`: `manut.xyz`, `app.manut.xyz`, and
+`app.manut.xyz API instances`.
+
 ## Preview Cloudflare Smoke
 
 Report:

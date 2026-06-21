@@ -117,19 +117,21 @@ Better Stack monitor provisioning is tracked in:
 - `.github/workflows/betterstack-monitoring.yml`
 
 The script is aligned with the current Better Stack `Manut XYZ` setup shown in the
-dashboard. It creates or updates two visible uptime monitors by default:
+dashboard. It creates or updates three visible uptime monitors by default:
 
 - `app.manut.xyz`: `https://app.manut.xyz`, expects `200` and keyword `Manut`.
 - `manut.xyz`: `https://manut.xyz`, expects `200` and keyword `Manut`.
+- `app.manut.xyz API instances`: `https://app.manut.xyz/api/instances/`, expects `200`
+  and keyword `current_version`.
 
 The sync matches existing monitors by name or by URL after removing trailing slashes, so it
 does not create a duplicate when Better Stack stores `https://app.manut.xyz` and the script
 uses `https://app.manut.xyz/`.
 
-An optional API endpoint monitor can also be enabled:
-
-- `app.manut.xyz API instances`: `https://app.manut.xyz/api/instances/`, expects `200`
-  and keyword `current_version`.
+The workflow also uploads `phase-07-betterstack-cutover`, a JSON evidence report generated
+by `apps/cloudflare/tools/betterstack-cutover-report.mjs`. Download that artifact and commit
+it as `process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json`
+when all three monitors are `up` and the live endpoint probes pass.
 
 Required GitHub secret:
 
@@ -148,7 +150,7 @@ Optional repository variables:
 - `BETTERSTACK_APP_KEYWORD`, default `Manut`
 - `BETTERSTACK_SITE_KEYWORD`, default `Manut`
 - `BETTERSTACK_API_KEYWORD`, default `current_version`
-- `BETTERSTACK_INCLUDE_API_MONITOR`, default `false`
+- `BETTERSTACK_INCLUDE_API_MONITOR`, default `true`
 - `BETTERSTACK_POLICY_ID`
 - `BETTERSTACK_MONITOR_GROUP_ID`
 

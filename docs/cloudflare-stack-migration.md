@@ -61,6 +61,7 @@ pnpm --filter @manut/cloudflare d1:compare -- <postgres-counts.json> <d1-counts.
 pnpm --filter @manut/cloudflare d1:validate-import -- <postgres-counts.json> <d1-counts.json> --relationships <relationship-checks.json> --out process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json
 pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manifest.json>
 pnpm --filter @manut/cloudflare uploads:validate -- <gcs-manifest.json> <r2-manifest.json> --out process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json
+pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json
 pnpm --filter @manut/cloudflare cutover:readiness
 pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app-preview.bettergogocash.workers.dev
 ```

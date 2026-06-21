@@ -24,7 +24,7 @@ env:
   BETTERSTACK_APP_KEYWORD: ${{ vars.BETTERSTACK_APP_KEYWORD || 'Manut' }}
   BETTERSTACK_SITE_KEYWORD: ${{ vars.BETTERSTACK_SITE_KEYWORD || 'Manut' }}
   BETTERSTACK_API_KEYWORD: ${{ vars.BETTERSTACK_API_KEYWORD || 'current_version' }}
-  BETTERSTACK_INCLUDE_API_MONITOR: ${{ vars.BETTERSTACK_INCLUDE_API_MONITOR || 'false' }}
+  BETTERSTACK_INCLUDE_API_MONITOR: ${{ vars.BETTERSTACK_INCLUDE_API_MONITOR || 'true' }}
   BETTERSTACK_POLICY_ID: ${{ vars.BETTERSTACK_POLICY_ID }}
   BETTERSTACK_MONITOR_GROUP_ID: ${{ vars.BETTERSTACK_MONITOR_GROUP_ID }}
 
@@ -49,6 +49,20 @@ jobs:
           fi
           ./.github/ops/betterstack/sync-manut-monitors.sh "${args[@]}"
 
+      - name: Capture Better Stack cutover report
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          node apps/cloudflare/tools/betterstack-cutover-report.mjs \
+            --json \
+            --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+
+      - name: Upload Better Stack cutover report
+        if: ${{ inputs.dry_run == false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-07-betterstack-cutover
+          path: ${{ runner.temp }}/phase-07-betterstack-cutover_21-06-26.json
+
       - name: Write monitoring summary
         run: |
           {
@@ -59,4 +73,5 @@ jobs:
             echo "Check frequency: \`${BETTERSTACK_CHECK_FREQUENCY}s\`"
             echo "Monitors: \`${BETTERSTACK_APP_MONITOR_NAME}\` and \`${BETTERSTACK_SITE_MONITOR_NAME}\`"
             echo "API monitor enabled: \`${BETTERSTACK_INCLUDE_API_MONITOR}\`"
+            echo "Cutover report artifact: \`phase-07-betterstack-cutover\`"
           } >> "$GITHUB_STEP_SUMMARY"

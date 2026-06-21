@@ -19,7 +19,7 @@ api_name="${BETTERSTACK_API_MONITOR_NAME:-app.manut.xyz API instances}"
 app_keyword="${BETTERSTACK_APP_KEYWORD:-Manut}"
 site_keyword="${BETTERSTACK_SITE_KEYWORD:-Manut}"
 api_keyword="${BETTERSTACK_API_KEYWORD:-current_version}"
-include_api_monitor="${BETTERSTACK_INCLUDE_API_MONITOR:-false}"
+include_api_monitor="${BETTERSTACK_INCLUDE_API_MONITOR:-true}"
 policy_id="${BETTERSTACK_POLICY_ID:-}"
 monitor_group_id="${BETTERSTACK_MONITOR_GROUP_ID:-}"
 

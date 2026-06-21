@@ -674,7 +674,7 @@ jobs:
       BETTERSTACK_APP_KEYWORD: ${{ vars.BETTERSTACK_APP_KEYWORD || 'Manut' }}
       BETTERSTACK_SITE_KEYWORD: ${{ vars.BETTERSTACK_SITE_KEYWORD || 'Manut' }}
       BETTERSTACK_API_KEYWORD: ${{ vars.BETTERSTACK_API_KEYWORD || 'current_version' }}
-      BETTERSTACK_INCLUDE_API_MONITOR: ${{ vars.BETTERSTACK_INCLUDE_API_MONITOR || 'false' }}
+      BETTERSTACK_INCLUDE_API_MONITOR: ${{ vars.BETTERSTACK_INCLUDE_API_MONITOR || 'true' }}
       BETTERSTACK_POLICY_ID: ${{ vars.BETTERSTACK_POLICY_ID }}
       BETTERSTACK_MONITOR_GROUP_ID: ${{ vars.BETTERSTACK_MONITOR_GROUP_ID }}
     steps:
@@ -683,6 +683,18 @@ jobs:
 
       - name: Sync Better Stack uptime monitors
         run: ./.github/ops/betterstack/sync-manut-monitors.sh
+
+      - name: Capture Better Stack cutover report
+        run: |
+          node apps/cloudflare/tools/betterstack-cutover-report.mjs \
+            --json \
+            --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+
+      - name: Upload Better Stack cutover report
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-07-betterstack-cutover
+          path: ${{ runner.temp }}/phase-07-betterstack-cutover_21-06-26.json
 
       - name: Write Better Stack summary
         run: |
@@ -693,4 +705,5 @@ jobs:
             echo "Site URL: \`${BETTERSTACK_SITE_URL}\`"
             echo "Monitors: \`${BETTERSTACK_APP_MONITOR_NAME}\` and \`${BETTERSTACK_SITE_MONITOR_NAME}\`"
             echo "API monitor enabled: \`${BETTERSTACK_INCLUDE_API_MONITOR}\`"
+            echo "Cutover report artifact: \`phase-07-betterstack-cutover\`"
           } >> "$GITHUB_STEP_SUMMARY"
