@@ -19,7 +19,13 @@ export type EdgeRouteClassification =
       reason: "unsupported-app-shell-method";
     };
 
-const localWorkerPaths = new Set(["/healthz", "/api/instances", "/api/instances/", "/api/cloudflare/migration-status"]);
+const localWorkerPaths = new Set([
+  "/healthz",
+  "/api/instances",
+  "/api/instances/",
+  "/api/cloudflare/migration-status",
+  "/api/cloudflare/routes",
+]);
 
 const staticPathPrefixes = ["/assets/", "/static/", "/_next/", "/build/", "/images/", "/fonts/", "/icons/"] as const;
 
@@ -153,7 +159,11 @@ function hasRequestBody(method: string): boolean {
   return method !== "GET" && method !== "HEAD";
 }
 
-export function buildLegacyProxyRequest(request: Request, legacyOrigin: string): Request {
+export function buildLegacyProxyRequest(
+  request: Request,
+  legacyOrigin: string,
+  contract?: LegacyRouteContract
+): Request {
   const requestUrl = new URL(request.url);
   const targetUrl = buildLegacyUrl(requestUrl, legacyOrigin);
   const headers = new Headers(request.headers);
@@ -162,6 +172,9 @@ export function buildLegacyProxyRequest(request: Request, legacyOrigin: string):
   headers.set("x-forwarded-host", requestUrl.host);
   headers.set("x-forwarded-proto", requestUrl.protocol.replace(":", ""));
   headers.set("x-manut-edge-route", "legacy-gke");
+  if (contract) {
+    headers.set("x-manut-edge-contract", contract);
+  }
 
   const init: RequestInit = {
     headers,
@@ -176,23 +189,51 @@ export function buildLegacyProxyRequest(request: Request, legacyOrigin: string):
   return new Request(targetUrl.toString(), init);
 }
 
-function legacyOriginResponse(error: string, message: string): Response {
+function withLegacyProxyHeaders(response: Response, contract?: LegacyRouteContract): Response {
+  const headers = new Headers(response.headers);
+
+  headers.set("x-manut-edge-route", "legacy-gke");
+  headers.set("x-manut-cloudflare-phase", "frontend-edge-routing");
+  if (contract) {
+    headers.set("x-manut-edge-contract", contract);
+  }
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
+}
+
+function legacyOriginResponse(error: string, message: string, contract?: LegacyRouteContract): Response {
   return Response.json(
     {
       error,
       message,
     },
-    { status: 502 }
+    {
+      status: 502,
+      headers: {
+        "x-manut-edge-route": "legacy-gke",
+        "x-manut-cloudflare-phase": "frontend-edge-routing",
+        ...(contract ? { "x-manut-edge-contract": contract } : {}),
+      },
+    }
   );
 }
 
-export async function proxyToLegacyOrigin(request: Request, env: CloudflareBindings): Promise<Response> {
+export async function proxyToLegacyOrigin(
+  request: Request,
+  env: CloudflareBindings,
+  contract?: LegacyRouteContract
+): Promise<Response> {
   const legacyOrigin = env.LEGACY_GKE_ORIGIN?.trim();
 
   if (!legacyOrigin) {
     return legacyOriginResponse(
       "LEGACY_GKE_ORIGIN_NOT_CONFIGURED",
-      "This route is a legacy proxy candidate, but LEGACY_GKE_ORIGIN is not configured."
+      "This route is a legacy proxy candidate, but LEGACY_GKE_ORIGIN is not configured.",
+      contract
     );
   }
 
@@ -203,13 +244,19 @@ export async function proxyToLegacyOrigin(request: Request, env: CloudflareBindi
     if (legacyUrl.origin === requestUrl.origin) {
       return legacyOriginResponse(
         "LEGACY_GKE_ORIGIN_MATCHES_WORKER_ORIGIN",
-        "Refusing to proxy to the same origin as the Worker request."
+        "Refusing to proxy to the same origin as the Worker request.",
+        contract
       );
     }
 
-    return await fetch(buildLegacyProxyRequest(request, legacyOrigin));
+    const response = await fetch(buildLegacyProxyRequest(request, legacyOrigin, contract));
+    return withLegacyProxyHeaders(response, contract);
   } catch (error) {
     console.error("LEGACY_GKE_PROXY_FAILED", error);
-    return legacyOriginResponse("LEGACY_GKE_PROXY_FAILED", "Failed to proxy the request to the legacy GKE origin.");
+    return legacyOriginResponse(
+      "LEGACY_GKE_PROXY_FAILED",
+      "Failed to proxy the request to the legacy GKE origin.",
+      contract
+    );
   }
 }

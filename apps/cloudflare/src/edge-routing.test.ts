@@ -56,13 +56,15 @@ describe("legacy proxy helper", () => {
   it("builds a legacy origin request while preserving path and search", () => {
     const proxyRequest = buildLegacyProxyRequest(
       new Request("https://app.manut.xyz/api/workspaces/?cursor=abc"),
-      "https://legacy-gke.manut.internal"
+      "https://legacy-gke.manut.internal",
+      "api"
     );
 
     expect(proxyRequest.url).toBe("https://legacy-gke.manut.internal/api/workspaces/?cursor=abc");
     expect(proxyRequest.method).toBe("GET");
     expect(proxyRequest.headers.get("x-forwarded-host")).toBe("app.manut.xyz");
     expect(proxyRequest.headers.get("x-manut-edge-route")).toBe("legacy-gke");
+    expect(proxyRequest.headers.get("x-manut-edge-contract")).toBe("api");
   });
 
   it("proxies candidate routes to the configured legacy GKE origin", async () => {
@@ -80,9 +82,16 @@ describe("legacy proxy helper", () => {
       LEGACY_GKE_ORIGIN: "https://legacy-gke.manut.internal",
     } satisfies CloudflareBindings;
 
-    const response = await proxyToLegacyOrigin(new Request("https://app.manut.xyz/auth/login?next=%2Fspaces"), env);
+    const response = await proxyToLegacyOrigin(
+      new Request("https://app.manut.xyz/auth/login?next=%2Fspaces"),
+      env,
+      "auth"
+    );
 
     expect(response.status).toBe(209);
+    expect(response.headers.get("x-manut-edge-route")).toBe("legacy-gke");
+    expect(response.headers.get("x-manut-edge-contract")).toBe("auth");
+    expect(response.headers.get("x-manut-cloudflare-phase")).toBe("frontend-edge-routing");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toEqual({
       proxied_url: "https://legacy-gke.manut.internal/auth/login?next=%2Fspaces",

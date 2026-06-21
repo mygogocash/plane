@@ -21,6 +21,30 @@ const migrationPhases = [
   "decommission",
 ] as const;
 
+const routeMapSamples = [
+  { path: "/healthz", purpose: "runtime health" },
+  { path: "/api/instances/", purpose: "instance metadata contract" },
+  { path: "/api/cloudflare/migration-status", purpose: "migration status contract" },
+  { path: "/api/workspaces/", purpose: "legacy API contract" },
+  { path: "/auth/login", purpose: "legacy auth contract" },
+  { path: "/live/workspace/ws-id/", purpose: "legacy live contract" },
+  { path: "/uploads/workspace/logo.png", purpose: "legacy upload compatibility path" },
+  { path: "/spaces", purpose: "legacy public spaces contract" },
+  { path: "/god-mode", purpose: "legacy admin contract" },
+  { path: "/assets/index.js", purpose: "static frontend asset path" },
+  { path: "/", purpose: "frontend app shell" },
+] as const;
+
+function describeRoute(path: string, purpose: string, appOrigin: string) {
+  const classification = classifyEdgeRoute(new Request(new URL(path, appOrigin).toString()));
+
+  return {
+    method: "GET",
+    purpose,
+    ...classification,
+  };
+}
+
 app.get("/healthz", (c) =>
   c.json({
     ok: true,
@@ -33,8 +57,8 @@ app.get("/api/instances/", async (c) => c.json(await buildInstancePayload(c.env)
 
 app.get("/api/cloudflare/migration-status", (c) =>
   c.json({
-    status: "foundation",
-    active_phase: "cloudflare-foundation",
+    status: "frontend-edge-routing",
+    active_phase: "frontend-edge-routing",
     app_origin: c.env.APP_ORIGIN ?? "https://app.manut.xyz",
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
     data_target: "d1",
@@ -45,11 +69,29 @@ app.get("/api/cloudflare/migration-status", (c) =>
   })
 );
 
+app.get("/api/cloudflare/routes", (c) => {
+  const appOrigin = c.env.APP_ORIGIN ?? "https://app.manut.xyz";
+
+  return c.json({
+    status: "frontend-edge-routing",
+    active_phase: "frontend-edge-routing",
+    app_origin: appOrigin,
+    cutover_ready: false,
+    legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
+    routes: routeMapSamples.map((route) => describeRoute(route.path, route.purpose, appOrigin)),
+    notes: [
+      "This route map is a shadow-routing contract only.",
+      "app.manut.xyz must remain on GKE until the later cutover gate is explicitly approved.",
+      "LEGACY_GKE_ORIGIN is intentionally reported only as configured/not configured.",
+    ],
+  });
+});
+
 app.all("*", async (c) => {
   const classification = classifyEdgeRoute(c.req.raw);
 
   if (classification.action === "legacy-proxy") {
-    return proxyToLegacyOrigin(c.req.raw, c.env);
+    return proxyToLegacyOrigin(c.req.raw, c.env, classification.contract);
   }
 
   return c.json(

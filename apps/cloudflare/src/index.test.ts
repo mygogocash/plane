@@ -47,8 +47,8 @@ describe("Manut Cloudflare Worker foundation", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      status: "foundation",
-      active_phase: "cloudflare-foundation",
+      status: "frontend-edge-routing",
+      active_phase: "frontend-edge-routing",
       app_origin: "https://app.manut.xyz",
       legacy_proxy_configured: false,
       data_target: "d1",
@@ -56,6 +56,36 @@ describe("Manut Cloudflare Worker foundation", () => {
       queue_target: "cloudflare-queues",
       live_target: "durable-objects",
     });
+  });
+
+  it("publishes the Phase 2 route map without exposing the legacy origin", async () => {
+    const response = await app.request(
+      "/api/cloudflare/routes",
+      {},
+      {
+        ...env,
+        LEGACY_GKE_ORIGIN: "https://legacy-gke.manut.internal",
+      }
+    );
+
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body).toMatchObject({
+      status: "frontend-edge-routing",
+      active_phase: "frontend-edge-routing",
+      cutover_ready: false,
+      legacy_proxy_configured: true,
+    });
+    expect(JSON.stringify(body)).not.toContain("legacy-gke.manut.internal");
+    expect(body.routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ action: "local", path: "/api/instances/" }),
+        expect.objectContaining({ action: "legacy-proxy", contract: "api", path: "/api/workspaces/" }),
+        expect.objectContaining({ action: "legacy-proxy", contract: "static", path: "/assets/index.js" }),
+        expect.objectContaining({ action: "legacy-proxy", contract: "app-shell", path: "/" }),
+      ])
+    );
   });
 
   it("keeps uploads on the legacy path until R2 cutover is configured", async () => {

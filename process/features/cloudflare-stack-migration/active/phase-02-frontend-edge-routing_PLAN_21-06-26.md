@@ -1,6 +1,6 @@
 # Phase 2 - Frontend and Edge Routing
 
-**Status:** IN PROGRESS for route foundation, production routing blocked
+**Status:** CODE DONE and locally verified for route foundation; production routing blocked
 
 ## Objective
 
@@ -40,3 +40,9 @@ public rollback action is required.
 - Legacy proxy behavior is explicit and observable.
 - No route silently claims migration completion before the backend/asset service
   exists.
+
+## Phase 2 Evidence
+
+- Report: `process/features/cloudflare-stack-migration/reports/phase-02-frontend-edge-routing-evidence_21-06-26.md`
+- Local Worker route map: `/api/cloudflare/routes`
+- Production cutover status: blocked until Phase 3/4/5 validation and authenticated smoke pass.
