@@ -162,6 +162,34 @@ describe("migration validation tools", () => {
     });
   });
 
+  it("prints canonical upload validation JSON with manifest paths", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-r2-validation-"));
+    const sourcePath = path.join(root, "gcs-manifest.json");
+    const targetPath = path.join(root, "r2-manifest.json");
+
+    await writeFile(sourcePath, JSON.stringify([{ key: "workspace/logo.png", size: 12, sha256: "abc" }]));
+    await writeFile(targetPath, JSON.stringify([{ key: "workspace/logo.png", size: 12, sha256: "abc" }]));
+
+    const result = runTool([
+      "tools/compare-upload-manifests.mjs",
+      sourcePath,
+      targetPath,
+      "--require-checksum",
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(report).toMatchObject({
+      ok: true,
+      source_manifest: sourcePath,
+      target_manifest: targetPath,
+      checksumPolicy: {
+        requireSharedChecksum: true,
+      },
+    });
+  });
+
   it("rejects duplicate D1 count rows instead of silently overwriting them", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
     const sourcePath = path.join(root, "postgres-counts.json");

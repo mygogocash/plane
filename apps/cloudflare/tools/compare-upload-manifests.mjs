@@ -258,23 +258,20 @@ export function compareManifests(sourceObjects, targetObjects, options = {}) {
   };
 }
 
-async function writeReport(outPath, report, sourcePath, targetPath) {
+function buildReport(report, sourcePath, targetPath) {
+  return {
+    generated_at: new Date().toISOString(),
+    ok: report.ok,
+    source_manifest: path.normalize(sourcePath),
+    target_manifest: path.normalize(targetPath),
+    ...report,
+  };
+}
+
+async function writeReport(outPath, report) {
   const absoluteOutPath = resolveRepoPath(outPath);
   await mkdir(path.dirname(absoluteOutPath), { recursive: true });
-  await writeFile(
-    absoluteOutPath,
-    `${JSON.stringify(
-      {
-        generated_at: new Date().toISOString(),
-        ok: report.ok,
-        source_manifest: path.normalize(sourcePath),
-        target_manifest: path.normalize(targetPath),
-        ...report,
-      },
-      null,
-      2
-    )}\n`
-  );
+  await writeFile(absoluteOutPath, `${JSON.stringify(report, null, 2)}\n`);
 }
 
 function printHumanReport(report, sourcePath, targetPath) {
@@ -309,12 +306,13 @@ async function main() {
   const targetPath = resolveRepoPath(options.targetPath);
   const sourceManifest = await loadManifest(sourcePath, "source");
   const targetManifest = await loadManifest(targetPath, "target");
-  const report = compareManifests(sourceManifest, targetManifest, {
+  const comparison = compareManifests(sourceManifest, targetManifest, {
     requireChecksum: options.requireChecksum,
   });
+  const report = buildReport(comparison, sourcePath, targetPath);
 
   if (options.outPath) {
-    await writeReport(options.outPath, report, sourcePath, targetPath);
+    await writeReport(options.outPath, report);
   }
 
   if (options.json) {
