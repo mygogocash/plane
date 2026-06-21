@@ -49,8 +49,8 @@ describe("LiveRoomDurableObject foundation contract", () => {
       capabilities: {
         health: true,
         metadata: true,
-        websocket: false,
-        collaboration: false,
+        websocket: true,
+        collaboration: true,
       },
     });
   });
@@ -69,8 +69,8 @@ describe("LiveRoomDurableObject foundation contract", () => {
         storage: "durable-object",
       },
       capabilities: {
-        websocket: false,
-        collaboration: false,
+        websocket: true,
+        collaboration: true,
       },
     });
   });
@@ -87,7 +87,7 @@ describe("LiveRoomDurableObject foundation contract", () => {
         id: "test-room",
         status: "planned",
       },
-      message: "Live collaboration is not implemented in the Cloudflare runtime yet.",
+      message: "Live collaboration shadow primitives are available on the WebSocket upgrade path.",
     });
   });
 

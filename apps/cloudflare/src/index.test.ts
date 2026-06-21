@@ -58,6 +58,23 @@ function fakeD1(...handlers: FakeD1Handler[]): D1Database {
   } as unknown as D1Database;
 }
 
+function fakeLiveRoomsNamespace(): DurableObjectNamespace {
+  return {
+    idFromName(name: string) {
+      return { toString: () => name } as DurableObjectId;
+    },
+    get(id: DurableObjectId) {
+      return {
+        fetch(request: Request) {
+          const room = new LiveRoomDurableObject({ id, storage: undefined } as unknown as DurableObjectState, env);
+
+          return room.fetch(request);
+        },
+      } as DurableObjectStub;
+    },
+  } as DurableObjectNamespace;
+}
+
 describe("Manut Cloudflare Worker foundation", () => {
   it("reports health for the Cloudflare runtime", async () => {
     const response = await app.request("/healthz", {}, env);
@@ -306,6 +323,33 @@ describe("Manut Cloudflare Worker foundation", () => {
       storage: "durable-object",
       env: "test",
       id: "test-room",
+    });
+  });
+
+  it("exposes Durable Object live shadow diagnostics without moving /live traffic", async () => {
+    const response = await app.request(
+      "/api/cloudflare/live/rooms/shadow-room/health",
+      {},
+      {
+        ...env,
+        LIVE_ROOMS: fakeLiveRoomsNamespace(),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      service: "manut-live-room",
+      storage: "durable-object",
+      env: "test",
+      id: "shadow-room",
+      capabilities: {
+        health: true,
+        locks: true,
+        metadata: true,
+        websocket: true,
+        collaboration: true,
+      },
     });
   });
 });

@@ -40,13 +40,13 @@ Result:
 
 ## Replacement Mapping
 
-| Current dependency                | Cloudflare target             | Current status                                             |
-| --------------------------------- | ----------------------------- | ---------------------------------------------------------- |
-| RabbitMQ/Celery dispatch          | Cloudflare Queues             | Envelope validation and retry/failure behavior implemented |
-| Celery beat                       | Scheduled Workers / Workflows | Planned                                                    |
-| Redis cache                       | KV                            | JSON helper implemented                                    |
-| Redis locks / strong coordination | Durable Objects               | Room lock primitive implemented                            |
-| Node live WebSocket service       | Durable Objects WebSockets    | Planned, returns explicit not-implemented response         |
+| Current dependency                | Cloudflare target             | Current status                                                           |
+| --------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| RabbitMQ/Celery dispatch          | Cloudflare Queues             | Envelope validation and retry/failure behavior implemented               |
+| Celery beat                       | Scheduled Workers / Workflows | Planned                                                                  |
+| Redis cache                       | KV                            | JSON helper implemented                                                  |
+| Redis locks / strong coordination | Durable Objects               | Room lock primitive implemented                                          |
+| Node live WebSocket service       | Durable Objects WebSockets    | Diagnostic shadow route implemented; production `/live/*` remains legacy |
 
 ## Cutover Status
 

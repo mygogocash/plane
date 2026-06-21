@@ -12,6 +12,7 @@ describe("Cloudflare edge route classification", () => {
   it.each([
     ["/api/instances/", "local"],
     ["/api/cloudflare/migration-status", "local"],
+    ["/api/cloudflare/live/rooms/shadow-room/health", "local"],
   ])("classifies %s as %s Worker handling", (path, action) => {
     expect(classifyEdgeRoute(new Request(`https://app.manut.xyz${path}`))).toMatchObject({
       action,

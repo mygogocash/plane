@@ -29,6 +29,7 @@ const routeMapSamples = [
   { path: "/api/instances/", purpose: "instance metadata contract" },
   { path: "/api/cloudflare/d1/workspaces", purpose: "D1 workspace shadow reads" },
   { path: "/api/cloudflare/d1/workspaces/gogocash/projects", purpose: "D1 project shadow reads" },
+  { path: "/api/cloudflare/live/rooms/shadow-room/health", purpose: "Durable Object live room shadow health" },
   { path: "/api/cloudflare/migration-status", purpose: "migration status contract" },
   { path: "/api/workspaces/", purpose: "legacy API contract" },
   { path: "/auth/login", purpose: "legacy auth contract" },
@@ -105,6 +106,43 @@ app.get("/api/cloudflare/routes", (c) => {
       "LEGACY_GKE_ORIGIN is intentionally reported only as configured/not configured.",
     ],
   });
+});
+
+app.all("/api/cloudflare/live/rooms/*", async (c) => {
+  if (!c.env.LIVE_ROOMS) {
+    return c.json(
+      {
+        error: "LIVE_ROOMS_BINDING_MISSING",
+        message: "Durable Object live room binding is not configured.",
+      },
+      { status: 503 }
+    );
+  }
+
+  const url = new URL(c.req.url);
+  const match = url.pathname.match(/^\/api\/cloudflare\/live\/rooms\/([^/]+)(?:\/(.*))?$/);
+  const roomName = match ? decodeURIComponent(match[1] ?? "") : "";
+  const roomPath = match?.[2] ? `/${match[2]}` : "";
+
+  if (!roomName) {
+    return c.json(
+      {
+        error: "LIVE_ROOM_NAME_REQUIRED",
+        message: "A live room name is required.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const id = c.env.LIVE_ROOMS.idFromName(roomName);
+  const room = c.env.LIVE_ROOMS.get(id);
+  const targetUrl = new URL(
+    `/live/${encodeURIComponent(roomName)}${roomPath}`,
+    c.env.APP_ORIGIN ?? "https://app.manut.xyz"
+  );
+  targetUrl.search = url.search;
+
+  return room.fetch(new Request(targetUrl.toString(), c.req.raw));
 });
 
 app.all("*", async (c) => {

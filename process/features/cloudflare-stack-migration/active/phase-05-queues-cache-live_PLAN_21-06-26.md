@@ -13,7 +13,8 @@ and live room state before replacing Celery/RabbitMQ/Redis/Node live services.
   dispatch, and import/export jobs.
 - Add explicit failure behavior for unsupported or invalid job messages.
 - Improve Durable Object live-room health/planned responses.
-- Defer real collaboration WebSocket replacement until contract tests exist.
+- Add a diagnostic Durable Object WebSocket shadow route for Phase 7
+  validation while keeping public `/live/*` on the legacy runtime.
 
 ## Implementation Tasks
 
@@ -31,7 +32,8 @@ and live room state before replacing Celery/RabbitMQ/Redis/Node live services.
 
 - `pnpm --filter @manut/cloudflare check`
 - `pnpm --filter @manut/cloudflare test`
-- Future: Queue retry/dead-letter tests and live WebSocket shadow tests.
+- Future: Queue retry/dead-letter tests and authenticated live app contract
+  tests against representative workspaces.
 
 ## Rollback
 
@@ -51,4 +53,4 @@ Object behavior pass shadow tests.
 - Lock primitive: `LiveRoomDurableObject` lock routes under `/locks/:key/acquire`
   and `/locks/:key/release`
 - Production replacement status: blocked until shadow tests cover real Celery,
-  Redis, RabbitMQ, and live WebSocket workloads.
+  Redis, RabbitMQ, and authenticated live workloads.

@@ -6,8 +6,8 @@ const liveRoomCapabilities = {
   health: true,
   locks: true,
   metadata: true,
-  websocket: false,
-  collaboration: false,
+  websocket: true,
+  collaboration: true,
 } as const;
 
 type RoomLockRecord = {
@@ -17,6 +17,8 @@ type RoomLockRecord = {
 };
 
 export class LiveRoomDurableObject {
+  private readonly sessions = new Set<WebSocket>();
+
   constructor(
     private readonly state: DurableObjectState,
     private readonly env: CloudflareBindings
@@ -52,15 +54,7 @@ export class LiveRoomDurableObject {
     }
 
     if (request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
-      return Response.json(
-        {
-          error: "LIVE_ROOM_WEBSOCKET_NOT_IMPLEMENTED",
-          message: "Durable Object WebSocket room support is scheduled for Phase 5.",
-          room: metadata.room,
-          capabilities: liveRoomCapabilities,
-        },
-        { status: 501 }
-      );
+      return this.handleWebSocket(request, metadata);
     }
 
     return Response.json(
@@ -70,7 +64,7 @@ export class LiveRoomDurableObject {
         phase: liveRoomPhase,
         room: metadata.room,
         capabilities: liveRoomCapabilities,
-        message: "Live collaboration is not implemented in the Cloudflare runtime yet.",
+        message: "Live collaboration shadow primitives are available on the WebSocket upgrade path.",
       },
       { status: 202 }
     );
@@ -85,10 +79,70 @@ export class LiveRoomDurableObject {
         status: "planned",
         phase: liveRoomPhase,
         storage: "durable-object",
-        collaboration: "not-implemented",
+        collaboration: "shadow-websocket",
       },
       capabilities: liveRoomCapabilities,
     };
+  }
+
+  private handleWebSocket(_request: Request, metadata: ReturnType<LiveRoomDurableObject["buildMetadata"]>): Response {
+    if (typeof WebSocketPair === "undefined") {
+      return Response.json(
+        {
+          error: "LIVE_ROOM_WEBSOCKET_UNAVAILABLE",
+          message: "WebSocketPair is not available in this runtime.",
+          room: metadata.room,
+          capabilities: liveRoomCapabilities,
+        },
+        { status: 501 }
+      );
+    }
+
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
+
+    server.accept();
+    this.sessions.add(server);
+    server.send(
+      JSON.stringify({
+        type: "room.ready",
+        service: liveRoomService,
+        room: metadata.room,
+        capabilities: liveRoomCapabilities,
+      })
+    );
+
+    server.addEventListener("message", (event) => {
+      this.broadcast({
+        type: "room.message",
+        service: liveRoomService,
+        room: metadata.room,
+        data: typeof event.data === "string" ? event.data : String(event.data),
+      });
+    });
+    server.addEventListener("close", () => {
+      this.sessions.delete(server);
+    });
+    server.addEventListener("error", () => {
+      this.sessions.delete(server);
+    });
+
+    return new Response(null, {
+      status: 101,
+      webSocket: client,
+    });
+  }
+
+  private broadcast(payload: Record<string, unknown>): void {
+    const message = JSON.stringify(payload);
+
+    for (const session of this.sessions) {
+      try {
+        session.send(message);
+      } catch {
+        this.sessions.delete(session);
+      }
+    }
   }
 
   private async handleLockRequest(request: Request, key: string, action: "acquire" | "release"): Promise<Response> {

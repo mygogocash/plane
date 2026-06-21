@@ -62,7 +62,11 @@ function pathMatches(path: string, basePath: string): boolean {
 }
 
 function isLocalWorkerPath(path: string): boolean {
-  return localWorkerPaths.has(path) || /^\/api\/cloudflare\/d1\/workspaces\/[^/]+\/projects\/?$/.test(path);
+  return (
+    localWorkerPaths.has(path) ||
+    /^\/api\/cloudflare\/d1\/workspaces\/[^/]+\/projects\/?$/.test(path) ||
+    pathMatches(path, "/api/cloudflare/live/rooms")
+  );
 }
 
 function isStaticPath(path: string): boolean {

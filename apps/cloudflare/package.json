@@ -13,6 +13,7 @@
     "uploads:validate": "node tools/compare-upload-manifests.mjs --require-checksum",
     "betterstack:cutover-report": "node tools/betterstack-cutover-report.mjs",
     "cutover:readiness": "node tools/cutover-readiness.mjs",
+    "live:shadow": "node tools/live-shadow-validation.mjs",
     "smoke:worker": "node tools/smoke-worker.mjs",
     "deploy:preview": "wrangler deploy --env=\"\"",
     "deploy:production": "wrangler deploy --env production",
