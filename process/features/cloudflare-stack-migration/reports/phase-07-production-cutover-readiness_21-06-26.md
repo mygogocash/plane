@@ -147,6 +147,19 @@ The current app API had a transient non-green probe during this phase:
 Continue monitoring before using the GKE API as a parity source for Cloudflare
 contract tests or a rollback target.
 
+Follow-up live investigation at `2026-06-21T14:35:24Z` confirmed the endpoint
+had recovered with two HTTP `200` JSON samples, but Kubernetes events showed the
+earlier failure aligned with GKE Autopilot node scale-down deleting the only API
+pod. The live fallback deployment was running with a single API replica, and the
+new pod reported readiness failures while gunicorn started. The tracked
+`k8s/manut-helm-values.yaml` now sets two replicas for HTTP-facing Manut
+workloads so the planned `manut-ce` release does not repeat this node
+scale-down outage pattern. The GKE deploy smoke should also fail when any
+post-rollout sample fails instead of treating recovered samples as green.
+The current `plane-ce` fallback was scaled to two replicas for API, web, admin,
+space, and live workloads, and fallback disruption budgets were added so
+voluntary node disruption must preserve at least one HTTP-serving pod.
+
 The latest baseline in this report returned HTTP `200` for
 `https://app.manut.xyz/api/instances/`, while DNS still pointed
 `app.manut.xyz` at GKE IP `34.143.231.225`.

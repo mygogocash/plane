@@ -47,6 +47,10 @@ GitHub Actions deploys with the Manut deployer identity:
 - `k8s/app-manut-xyz-ingress.yaml`: `app.manut.xyz` and `/uploads` ingress.
 - `k8s/cert-manager-letsencrypt.yaml`: `letsencrypt-prod` issuer and app cert.
 - `k8s/github-actions-deployer-rbac.yaml`: namespace-scoped deploy permissions.
+- `k8s/manut-pod-disruption-budgets.yaml`: disruption budgets for the Manut
+  HTTP-facing workloads.
+- `k8s/plane-fallback-pod-disruption-budgets.yaml`: disruption budgets for the
+  current `plane-ce` fallback while it remains live.
 - `k8s/manut-uploads-cors.json`: Cloud Storage CORS policy.
 - `docs/gcs-plane-uploads-lifecycle.json`: non-destructive bucket lifecycle.
 
@@ -67,7 +71,23 @@ helm upgrade --install manut-app makeplane/plane-ce \
   --namespace manut-ce \
   --values k8s/manut-helm-values.yaml
 
+kubectl apply -f k8s/manut-pod-disruption-budgets.yaml
 kubectl apply -f k8s/app-manut-xyz-ingress.yaml
+```
+
+While `plane-ce` remains the production fallback, keep its HTTP-facing
+deployments at two replicas and apply the fallback disruption budgets:
+
+```bash
+kubectl -n plane-ce scale \
+  deployment/plane-app-api-wl \
+  deployment/plane-app-web-wl \
+  deployment/plane-app-admin-wl \
+  deployment/plane-app-space-wl \
+  deployment/plane-app-live-wl \
+  --replicas=2
+
+kubectl apply -f k8s/plane-fallback-pod-disruption-budgets.yaml
 ```
 
 Apply upload bucket CORS:
@@ -91,9 +111,10 @@ Pushes to `preview` deploy through `.github/workflows/ci-cd.yml`:
 1. Run web and API checks.
 2. Publish `manut-*` component images to Artifact Registry.
 3. Run the backend migrator image as `manut-app-api-migrate-*`.
-4. Set GKE deployment images for `manut-app-*` workloads.
-5. Wait for rollout status and smoke `https://app.manut.xyz/api/instances/`.
-6. Sync Better Stack uptime monitors when `BETTERSTACK_API_TOKEN` is configured.
+4. Reconcile HTTP-facing replica counts and PodDisruptionBudgets.
+5. Set GKE deployment images for `manut-app-*` workloads.
+6. Wait for rollout status and smoke `https://app.manut.xyz/api/instances/`.
+7. Sync Better Stack uptime monitors when `BETTERSTACK_API_TOKEN` is configured.
 
 Required repository variables:
 
@@ -108,6 +129,7 @@ Defaulted repository variables:
 - `GCP_REGION`
 - `GKE_CLUSTER`
 - `GKE_NAMESPACE`
+- `GKE_MIN_HTTP_REPLICAS`, default `2`
 
 ## Better Stack Monitoring
 

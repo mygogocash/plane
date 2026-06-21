@@ -39,6 +39,7 @@ env:
   GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
   GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'manut-ce-gke' }}
   GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'manut-ce' }}
+  GKE_MIN_HTTP_REPLICAS: ${{ vars.GKE_MIN_HTTP_REPLICAS || '2' }}
   GKE_SMOKE_DELAY_SECONDS: ${{ vars.GKE_SMOKE_DELAY_SECONDS || '60' }}
   GKE_SMOKE_SAMPLES: ${{ vars.GKE_SMOKE_SAMPLES || '10' }}
   DOCKER_PLATFORMS: linux/amd64
@@ -159,6 +160,8 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'turbo.json'
               - 'package.json'
+              - 'k8s/**'
+              - '.github/workflows/ci-cd.yml'
             frontend:
               - *shared
               - 'apps/web/**'
@@ -411,6 +414,9 @@ jobs:
           echo "GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT repository variables are required for GKE deployment." >&2
           exit 1
 
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
@@ -429,6 +435,63 @@ jobs:
           cluster_name: ${{ env.GKE_CLUSTER }}
           location: ${{ env.GCP_REGION }}
           project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Reconcile GKE availability guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          min_replicas="${GKE_MIN_HTTP_REPLICAS:-2}"
+          if ! [[ "$min_replicas" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::GKE_MIN_HTTP_REPLICAS must be a positive integer; got '${min_replicas}'."
+            exit 1
+          fi
+
+          pdb_file=""
+          case "${GKE_NAMESPACE}" in
+            plane-ce)
+              pdb_file="k8s/plane-fallback-pod-disruption-budgets.yaml"
+              ;;
+            manut-ce)
+              pdb_file="k8s/manut-pod-disruption-budgets.yaml"
+              ;;
+            *)
+              echo "::warning::No tracked PodDisruptionBudget manifest is mapped for namespace ${GKE_NAMESPACE}."
+              ;;
+          esac
+
+          if [ -n "$pdb_file" ]; then
+            kubectl apply -f "$pdb_file"
+          fi
+
+          scaled=()
+          scale_if_exists() {
+            local legacy_deployment="$1"
+            local manut_deployment="$2"
+            local deployment=""
+
+            if kubectl -n "${GKE_NAMESPACE}" get deployment "${manut_deployment}" >/dev/null 2>&1; then
+              deployment="${manut_deployment}"
+            elif kubectl -n "${GKE_NAMESPACE}" get deployment "${legacy_deployment}" >/dev/null 2>&1; then
+              deployment="${legacy_deployment}"
+            else
+              echo "::warning::Neither ${manut_deployment} nor ${legacy_deployment} exists in namespace ${GKE_NAMESPACE}; skipping scale guard."
+              return 0
+            fi
+
+            kubectl -n "${GKE_NAMESPACE}" scale "deployment/${deployment}" --replicas="${min_replicas}"
+            scaled+=("${deployment}")
+          }
+
+          scale_if_exists plane-app-api-wl manut-app-api-wl
+          scale_if_exists plane-app-web-wl manut-app-web-wl
+          scale_if_exists plane-app-admin-wl manut-app-admin-wl
+          scale_if_exists plane-app-space-wl manut-app-space-wl
+          scale_if_exists plane-app-live-wl manut-app-live-wl
+
+          for d in "${scaled[@]}"; do
+            kubectl -n "${GKE_NAMESPACE}" rollout status "deployment/${d}" --timeout=600s
+          done
 
       - name: Run database migrations
         if: ${{ needs.changes.outputs.migrations == 'true' }}
@@ -659,7 +722,8 @@ jobs:
             exit 1
           fi
           if [ "$failed_samples" -gt 0 ]; then
-            echo "::warning::Production smoke had ${failed_samples} transient failed sample(s) before recovery."
+            echo "::error::Production smoke had ${failed_samples} failed sample(s) after rollout."
+            exit 1
           fi
 
       - name: Write GCP deployment summary
@@ -713,6 +777,10 @@ jobs:
           node apps/cloudflare/tools/betterstack-cutover-report.mjs \
             --json \
             --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+
+      - name: Summarize Better Stack cutover report
+        if: ${{ always() }}
+        run: ./.github/ops/betterstack/summarize-cutover-report.sh "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
 
       - name: Upload Better Stack cutover report
         if: ${{ always() }}

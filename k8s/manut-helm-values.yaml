@@ -25,22 +25,27 @@ rabbitmq:
   default_password: plane
 
 web:
+  replicas: 2
   image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-frontend
   pullPolicy: Always
 
 space:
+  replicas: 2
   image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-space
   pullPolicy: Always
 
 admin:
+  replicas: 2
   image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-admin
   pullPolicy: Always
 
 live:
+  replicas: 2
   image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-live
   pullPolicy: Always
 
 api:
+  replicas: 2
   image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-backend
   pullPolicy: Always
 

@@ -1,0 +1,54 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: plane-app-api-pdb
+  namespace: plane-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: plane-ce-plane-app-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: plane-app-web-pdb
+  namespace: plane-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: plane-ce-plane-app-web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: plane-app-admin-pdb
+  namespace: plane-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: plane-ce-plane-app-admin
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: plane-app-space-pdb
+  namespace: plane-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: plane-ce-plane-app-space
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: plane-app-live-pdb
+  namespace: plane-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: plane-ce-plane-app-live

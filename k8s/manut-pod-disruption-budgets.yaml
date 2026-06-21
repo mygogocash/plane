@@ -1,0 +1,54 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: manut-app-api-pdb
+  namespace: manut-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: manut-ce-manut-app-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: manut-app-web-pdb
+  namespace: manut-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: manut-ce-manut-app-web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: manut-app-admin-pdb
+  namespace: manut-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: manut-ce-manut-app-admin
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: manut-app-space-pdb
+  namespace: manut-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: manut-ce-manut-app-space
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: manut-app-live-pdb
+  namespace: manut-ce
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.name: manut-ce-manut-app-live
