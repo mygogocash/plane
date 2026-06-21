@@ -7,8 +7,27 @@ const env = {
   APP_ENV: "test",
 } satisfies CloudflareBindings;
 
-function createLiveRoom(id = "test-room"): LiveRoomDurableObject {
-  return new LiveRoomDurableObject({ id: { toString: () => id } } as DurableObjectState, env);
+function createStorage() {
+  const values = new Map<string, unknown>();
+
+  return {
+    values,
+    storage: {
+      async get<T>(key: string): Promise<T | undefined> {
+        return values.get(key) as T | undefined;
+      },
+      async put<T>(key: string, value: T): Promise<void> {
+        values.set(key, value);
+      },
+      async delete(key: string): Promise<boolean> {
+        return values.delete(key);
+      },
+    },
+  };
+}
+
+function createLiveRoom(id = "test-room", storage = createStorage().storage): LiveRoomDurableObject {
+  return new LiveRoomDurableObject({ id: { toString: () => id }, storage } as unknown as DurableObjectState, env);
 }
 
 describe("LiveRoomDurableObject foundation contract", () => {
@@ -69,6 +88,50 @@ describe("LiveRoomDurableObject foundation contract", () => {
         status: "planned",
       },
       message: "Live collaboration is not implemented in the Cloudflare runtime yet.",
+    });
+  });
+
+  it("acquires and releases Durable Object room locks without starting collaboration", async () => {
+    const storage = createStorage();
+    const room = createLiveRoom("room-lock", storage.storage);
+
+    const acquireResponse = await room.fetch(
+      new Request("https://app.manut.xyz/live/room-lock/locks/import/acquire", {
+        body: JSON.stringify({ holder: "job-import-1", ttl_seconds: 60 }),
+        method: "POST",
+      })
+    );
+    expect(acquireResponse.status).toBe(200);
+    await expect(acquireResponse.json()).resolves.toMatchObject({
+      ok: true,
+      lock: {
+        key: "import",
+        holder: "job-import-1",
+        ttl_seconds: 60,
+      },
+    });
+
+    const conflictResponse = await room.fetch(
+      new Request("https://app.manut.xyz/live/room-lock/locks/import/acquire", {
+        body: JSON.stringify({ holder: "job-import-2", ttl_seconds: 60 }),
+        method: "POST",
+      })
+    );
+    expect(conflictResponse.status).toBe(409);
+
+    const releaseResponse = await room.fetch(
+      new Request("https://app.manut.xyz/live/room-lock/locks/import/release", {
+        body: JSON.stringify({ holder: "job-import-1" }),
+        method: "POST",
+      })
+    );
+    expect(releaseResponse.status).toBe(200);
+    await expect(releaseResponse.json()).resolves.toMatchObject({
+      ok: true,
+      lock: {
+        key: "import",
+        released: true,
+      },
     });
   });
 });

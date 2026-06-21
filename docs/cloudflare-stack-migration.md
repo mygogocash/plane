@@ -126,3 +126,28 @@ pnpm --filter @manut/cloudflare d1:compare -- postgres-counts.json d1-counts.jso
 5. Add contract tests comparing GKE and Worker responses for representative
    workspaces/projects.
 6. Add auth and membership enforcement for any user-facing route.
+
+## Queue, Cache, Lock, and Live Primitives
+
+Phase 5 keeps the current Celery/RabbitMQ/Redis/live Node services active while
+adding Cloudflare-native primitives:
+
+- Cloudflare Queues envelope validation and consumer failure behavior for
+  `upload-audit`, `migration-audit`, `email-dispatch`, and `import-export`.
+- KV JSON cache helpers under `apps/cloudflare/src/cache.ts`; missing bindings
+  return explicit `KV_BINDING_MISSING` misses instead of silent fallbacks.
+- Durable Object room locks under
+  `/live/{room}/locks/{lockKey}/acquire` and
+  `/live/{room}/locks/{lockKey}/release`; lock conflicts return HTTP `409`.
+- Live room health/metadata endpoints continue to report WebSocket
+  collaboration as not implemented until shadow tests exist.
+
+Replacement mapping:
+
+| Current GCP/GKE dependency        | Cloudflare target             | Phase 5 status                             |
+| --------------------------------- | ----------------------------- | ------------------------------------------ |
+| RabbitMQ/Celery dispatch          | Cloudflare Queues             | Envelope and retry/failure primitives only |
+| Celery beat                       | Scheduled Workers / Workflows | Planned                                    |
+| Redis cache                       | KV for cacheable JSON         | Helper implemented                         |
+| Redis locks / strong coordination | Durable Objects               | Room lock primitive implemented            |
+| Node live WebSocket service       | Durable Objects WebSockets    | Planned, not production-ready              |

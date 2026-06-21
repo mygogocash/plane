@@ -96,11 +96,13 @@ describe("Manut Cloudflare Worker foundation", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      status: "d1-backend-rewrite",
-      active_phase: "d1-backend-rewrite",
+      status: "queues-cron-cache-live",
+      active_phase: "queues-cron-cache-live",
       app_origin: "https://app.manut.xyz",
       legacy_proxy_configured: false,
+      cache_target: "kv",
       d1_shadow_domains: ["workspaces", "projects"],
+      lock_target: "durable-objects",
       data_target: "d1",
       upload_target: "r2",
       queue_target: "cloudflare-queues",

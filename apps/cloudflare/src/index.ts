@@ -71,13 +71,15 @@ app.get("/api/cloudflare/d1/workspaces/:workspaceSlug/projects", (c) =>
 
 app.get("/api/cloudflare/migration-status", (c) =>
   c.json({
-    status: "d1-backend-rewrite",
-    active_phase: "d1-backend-rewrite",
+    status: "queues-cron-cache-live",
+    active_phase: "queues-cron-cache-live",
     app_origin: c.env.APP_ORIGIN ?? "https://app.manut.xyz",
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
     r2_uploads_read_enabled: isR2UploadsReadEnabled(c.env),
+    cache_target: "kv",
     data_target: "d1",
     d1_shadow_domains: ["workspaces", "projects"],
+    lock_target: "durable-objects",
     upload_target: "r2",
     queue_target: "cloudflare-queues",
     live_target: "durable-objects",

@@ -149,4 +149,50 @@ describe("Cloudflare Queue job primitives", () => {
     expect(ack).toHaveBeenCalledTimes(1);
     expect(retry).not.toHaveBeenCalled();
   });
+
+  it("retries supported queue jobs when their handler fails", async () => {
+    const ack = vi.fn();
+    const retry = vi.fn();
+    const recordedFailures: JobFailureRecord[] = [];
+    const batch: QueueBatchLike = {
+      queue: "manut-jobs-test",
+      messages: [
+        {
+          id: "message-handler-failure-1",
+          body: validEnvelopes[0],
+          ack,
+          retry,
+        },
+      ],
+    };
+
+    const summary = await consumeJobQueue(batch, env, {
+      handlers: {
+        "upload-audit": () => {
+          throw new Error("R2 audit unavailable");
+        },
+      },
+      now: () => new Date("2026-06-21T08:00:00.000Z"),
+      recordFailure: (failure) => {
+        recordedFailures.push(failure);
+      },
+    });
+
+    expect(summary).toMatchObject({
+      accepted: 0,
+      failed: 1,
+      failures: [
+        {
+          reason: "JOB_HANDLER_FAILED",
+          retryable: true,
+          jobType: "upload-audit",
+          message: "R2 audit unavailable",
+          createdAt: "2026-06-21T08:00:00.000Z",
+        },
+      ],
+    });
+    expect(recordedFailures).toEqual(summary.failures);
+    expect(ack).not.toHaveBeenCalled();
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
 });
