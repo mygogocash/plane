@@ -58,7 +58,21 @@ Required evidence variables:
 - `LIVE_SHADOW_TEST_REPORT`
 - `AUTHENTICATED_SMOKE_REPORT`
 - `BETTERSTACK_CUTOVER_REPORT`
+- `OPERATOR_CUTOVER_APPROVAL_REPORT`
 - `CUTOVER_APPROVED=true`
+
+`OPERATOR_CUTOVER_APPROVAL_REPORT` must be generated with:
+
+```bash
+pnpm --filter @manut/cloudflare operator:approval-report -- \
+  --input operator-approval-evidence.json \
+  --out process/features/cloudflare-stack-migration/reports/phase-07-operator-cutover-approval_21-06-26.json
+```
+
+The report must include `approved_by`, `approved_at`, a valid
+`maintenance_window`, and passing evidence for maintenance-window announcement,
+rollback checkpoint, DNS change approval, write freeze, and smoke-plan
+readiness. `CUTOVER_APPROVED=true` is only valid after that report exists.
 
 ## Rollback Strategy
 

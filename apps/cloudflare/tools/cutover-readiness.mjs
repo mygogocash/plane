@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { validateAuthenticatedSmokeReport } from "./authenticated-smoke-report.mjs";
+import { validateOperatorApprovalReport } from "./operator-approval-report.mjs";
 import { validateSevenGreenDaysReport } from "./seven-green-days-report.mjs";
 
 function usage() {
@@ -26,6 +27,7 @@ Optional evidence environment variables:
   LIVE_SHADOW_TEST_REPORT
   AUTHENTICATED_SMOKE_REPORT
   BETTERSTACK_CUTOVER_REPORT
+  OPERATOR_CUTOVER_APPROVAL_REPORT
   SEVEN_GREEN_DAYS_REPORT
 
 Approval environment variables:
@@ -216,6 +218,9 @@ async function validateEvidenceJson(filePath, validationKind = null) {
     if (kind === "betterstack-cutover") {
       return validateBetterStackCutoverReport(json);
     }
+    if (kind === "operator-approval") {
+      return validateOperatorApprovalReport(json);
+    }
     if (kind === "seven-green-days") {
       return validateSevenGreenDaysReport(json);
     }
@@ -241,6 +246,9 @@ function inferValidationKindFromFilename(filename) {
   }
   if (filename.includes("betterstack-cutover")) {
     return "betterstack-cutover";
+  }
+  if (filename.includes("operator-cutover-approval")) {
+    return "operator-approval";
   }
   if (filename.includes("seven-green-days")) {
     return "seven-green-days";
@@ -364,19 +372,34 @@ function validateBetterStackCutoverReport(report) {
   return { ok: true };
 }
 
-function approvalCheck() {
+async function approvalCheck(root) {
   const approved = process.env.CUTOVER_APPROVED === "true";
+  const relativePath =
+    "process/features/cloudflare-stack-migration/reports/phase-07-operator-cutover-approval_21-06-26.json";
+  const rawPath = process.env.OPERATOR_CUTOVER_APPROVAL_REPORT ?? relativePath;
+  const absolutePath = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
+  const status = await fileStatus(absolutePath);
+  const jsonValidation = status.exists ? await validateEvidenceJson(absolutePath, "operator-approval") : { ok: true };
+  const evidenceReady = isPresentEvidence(status) && jsonValidation.ok;
+  const isPass = approved && evidenceReady;
 
   return {
     id: "operator-cutover-approval",
     label: "Explicit operator approval",
     phase: "phase-07",
-    status: approved ? "pass" : "blocked",
-    evidence: approved ? "CUTOVER_APPROVED=true" : null,
-    env: "CUTOVER_APPROVED",
-    remediation: approved
+    status: isPass ? "pass" : "blocked",
+    evidence: evidenceReady ? path.relative(root, absolutePath) : approved ? "CUTOVER_APPROVED=true" : null,
+    env: process.env.OPERATOR_CUTOVER_APPROVAL_REPORT ? "OPERATOR_CUTOVER_APPROVAL_REPORT" : null,
+    approval_env: "CUTOVER_APPROVED",
+    size_bytes: status.exists ? status.sizeBytes : null,
+    remediation: isPass
       ? null
-      : "Set CUTOVER_APPROVED=true only after maintenance window, rollback checkpoint, and operator approval are recorded.",
+      : (missingEvidenceRemediation(
+          status,
+          "Record the operator cutover approval report before setting CUTOVER_APPROVED=true."
+        ) ??
+        jsonValidation.message ??
+        "Set CUTOVER_APPROVED=true only after approval report, maintenance window, and rollback checkpoint are recorded."),
   };
 }
 
@@ -538,7 +561,7 @@ async function buildReport(root, selectedPhase) {
   const checks = [
     ...(await Promise.all(localEvidence.map((check) => requiredFileCheck({ ...check, root })))),
     ...(await Promise.all(externalEvidence.map((check) => envFileCheck({ ...check, root })))),
-    approvalCheck(),
+    await approvalCheck(root),
   ];
 
   const phase7Checks = checks.filter((check) => check.phase !== "phase-08");

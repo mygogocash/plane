@@ -308,6 +308,82 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
+  it("rejects operator approval when CUTOVER_APPROVED is set without an approval report", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+
+    const report = runReadiness(root, {
+      CUTOVER_APPROVED: "true",
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "operator-cutover-approval");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Record the operator cutover approval report before setting CUTOVER_APPROVED=true.",
+    });
+  });
+
+  it("rejects weak operator approval env override evidence even when ok is true", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "approval.json");
+    await writeFile(evidencePath, JSON.stringify({ ok: true, target_origin: "https://app.manut.xyz" }));
+
+    const report = runReadiness(root, {
+      CUTOVER_APPROVED: "true",
+      OPERATOR_CUTOVER_APPROVAL_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "operator-cutover-approval");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Operator approval report must include approved_by.",
+    });
+  });
+
+  it("accepts strongly shaped operator approval only when the explicit approval env is set", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "approval.json");
+    await writeFile(
+      evidencePath,
+      JSON.stringify({
+        ok: true,
+        cutover_approved: true,
+        approved_by: "operator@example.com",
+        approved_at: "2026-06-21T12:00:00.000Z",
+        target_origin: "https://app.manut.xyz",
+        maintenance_window: {
+          start_at: "2026-06-21T13:00:00.000Z",
+          end_at: "2026-06-21T14:00:00.000Z",
+        },
+        checks: [
+          { id: "maintenance-window-announced", ok: true, evidence: "calendar invite" },
+          { id: "rollback-checkpoint-confirmed", ok: true, evidence: "rollback DNS target documented" },
+          { id: "dns-change-approved", ok: true, evidence: "operator approved app.manut.xyz route change" },
+          { id: "write-freeze-confirmed", ok: true, evidence: "maintenance banner scheduled" },
+          { id: "smoke-plan-ready", ok: true, evidence: "public and authenticated smoke checklist ready" },
+        ],
+      })
+    );
+
+    const withoutEnv = runReadiness(root, {
+      OPERATOR_CUTOVER_APPROVAL_REPORT: evidencePath,
+    });
+    const blockedCheck = withoutEnv.checks.find((item: { id: string }) => item.id === "operator-cutover-approval");
+
+    expect(blockedCheck).toMatchObject({
+      status: "blocked",
+      remediation:
+        "Set CUTOVER_APPROVED=true only after approval report, maintenance window, and rollback checkpoint are recorded.",
+    });
+
+    const withEnv = runReadiness(root, {
+      CUTOVER_APPROVED: "true",
+      OPERATOR_CUTOVER_APPROVAL_REPORT: evidencePath,
+    });
+    const passingCheck = withEnv.checks.find((item: { id: string }) => item.id === "operator-cutover-approval");
+
+    expect(passingCheck).toMatchObject({ status: "pass" });
+  });
+
   it("accepts strongly shaped D1, R2, and Better Stack evidence for their gates", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");

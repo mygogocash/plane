@@ -64,6 +64,7 @@ pnpm --filter @manut/cloudflare uploads:validate -- <gcs-manifest.json> <r2-mani
 pnpm --filter @manut/cloudflare live:shadow -- https://manut-app.bettergogocash.workers.dev --out process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json
 pnpm --filter @manut/cloudflare auth:smoke-report -- --input <manual-auth-smoke.json> --out process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json
 pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json
+pnpm --filter @manut/cloudflare operator:approval-report -- --input <operator-approval-evidence.json> --out process/features/cloudflare-stack-migration/reports/phase-07-operator-cutover-approval_21-06-26.json
 pnpm --filter @manut/cloudflare seven-green-days:report -- --input <phase8-stability-evidence.json> --out process/features/cloudflare-stack-migration/reports/phase-08-seven-green-days_21-06-26.json
 pnpm --filter @manut/cloudflare cutover:readiness
 pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app-preview.bettergogocash.workers.dev
@@ -162,6 +163,7 @@ Required Phase 7 evidence:
 - `LIVE_SHADOW_TEST_REPORT`
 - `AUTHENTICATED_SMOKE_REPORT`
 - `BETTERSTACK_CUTOVER_REPORT`
+- `OPERATOR_CUTOVER_APPROVAL_REPORT`
 - `CUTOVER_APPROVED=true`
 
 Required Phase 8 evidence:
@@ -197,6 +199,11 @@ shape:
 - Better Stack cutover evidence must include the required `public-site`,
   `app-root`, and `api-instances` monitor checks, and every monitor check must
   be `up`.
+- Operator approval evidence must include `approved_by`, `approved_at`, a
+  valid `maintenance_window`, and passing evidence checks for maintenance-window
+  announcement, rollback checkpoint, DNS change approval, write freeze, and
+  smoke-plan readiness. The readiness gate also requires `CUTOVER_APPROVED=true`
+  after that report is present and valid.
 - Phase 8 seven-green-days evidence must set `green_days_verified: true` and
   include `cutover_at`, `verified_through`, at least seven full days between
   those timestamps, and passing evidence checks for Better Stack monitors,
@@ -206,6 +213,29 @@ shape:
 Evidence paths supplied through env vars use the gate definition for validation,
 so arbitrary file names do not bypass these contracts. High-risk evidence files
 must be JSON.
+
+## Phase 7 Operator Approval Evidence
+
+Before any `app.manut.xyz` routing change, build the operator approval report:
+
+```bash
+pnpm --filter @manut/cloudflare operator:approval-report -- \
+  --input operator-approval-evidence.json \
+  --out process/features/cloudflare-stack-migration/reports/phase-07-operator-cutover-approval_21-06-26.json
+CUTOVER_APPROVED=true pnpm --filter @manut/cloudflare cutover:readiness
+```
+
+The input must include `approved_by`, `approved_at`, `maintenance_window`, and
+these passing check IDs with evidence:
+
+- `maintenance-window-announced`
+- `rollback-checkpoint-confirmed`
+- `dns-change-approved`
+- `write-freeze-confirmed`
+- `smoke-plan-ready`
+
+The report is evidence only. It does not change DNS, apply D1 migrations, write
+to R2, or approve destructive provider actions.
 
 ## Phase 8 Seven Green Days Evidence
 
