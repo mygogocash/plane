@@ -14,7 +14,8 @@ Latest captured baseline during this report:
 - `manut.xyz` served HTTP `200` through Cloudflare and contained Manut branding.
 - `app.manut.xyz/` served HTTP `200` from the current app origin.
 - `app.manut.xyz/api/instances/` returned HTTP `503` from the current GKE app
-  path at `2026-06-21T09:19:16Z`.
+  path at `2026-06-21T09:19:16Z`, then returned HTTP `200` with JSON at
+  `2026-06-21T09:26:47Z`.
 - `app.manut.xyz` DNS still resolved to GKE IP `34.143.231.225`.
 - `/uploads` still returned the current GCS-backed HTTP `403` XML response.
 
@@ -51,6 +52,7 @@ runtime and rollback anchor.
 
 ## Production Health Note
 
-The current app API baseline is not green because `/api/instances/` returned
-HTTP `503`. Fix or consciously accept the current GKE/API incident before using
-it as a parity source for Cloudflare contract tests or a rollback target.
+The current app API had a transient non-green probe during this phase:
+`/api/instances/` returned HTTP `503` once and later returned HTTP `200`.
+Continue monitoring before using the GKE API as a parity source for Cloudflare
+contract tests or a rollback target.
