@@ -129,8 +129,15 @@ async function loadRelationshipChecks(filePath) {
 
 function buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks) {
   const failedRelationshipChecks = relationshipChecks.filter((check) => !check.ok);
-  const validationErrors =
-    relationshipChecks.length === 0 ? ["D1 import validation requires at least one relationship check."] : [];
+  const validationErrors = [];
+
+  if (countReport.matchedTableCount <= 0) {
+    validationErrors.push("D1 import validation requires at least one matched count table.");
+  }
+
+  if (relationshipChecks.length === 0) {
+    validationErrors.push("D1 import validation requires at least one relationship check.");
+  }
 
   return {
     generated_at: new Date().toISOString(),

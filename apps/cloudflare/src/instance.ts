@@ -9,17 +9,13 @@ async function readConfigValue(env: CloudflareBindings, key: string): Promise<st
     return null;
   }
 
-  try {
-    const db = drizzle(env.MANUT_DB);
-    const rows = await db
-      .select({ value: instanceConfig.value })
-      .from(instanceConfig)
-      .where(eq(instanceConfig.key, key))
-      .limit(1);
-    return rows[0]?.value ?? null;
-  } catch {
-    return null;
-  }
+  const db = drizzle(env.MANUT_DB);
+  const rows = await db
+    .select({ value: instanceConfig.value })
+    .from(instanceConfig)
+    .where(eq(instanceConfig.key, key))
+    .limit(1);
+  return rows[0]?.value ?? null;
 }
 
 export async function buildInstancePayload(env: CloudflareBindings, now = new Date()): Promise<InstancePayload> {

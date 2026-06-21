@@ -63,7 +63,19 @@ app.get("/healthz", (c) =>
   })
 );
 
-app.get("/api/instances/", async (c) => c.json(await buildInstancePayload(c.env)));
+app.get("/api/instances/", async (c) => {
+  try {
+    return c.json(await buildInstancePayload(c.env));
+  } catch {
+    return c.json(
+      {
+        error: "D1_CONFIG_READ_FAILED",
+        message: "Unable to read Manut instance config from D1.",
+      },
+      { status: 503 }
+    );
+  }
+});
 
 app.get("/api/cloudflare/d1/workspaces", (c) => handleD1WorkspacesRequest(c.req.raw, c.env));
 

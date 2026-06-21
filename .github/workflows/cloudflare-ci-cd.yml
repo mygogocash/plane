@@ -202,27 +202,99 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: pnpm --filter @manut/cloudflare deploy:production
 
-      - name: Smoke optional preview URL
-        if: ${{ inputs.cloudflare_preview_url != '' }}
+      - name: Resolve Worker smoke URL
+        id: smoke
+        env:
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          INPUT_SMOKE_URL: ${{ inputs.cloudflare_preview_url }}
+          PREVIEW_WORKER_URL: ${{ vars.CLOUDFLARE_PREVIEW_WORKER_URL || 'https://manut-app-preview.bettergogocash.workers.dev' }}
+          PRODUCTION_WORKER_URL: ${{ vars.CLOUDFLARE_PRODUCTION_WORKER_URL || 'https://manut-app.bettergogocash.workers.dev' }}
         shell: bash
         run: |
           set -euo pipefail
-          pnpm --filter @manut/cloudflare smoke:worker -- "${{ inputs.cloudflare_preview_url }}" --json --out "$RUNNER_TEMP/cloudflare-preview-smoke.json"
+          if [ -n "$INPUT_SMOKE_URL" ]; then
+            smoke_url="$INPUT_SMOKE_URL"
+          elif [ "$DEPLOY_TARGET" = "production" ]; then
+            smoke_url="$PRODUCTION_WORKER_URL"
+          else
+            smoke_url="$PREVIEW_WORKER_URL"
+          fi
+          smoke_url="${smoke_url%/}"
           {
-            echo ""
-            echo "### Cloudflare preview smoke"
-            echo ""
-            echo '```json'
-            cat "$RUNNER_TEMP/cloudflare-preview-smoke.json"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "url=$smoke_url"
+            echo "deploy_report=$RUNNER_TEMP/cloudflare-${{ inputs.deploy_target }}-deploy.json"
+            echo "smoke_report=$RUNNER_TEMP/cloudflare-${{ inputs.deploy_target }}-smoke.json"
+            echo "live_shadow_report=$RUNNER_TEMP/cloudflare-${{ inputs.deploy_target }}-live-shadow.json"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Upload preview smoke report
-        if: ${{ inputs.cloudflare_preview_url != '' }}
+      - name: Smoke deployed Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @manut/cloudflare smoke:worker -- "${{ steps.smoke.outputs.url }}" --json --out "${{ steps.smoke.outputs.smoke_report }}"
+
+      - name: Run live shadow validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @manut/cloudflare live:shadow -- "${{ steps.smoke.outputs.url }}" --json --out "${{ steps.smoke.outputs.live_shadow_report }}"
+
+      - name: Write deploy evidence report
+        env:
+          APPLY_D1_MIGRATIONS: ${{ inputs.apply_d1_migrations }}
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          DEPLOY_REPORT: ${{ steps.smoke.outputs.deploy_report }}
+          LIVE_SHADOW_REPORT: ${{ steps.smoke.outputs.live_shadow_report }}
+          SMOKE_REPORT: ${{ steps.smoke.outputs.smoke_report }}
+          SMOKE_URL: ${{ steps.smoke.outputs.url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const smoke = JSON.parse(fs.readFileSync(process.env.SMOKE_REPORT, "utf8"));
+          const liveShadow = JSON.parse(fs.readFileSync(process.env.LIVE_SHADOW_REPORT, "utf8"));
+          const deployTarget = process.env.DEPLOY_TARGET;
+          const checks = {
+            worker_deploy: true,
+            worker_smoke: smoke.ok === true,
+            live_shadow: liveShadow.ok === true,
+            remote_d1_migrations: deployTarget !== "production" || process.env.APPLY_D1_MIGRATIONS === "true",
+          };
+          const report = {
+            generated_at: new Date().toISOString(),
+            ok: Object.values(checks).every(Boolean),
+            environment: deployTarget,
+            dns_changed: false,
+            worker: {
+              name: deployTarget === "production" ? "manut-app" : "manut-app-preview",
+              url: process.env.SMOKE_URL,
+              version_id: process.env.GITHUB_SHA,
+            },
+            checks,
+            evidence: {
+              smoke_report: path.basename(process.env.SMOKE_REPORT),
+              live_shadow_report: path.basename(process.env.LIVE_SHADOW_REPORT),
+            },
+            notes: [
+              "This deploy published the Cloudflare Worker to workers.dev.",
+              "app.manut.xyz DNS is not changed by this workflow.",
+              "GKE rollback remains retained until the explicit cutover gate is approved.",
+            ],
+          };
+          fs.writeFileSync(process.env.DEPLOY_REPORT, `${JSON.stringify(report, null, 2)}\n`);
+          NODE
+
+      - name: Upload Cloudflare deploy evidence
         uses: actions/upload-artifact@v4
         with:
-          name: cloudflare-preview-smoke-${{ inputs.deploy_target }}
-          path: ${{ runner.temp }}/cloudflare-preview-smoke.json
+          name: cloudflare-${{ inputs.deploy_target }}-evidence
+          path: |
+            ${{ runner.temp }}/cloudflare-${{ inputs.deploy_target }}-deploy.json
+            ${{ runner.temp }}/cloudflare-${{ inputs.deploy_target }}-smoke.json
+            ${{ runner.temp }}/cloudflare-${{ inputs.deploy_target }}-live-shadow.json
 
       - name: Write deploy summary
         run: |
@@ -230,7 +302,9 @@ jobs:
             echo "### Cloudflare deploy"
             echo ""
             echo "- Target: \`${{ inputs.deploy_target }}\`"
+            echo "- Worker smoke URL: \`${{ steps.smoke.outputs.url }}\`"
             echo "- D1 migrations requested: \`${{ inputs.apply_d1_migrations }}\`"
             echo "- Production DNS changed: \`false\`"
             echo "- GKE rollback retained: \`true\`"
+            echo "- Deploy evidence: \`cloudflare-${{ inputs.deploy_target }}-evidence\`"
           } >> "$GITHUB_STEP_SUMMARY"

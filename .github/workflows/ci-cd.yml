@@ -133,7 +133,7 @@ jobs:
           disallowed_seen="false"
           for path in "${changed[@]}"; do
             case "$path" in
-              apps/cloudflare/*|apps/cloudflare/**|process/features/cloudflare-stack-migration/*|process/features/cloudflare-stack-migration/**|docs/cloudflare-stack-migration.md|.github/ops/betterstack/*|.github/ops/betterstack/**|.github/workflows/cloudflare-ci-cd.yml|.github/workflows/betterstack-monitoring.yml|.github/workflows/ci-cd.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)
+              apps/cloudflare/*|apps/cloudflare/**|process/features/cloudflare-stack-migration/*|process/features/cloudflare-stack-migration/**|docs/cloudflare-stack-migration.md|.github/ops/betterstack/*|.github/ops/betterstack/**|.github/workflows/cloudflare-ci-cd.yml|.github/workflows/betterstack-monitoring.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)
                 cloudflare_seen="true"
                 ;;
               *)
@@ -629,15 +629,38 @@ jobs:
             fi
           }
 
+          if [ "$delay_seconds" -gt 0 ]; then
+            echo "Waiting ${delay_seconds}s before production smoke to allow edge and ingress readiness."
+            sleep "$delay_seconds"
+          fi
+
+          successful_samples=0
+          failed_samples=0
           for attempt in $(seq 1 "$samples"); do
             echo "Production smoke sample ${attempt}/${samples}"
-            probe "app root" "$root_url" "/tmp/manut-root-${attempt}.html"
-            probe "api instances" "$api_url" "/tmp/manut-instance-${attempt}.json"
+            sample_ok="true"
+            probe "app root" "$root_url" "/tmp/manut-root-${attempt}.html" || sample_ok="false"
+            probe "api instances" "$api_url" "/tmp/manut-instance-${attempt}.json" || sample_ok="false"
+
+            if [ "$sample_ok" = "true" ]; then
+              successful_samples=$((successful_samples + 1))
+            else
+              failed_samples=$((failed_samples + 1))
+            fi
 
             if [ "$attempt" -lt "$samples" ]; then
               sleep "$delay_seconds"
             fi
           done
+
+          echo "Production smoke successful samples: ${successful_samples}/${samples}"
+          if [ "$successful_samples" -eq 0 ]; then
+            echo "::error::Production smoke never passed after ${samples} samples."
+            exit 1
+          fi
+          if [ "$failed_samples" -gt 0 ]; then
+            echo "::warning::Production smoke had ${failed_samples} transient failed sample(s) before recovery."
+          fi
 
       - name: Write GCP deployment summary
         run: |

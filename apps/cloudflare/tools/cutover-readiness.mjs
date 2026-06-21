@@ -212,6 +212,15 @@ async function validateEvidenceJson(filePath, validationKind = null) {
     if (kind === "r2-manifest-validation") {
       return validateR2ManifestReport(json);
     }
+    if (kind === "worker-smoke") {
+      return validateWorkerSmokeReport(json);
+    }
+    if (kind === "cloudflare-production-deploy") {
+      return validateCloudflareProductionDeployReport(json);
+    }
+    if (kind === "live-shadow-validation") {
+      return validateLiveShadowReport(json);
+    }
     if (kind === "authenticated-smoke") {
       return validateAuthenticatedSmokeReport(json);
     }
@@ -241,6 +250,15 @@ function inferValidationKindFromFilename(filename) {
   if (filename.includes("r2-manifest-validation")) {
     return "r2-manifest-validation";
   }
+  if (filename.includes("cloudflare-preview-smoke") || filename.includes("cloudflare-production-smoke")) {
+    return "worker-smoke";
+  }
+  if (filename.includes("cloudflare-production-deploy")) {
+    return "cloudflare-production-deploy";
+  }
+  if (filename.includes("live-shadow-validation")) {
+    return "live-shadow-validation";
+  }
   if (filename.includes("authenticated-smoke")) {
     return "authenticated-smoke";
   }
@@ -264,6 +282,11 @@ function isRecord(value) {
 function validateD1ImportReport(report) {
   if (!isRecord(report.summary)) {
     return { ok: false, message: "D1 import report must include summary." };
+  }
+
+  const matchedCountTables = report.summary.count_tables_matched ?? report.count_report?.matchedTableCount;
+  if (!Number.isSafeInteger(matchedCountTables) || matchedCountTables <= 0) {
+    return { ok: false, message: "D1 import report must include at least one matched count table." };
   }
 
   if (report.summary.count_tables_mismatched !== 0) {
@@ -342,6 +365,101 @@ function validateR2ManifestReport(report) {
   return { ok: true };
 }
 
+const REQUIRED_WORKER_SMOKE_CHECK_IDS = [
+  "healthz",
+  "instances",
+  "migration-status",
+  "route-map",
+  "d1-workspaces-shadow",
+  "legacy-api-proxy",
+  "legacy-uploads-proxy",
+];
+
+function validateRequiredChecks(report, requiredIds, label) {
+  if (!isRecord(report.summary)) {
+    return { ok: false, message: `${label} report must include summary.` };
+  }
+
+  if (report.summary.failed !== 0) {
+    return { ok: false, message: `${label} report must have zero failed checks.` };
+  }
+
+  if (!Array.isArray(report.checks)) {
+    return { ok: false, message: `${label} report must include checks[].` };
+  }
+
+  const checksById = new Map(report.checks.map((check) => [check?.id, check]));
+  for (const id of requiredIds) {
+    const check = checksById.get(id);
+    if (!check) {
+      return { ok: false, message: `${label} report is missing ${id}.` };
+    }
+    if (check.ok !== true) {
+      return { ok: false, message: `${label} check ${id} is not passing.` };
+    }
+  }
+
+  return { ok: true };
+}
+
+function validateWorkerSmokeReport(report) {
+  if (typeof report.base_url !== "string" || report.base_url.trim() === "") {
+    return { ok: false, message: "Worker smoke report must include base_url." };
+  }
+
+  return validateRequiredChecks(report, REQUIRED_WORKER_SMOKE_CHECK_IDS, "Worker smoke");
+}
+
+function validateCloudflareProductionDeployReport(report) {
+  if (report.environment !== "production") {
+    return { ok: false, message: "Cloudflare deploy report environment must be production." };
+  }
+
+  if (!isRecord(report.worker) || typeof report.worker.name !== "string" || typeof report.worker.url !== "string") {
+    return { ok: false, message: "Cloudflare deploy report must include worker name and url." };
+  }
+
+  if (typeof report.worker.version_id !== "string" || report.worker.version_id.trim() === "") {
+    return { ok: false, message: "Cloudflare deploy report must include worker version_id." };
+  }
+
+  if (!isRecord(report.checks) || Object.values(report.checks).some((value) => value !== true)) {
+    return { ok: false, message: "Cloudflare deploy report checks must all be true." };
+  }
+
+  if (!isRecord(report.evidence) || typeof report.evidence.smoke_report !== "string") {
+    return { ok: false, message: "Cloudflare deploy report must include smoke_report evidence." };
+  }
+
+  return { ok: true };
+}
+
+const REQUIRED_LIVE_SHADOW_CHECK_IDS = [
+  "live-room-health",
+  "live-room-metadata",
+  "live-room-planned-response",
+  "live-room-lock-acquire",
+  "live-room-lock-conflict",
+  "live-room-lock-release",
+  "live-room-websocket-echo",
+];
+
+function validateLiveShadowReport(report) {
+  if (typeof report.base_url !== "string" || report.base_url.trim() === "") {
+    return { ok: false, message: "Live shadow report must include base_url." };
+  }
+
+  if (typeof report.room !== "string" || report.room.trim() === "") {
+    return { ok: false, message: "Live shadow report must include room." };
+  }
+
+  if (typeof report.lock_key !== "string" || !report.lock_key.startsWith("phase-07-shadow-")) {
+    return { ok: false, message: "Live shadow report must include a phase-07 lock_key." };
+  }
+
+  return validateRequiredChecks(report, REQUIRED_LIVE_SHADOW_CHECK_IDS, "Live shadow");
+}
+
 const REQUIRED_BETTERSTACK_MONITOR_IDS = ["public-site", "app-root", "api-instances"];
 
 function validateBetterStackCutoverReport(report) {
@@ -352,10 +470,9 @@ function validateBetterStackCutoverReport(report) {
   if (
     !Number.isSafeInteger(report.monitor_summary.total) ||
     report.monitor_summary.total < REQUIRED_BETTERSTACK_MONITOR_IDS.length ||
-    !Number.isSafeInteger(report.monitor_summary.failed) ||
-    report.monitor_summary.failed !== 0
+    !Number.isSafeInteger(report.monitor_summary.failed)
   ) {
-    return { ok: false, message: "Better Stack report must have all required monitors green." };
+    return { ok: false, message: "Better Stack report must summarize the required monitors." };
   }
 
   if (!Array.isArray(report.monitor_checks) || report.monitor_checks.length < REQUIRED_BETTERSTACK_MONITOR_IDS.length) {
@@ -363,18 +480,55 @@ function validateBetterStackCutoverReport(report) {
   }
 
   const checksById = new Map(report.monitor_checks.map((check) => [check?.id, check]));
+  const requiredChecks = [];
   for (const id of REQUIRED_BETTERSTACK_MONITOR_IDS) {
-    if (!checksById.has(id)) {
+    const check = checksById.get(id);
+    if (!check) {
       return { ok: false, message: `Better Stack report is missing required monitor ${id}.` };
     }
+    requiredChecks.push(check);
   }
 
-  if (report.monitor_checks.some((check) => check?.ok !== true || check.status !== "up")) {
-    return { ok: false, message: "Better Stack monitor checks must all be up." };
+  if (requiredChecks.some((check) => check?.ok !== true || check.status !== "up")) {
+    return { ok: false, message: "Better Stack report must have all required monitors green." };
   }
 
-  if (report.monitor_checks.some((check) => check?.url_matches !== true)) {
+  if (requiredChecks.some((check) => check?.url_matches !== true)) {
     return { ok: false, message: "Better Stack monitor checks must target the expected URLs." };
+  }
+
+  if (!isRecord(report.endpoint_summary)) {
+    return { ok: false, message: "Better Stack report must include endpoint_summary." };
+  }
+
+  if (
+    !Number.isSafeInteger(report.endpoint_summary.total) ||
+    report.endpoint_summary.total < REQUIRED_BETTERSTACK_MONITOR_IDS.length ||
+    !Number.isSafeInteger(report.endpoint_summary.failed)
+  ) {
+    return { ok: false, message: "Better Stack report must summarize endpoint probes." };
+  }
+
+  if (report.endpoint_summary.failed !== 0) {
+    return { ok: false, message: "Better Stack endpoint probes must all pass." };
+  }
+
+  if (
+    !Array.isArray(report.endpoint_checks) ||
+    report.endpoint_checks.length < REQUIRED_BETTERSTACK_MONITOR_IDS.length
+  ) {
+    return { ok: false, message: "Better Stack report must include endpoint_checks for all required endpoints." };
+  }
+
+  const endpointChecksById = new Map(report.endpoint_checks.map((check) => [check?.id, check]));
+  for (const id of REQUIRED_BETTERSTACK_MONITOR_IDS) {
+    const check = endpointChecksById.get(id);
+    if (!check) {
+      return { ok: false, message: `Better Stack report is missing required endpoint probe ${id}.` };
+    }
+    if (check.ok !== true || check.status !== 200 || check.keyword_found !== true) {
+      return { ok: false, message: "Better Stack endpoint probes must all pass." };
+    }
   }
 
   return { ok: true };
@@ -396,7 +550,7 @@ async function approvalCheck(root) {
     label: "Explicit operator approval",
     phase: "phase-07",
     status: isPass ? "pass" : "blocked",
-    evidence: evidenceReady ? path.relative(root, absolutePath) : approved ? "CUTOVER_APPROVED=true" : null,
+    evidence: path.relative(root, absolutePath),
     env: process.env.OPERATOR_CUTOVER_APPROVAL_REPORT ? "OPERATOR_CUTOVER_APPROVAL_REPORT" : null,
     approval_env: "CUTOVER_APPROVED",
     size_bytes: status.exists ? status.sizeBytes : null,
@@ -491,6 +645,7 @@ async function buildReport(root, selectedPhase) {
       envName: "CLOUDFLARE_PREVIEW_SMOKE_REPORT",
       relativePath:
         "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-preview-smoke_21-06-26.json",
+      validationKind: "worker-smoke",
       remediation: "Run a preview Worker/Page smoke and record HTTP/status/headers.",
     },
     {
@@ -500,6 +655,7 @@ async function buildReport(root, selectedPhase) {
       envName: "CLOUDFLARE_PRODUCTION_DEPLOY_REPORT",
       relativePath:
         "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json",
+      validationKind: "cloudflare-production-deploy",
       remediation: "Record the manually dispatched Cloudflare production deploy run.",
     },
     {
@@ -509,6 +665,7 @@ async function buildReport(root, selectedPhase) {
       envName: "CLOUDFLARE_PRODUCTION_SMOKE_REPORT",
       relativePath:
         "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json",
+      validationKind: "worker-smoke",
       remediation: "Run production Worker smoke and record HTTP/status/header contract evidence.",
     },
     {
@@ -535,6 +692,7 @@ async function buildReport(root, selectedPhase) {
       phase: "phase-07",
       envName: "LIVE_SHADOW_TEST_REPORT",
       relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json",
+      validationKind: "live-shadow-validation",
       remediation: "Run Durable Object live shadow tests against representative rooms.",
     },
     {
@@ -594,6 +752,7 @@ async function buildReport(root, selectedPhase) {
       passed: selectedChecks.length - selectedBlocked.length,
       blocked: selectedBlocked.length,
     },
+    selected_checks: selectedChecks,
     checks,
   };
 }

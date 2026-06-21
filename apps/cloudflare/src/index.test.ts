@@ -58,6 +58,18 @@ function fakeD1(...handlers: FakeD1Handler[]): D1Database {
   } as unknown as D1Database;
 }
 
+function fakeD1Throws(message = "D1 query failed"): D1Database {
+  return {
+    prepare() {
+      return {
+        all() {
+          throw new Error(message);
+        },
+      } as unknown as D1PreparedStatement;
+    },
+  } as unknown as D1Database;
+}
+
 function fakeLiveRoomsNamespace(): DurableObjectNamespace {
   return {
     idFromName(name: string) {
@@ -105,6 +117,22 @@ describe("Manut Cloudflare Worker foundation", () => {
         is_setup_done: true,
         workspaces_exist: true,
       },
+    });
+  });
+
+  it("returns an explicit error when instance config D1 reads fail", async () => {
+    const response = await app.request(
+      "/api/instances/",
+      {},
+      {
+        ...env,
+        MANUT_DB: fakeD1Throws(),
+      }
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "D1_CONFIG_READ_FAILED",
     });
   });
 
