@@ -51,6 +51,19 @@ Direct endpoint probes in that report are supplemental unless
 smoke evidence as the source of truth for live HTTP behavior when GitHub-hosted
 runners are challenged by Cloudflare.
 
+The committed report must include at least the three required monitor checks and
+all of them must be `up`. Readiness also validates high-risk evidence report
+shape for D1 import, R2 manifest parity, authenticated smoke, Better Stack
+monitor status, and Phase 8 seven-green-days evidence so generic `ok: true`
+stubs cannot unblock cutover.
+
+High-risk evidence validation is bound to the readiness gate, not to the report
+filename. Environment overrides with arbitrary file names still require the
+proper D1, R2, authenticated smoke, Better Stack, or Phase 8 JSON shape. The
+final D1 report must include a passing `count_report`; the Better Stack gate
+specifically requires `public-site`, `app-root`, and `api-instances` monitor
+checks.
+
 ## Preview Cloudflare Smoke
 
 Report:

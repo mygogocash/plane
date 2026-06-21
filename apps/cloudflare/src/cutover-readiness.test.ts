@@ -103,4 +103,264 @@ describe("cutover readiness evidence gate", () => {
       remediation: "Authenticated smoke report is missing session-refresh.",
     });
   });
+
+  it("rejects weak D1 import reports even when ok is true", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"), JSON.stringify({ ok: true }));
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import report must include summary.",
+    });
+  });
+
+  it("rejects weak D1 env override evidence even when the file name is generic", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "d1-final-evidence.json");
+    await writeFile(evidencePath, JSON.stringify({ ok: true }));
+
+    const report = runReadiness(root, {
+      D1_IMPORT_VALIDATION_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import report must include summary.",
+    });
+  });
+
+  it("rejects high-risk env override evidence when the file is not JSON", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "d1-final-evidence.txt");
+    await writeFile(evidencePath, "ok");
+
+    const report = runReadiness(root, {
+      D1_IMPORT_VALIDATION_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Evidence file must be JSON for this gate.",
+    });
+  });
+
+  it("rejects D1 reports with failed relationship rows even when summary claims success", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_mismatched: 0,
+          relationship_checks_failed: 0,
+        },
+        count_report: {
+          ok: true,
+          mismatchedTableCount: 0,
+        },
+        relationship_checks: [{ name: "projects.workspace_id", ok: false, orphan_count: 1 }],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import relationship checks must all pass with zero orphans.",
+    });
+  });
+
+  it("rejects R2 validation reports that do not enforce shared checksums", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-r2-manifest-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        checksumPolicy: { requireSharedChecksum: false },
+        sourceObjectCount: 1,
+        targetObjectCount: 1,
+        matchedObjectCount: 1,
+        mismatchedObjectCount: 0,
+        mismatches: [],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "r2-manifest-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "R2 manifest report must require shared checksums.",
+    });
+  });
+
+  it("rejects weak R2 env override evidence even when the file name is generic", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "r2-final-evidence.json");
+    await writeFile(evidencePath, JSON.stringify({ ok: true }));
+
+    const report = runReadiness(root, {
+      R2_MANIFEST_VALIDATION_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "r2-manifest-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "R2 manifest report must require shared checksums.",
+    });
+  });
+
+  it("rejects Better Stack reports unless every required monitor is up", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        monitor_summary: { total: 3, passed: 2, failed: 1 },
+        monitor_checks: [
+          { id: "public-site", ok: true, status: "up" },
+          { id: "app-root", ok: true, status: "up" },
+          { id: "api-instances", ok: false, status: "down" },
+        ],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Better Stack report must have all required monitors green.",
+    });
+  });
+
+  it("rejects Better Stack reports that omit required monitor ids", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        monitor_summary: { total: 3, passed: 3, failed: 0 },
+        monitor_checks: [
+          { id: "public-site", ok: true, status: "up" },
+          { id: "app-root", ok: true, status: "up" },
+          { id: "unrelated", ok: true, status: "up" },
+        ],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Better Stack report is missing required monitor api-instances.",
+    });
+  });
+
+  it("rejects weak Better Stack env override evidence even when the file name is generic", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "betterstack-final-evidence.json");
+    await writeFile(evidencePath, JSON.stringify({ ok: true }));
+
+    const report = runReadiness(root, {
+      BETTERSTACK_CUTOVER_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Better Stack report must include monitor_summary.",
+    });
+  });
+
+  it("rejects weak seven-green-days env override evidence even when the file name is generic", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "phase8-final-evidence.json");
+    await writeFile(evidencePath, JSON.stringify({ ok: true }));
+
+    const report = runReadiness(root, {
+      SEVEN_GREEN_DAYS_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "phase8-seven-green-days");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Seven green days report must set green_days_verified: true.",
+    });
+  });
+
+  it("accepts strongly shaped D1, R2, and Better Stack evidence for their gates", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_mismatched: 0,
+          relationship_checks_failed: 0,
+        },
+        count_report: {
+          ok: true,
+          mismatchedTableCount: 0,
+        },
+        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphanCount: 0 }],
+      })
+    );
+    await writeFile(
+      path.join(reportDir, "phase-07-r2-manifest-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        source_manifest: "gcs-manifest.json",
+        target_manifest: "r2-manifest.json",
+        checksumPolicy: { requireSharedChecksum: true },
+        sourceObjectCount: 1,
+        targetObjectCount: 1,
+        matchedObjectCount: 1,
+        mismatchedObjectCount: 0,
+        mismatches: [],
+      })
+    );
+    await writeFile(
+      path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        monitor_summary: { total: 3, passed: 3, failed: 0 },
+        monitor_checks: [
+          { id: "public-site", ok: true, status: "up" },
+          { id: "app-root", ok: true, status: "up" },
+          { id: "api-instances", ok: true, status: "up" },
+        ],
+      })
+    );
+
+    const report = runReadiness(root);
+    const checksById = new Map(report.checks.map((item: { id: string }) => [item.id, item]));
+
+    expect(checksById.get("d1-import-validation")).toMatchObject({ status: "pass" });
+    expect(checksById.get("r2-manifest-validation")).toMatchObject({ status: "pass" });
+    expect(checksById.get("betterstack-cutover-green")).toMatchObject({ status: "pass" });
+  });
 });

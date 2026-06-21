@@ -180,7 +180,28 @@ The readiness checker uses that default path if
 The production Worker deploy gate has local evidence at
 `process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json`.
 The readiness checker validates JSON evidence by requiring `ok: true`, including
-for env-provided report paths.
+for env-provided report paths. High-risk cutover gates also validate the report
+shape:
+
+- D1 import evidence must include `summary`, `source_counts`,
+  `target_counts`, passing `count_report`, at least one `relationship_checks`
+  entry, zero count-table mismatches, zero failed relationship checks, and every
+  relationship row must pass with zero orphans.
+- R2 manifest evidence must come from strict checksum validation, include
+  `source_manifest` and `target_manifest`, require shared checksums, have zero
+  object mismatches, include an empty `mismatches` array, and have equal source,
+  target, and matched object counts.
+- Authenticated smoke evidence must include every required workflow check with
+  passing evidence.
+- Better Stack cutover evidence must include the required `public-site`,
+  `app-root`, and `api-instances` monitor checks, and every monitor check must
+  be `up`.
+- Phase 8 seven-green-days evidence must set `green_days_verified: true` and
+  include `cutover_at` and `verified_through`.
+
+Evidence paths supplied through env vars use the gate definition for validation,
+so arbitrary file names do not bypass these contracts. High-risk evidence files
+must be JSON.
 
 ## Cutover Rule
 
@@ -268,6 +289,11 @@ Accepted manifest rows can include `key`, `name`, `object`, `objectKey`, or
 plain `uploads:compare` only for exploratory size/key checks; it is not strong
 enough to satisfy Phase 7 cutover evidence.
 
+The final `phase-07-r2-manifest-validation_21-06-26.json` report will be
+rejected by readiness unless it has `checksumPolicy.requireSharedChecksum: true`,
+`mismatchedObjectCount: 0`, `source_manifest`, `target_manifest`, and equal
+source, target, and matched object counts, plus an empty `mismatches` array.
+
 The R2 bucket must deny anonymous listing for bare `/uploads` and allow object
 reads only through the Worker route. CORS for `manut-uploads-prod` should allow
 `https://app.manut.xyz` for the methods used by the app upload flow.
@@ -298,6 +324,11 @@ pnpm --filter @manut/cloudflare d1:validate-import -- postgres-counts.json d1-co
 5. Add contract tests comparing GKE and Worker responses for representative
    workspaces/projects.
 6. Add auth and membership enforcement for any user-facing route.
+
+The final `phase-07-d1-import-validation_21-06-26.json` report will be rejected
+by readiness unless it has zero count mismatches, zero failed relationship
+checks, `source_counts`, `target_counts`, passing `count_report`, and at least
+one relationship check where every row passes with zero orphans.
 
 Relationship check files can use:
 

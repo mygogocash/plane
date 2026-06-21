@@ -150,7 +150,7 @@ async function requiredFileCheck({ id, label, phase, root, relativePath, remedia
   };
 }
 
-async function envFileCheck({ id, label, phase, root, envName, relativePath, remediation }) {
+async function envFileCheck({ id, label, phase, root, envName, relativePath, remediation, validationKind }) {
   const rawPath = process.env[envName] ?? relativePath;
 
   if (!rawPath) {
@@ -167,7 +167,7 @@ async function envFileCheck({ id, label, phase, root, envName, relativePath, rem
 
   const absolutePath = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
   const status = await fileStatus(absolutePath);
-  const jsonValidation = status.exists ? await validateEvidenceJson(absolutePath) : { ok: true };
+  const jsonValidation = status.exists ? await validateEvidenceJson(absolutePath, validationKind) : { ok: true };
   const fallbackRemediation = relativePath ? remediation : `${envName} points to a missing file.`;
   const isPass = isPresentEvidence(status) && jsonValidation.ok;
 
@@ -183,8 +183,11 @@ async function envFileCheck({ id, label, phase, root, envName, relativePath, rem
   };
 }
 
-async function validateEvidenceJson(filePath) {
+async function validateEvidenceJson(filePath, validationKind = null) {
   if (!filePath.endsWith(".json")) {
+    if (validationKind) {
+      return { ok: false, message: "Evidence file must be JSON for this gate." };
+    }
     return { ok: true };
   }
 
@@ -197,8 +200,23 @@ async function validateEvidenceJson(filePath) {
       };
     }
 
-    if (path.basename(filePath).includes("authenticated-smoke")) {
+    const filename = path.basename(filePath);
+    const kind = validationKind ?? inferValidationKindFromFilename(filename);
+
+    if (kind === "d1-import-validation") {
+      return validateD1ImportReport(json);
+    }
+    if (kind === "r2-manifest-validation") {
+      return validateR2ManifestReport(json);
+    }
+    if (kind === "authenticated-smoke") {
       return validateAuthenticatedSmokeReport(json);
+    }
+    if (kind === "betterstack-cutover") {
+      return validateBetterStackCutoverReport(json);
+    }
+    if (kind === "seven-green-days") {
+      return validateSevenGreenDaysReport(json);
     }
 
     return { ok: true };
@@ -208,6 +226,153 @@ async function validateEvidenceJson(filePath) {
       message: `Evidence JSON is invalid: ${error.message}`,
     };
   }
+}
+
+function inferValidationKindFromFilename(filename) {
+  if (filename.includes("d1-import-validation")) {
+    return "d1-import-validation";
+  }
+  if (filename.includes("r2-manifest-validation")) {
+    return "r2-manifest-validation";
+  }
+  if (filename.includes("authenticated-smoke")) {
+    return "authenticated-smoke";
+  }
+  if (filename.includes("betterstack-cutover")) {
+    return "betterstack-cutover";
+  }
+  if (filename.includes("seven-green-days")) {
+    return "seven-green-days";
+  }
+
+  return null;
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateD1ImportReport(report) {
+  if (!isRecord(report.summary)) {
+    return { ok: false, message: "D1 import report must include summary." };
+  }
+
+  if (report.summary.count_tables_mismatched !== 0) {
+    return { ok: false, message: "D1 import report must have zero count table mismatches." };
+  }
+
+  if (report.summary.relationship_checks_failed !== 0) {
+    return { ok: false, message: "D1 import report must have zero failed relationship checks." };
+  }
+
+  if (
+    typeof report.source_counts !== "string" ||
+    !report.source_counts ||
+    typeof report.target_counts !== "string" ||
+    !report.target_counts
+  ) {
+    return { ok: false, message: "D1 import report must include source_counts and target_counts." };
+  }
+
+  if (!isRecord(report.count_report) || report.count_report.ok !== true) {
+    return { ok: false, message: "D1 import count_report must pass." };
+  }
+
+  if (!Array.isArray(report.relationship_checks) || report.relationship_checks.length === 0) {
+    return { ok: false, message: "D1 import report must include relationship_checks." };
+  }
+
+  const failedRelationship = report.relationship_checks.find((check) => {
+    const orphanCount = check?.orphan_count ?? check?.orphanCount;
+    return check?.ok !== true || orphanCount !== 0;
+  });
+  if (failedRelationship) {
+    return { ok: false, message: "D1 import relationship checks must all pass with zero orphans." };
+  }
+
+  return { ok: true };
+}
+
+function validateR2ManifestReport(report) {
+  if (!isRecord(report.checksumPolicy) || report.checksumPolicy.requireSharedChecksum !== true) {
+    return { ok: false, message: "R2 manifest report must require shared checksums." };
+  }
+
+  if (report.mismatchedObjectCount !== 0) {
+    return { ok: false, message: "R2 manifest report must have zero object mismatches." };
+  }
+
+  if (!Number.isSafeInteger(report.sourceObjectCount) || report.sourceObjectCount < 0) {
+    return { ok: false, message: "R2 manifest report must include sourceObjectCount." };
+  }
+
+  if (!Number.isSafeInteger(report.targetObjectCount) || report.targetObjectCount < 0) {
+    return { ok: false, message: "R2 manifest report must include targetObjectCount." };
+  }
+
+  if (!Number.isSafeInteger(report.matchedObjectCount) || report.matchedObjectCount < 0) {
+    return { ok: false, message: "R2 manifest report must include matchedObjectCount." };
+  }
+
+  if (report.sourceObjectCount !== report.targetObjectCount || report.sourceObjectCount !== report.matchedObjectCount) {
+    return { ok: false, message: "R2 manifest report source, target, and matched object counts must match." };
+  }
+
+  if (typeof report.source_manifest !== "string" || typeof report.target_manifest !== "string") {
+    return { ok: false, message: "R2 manifest report must include source_manifest and target_manifest." };
+  }
+
+  if (!Array.isArray(report.mismatches) || report.mismatches.length !== 0) {
+    return { ok: false, message: "R2 manifest report must include an empty mismatches array." };
+  }
+
+  return { ok: true };
+}
+
+const REQUIRED_BETTERSTACK_MONITOR_IDS = ["public-site", "app-root", "api-instances"];
+
+function validateBetterStackCutoverReport(report) {
+  if (!isRecord(report.monitor_summary)) {
+    return { ok: false, message: "Better Stack report must include monitor_summary." };
+  }
+
+  if (
+    !Number.isSafeInteger(report.monitor_summary.total) ||
+    report.monitor_summary.total < REQUIRED_BETTERSTACK_MONITOR_IDS.length ||
+    !Number.isSafeInteger(report.monitor_summary.failed) ||
+    report.monitor_summary.failed !== 0
+  ) {
+    return { ok: false, message: "Better Stack report must have all required monitors green." };
+  }
+
+  if (!Array.isArray(report.monitor_checks) || report.monitor_checks.length < REQUIRED_BETTERSTACK_MONITOR_IDS.length) {
+    return { ok: false, message: "Better Stack report must include monitor_checks for all required monitors." };
+  }
+
+  const checksById = new Map(report.monitor_checks.map((check) => [check?.id, check]));
+  for (const id of REQUIRED_BETTERSTACK_MONITOR_IDS) {
+    if (!checksById.has(id)) {
+      return { ok: false, message: `Better Stack report is missing required monitor ${id}.` };
+    }
+  }
+
+  if (report.monitor_checks.some((check) => check?.ok !== true || check.status !== "up")) {
+    return { ok: false, message: "Better Stack monitor checks must all be up." };
+  }
+
+  return { ok: true };
+}
+
+function validateSevenGreenDaysReport(report) {
+  if (report.green_days_verified !== true) {
+    return { ok: false, message: "Seven green days report must set green_days_verified: true." };
+  }
+
+  if (!report.cutover_at || !report.verified_through) {
+    return { ok: false, message: "Seven green days report must include cutover_at and verified_through." };
+  }
+
+  return { ok: true };
 }
 
 function approvalCheck() {
@@ -332,6 +497,7 @@ async function buildReport(root, selectedPhase) {
       phase: "phase-07",
       envName: "D1_IMPORT_VALIDATION_REPORT",
       relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json",
+      validationKind: "d1-import-validation",
       remediation: "Import the final Postgres delta into D1 and record row-count and relationship checks.",
     },
     {
@@ -340,6 +506,7 @@ async function buildReport(root, selectedPhase) {
       phase: "phase-07",
       envName: "R2_MANIFEST_VALIDATION_REPORT",
       relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json",
+      validationKind: "r2-manifest-validation",
       remediation: "Compare final GCS and R2 manifests and record object count/checksum results.",
     },
     {
@@ -356,6 +523,7 @@ async function buildReport(root, selectedPhase) {
       phase: "phase-07",
       envName: "AUTHENTICATED_SMOKE_REPORT",
       relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json",
+      validationKind: "authenticated-smoke",
       remediation: "Record login, workspace, project, work-item, upload, admin, and public-space smoke evidence.",
     },
     {
@@ -364,6 +532,7 @@ async function buildReport(root, selectedPhase) {
       phase: "phase-07",
       envName: "BETTERSTACK_CUTOVER_REPORT",
       relativePath: "process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json",
+      validationKind: "betterstack-cutover",
       remediation: "Record green monitors for manut.xyz, app.manut.xyz, and /api/instances/.",
     },
     {
@@ -372,6 +541,7 @@ async function buildReport(root, selectedPhase) {
       phase: "phase-08",
       envName: "SEVEN_GREEN_DAYS_REPORT",
       relativePath: "process/features/cloudflare-stack-migration/reports/phase-08-seven-green-days_21-06-26.json",
+      validationKind: "seven-green-days",
       remediation: "Wait 7 green days after cutover and record Better Stack/runtime evidence.",
     },
   ];
