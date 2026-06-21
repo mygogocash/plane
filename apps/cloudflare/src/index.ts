@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
+import { handleD1WorkspaceProjectsRequest, handleD1WorkspacesRequest } from "./d1-core";
 import { buildInstancePayload } from "./instance";
 import { LiveRoomDurableObject } from "./live-room";
 import type { CloudflareBindings } from "./types";
@@ -25,6 +26,8 @@ const migrationPhases = [
 const routeMapSamples = [
   { path: "/healthz", purpose: "runtime health" },
   { path: "/api/instances/", purpose: "instance metadata contract" },
+  { path: "/api/cloudflare/d1/workspaces", purpose: "D1 workspace shadow reads" },
+  { path: "/api/cloudflare/d1/workspaces/gogocash/projects", purpose: "D1 project shadow reads" },
   { path: "/api/cloudflare/migration-status", purpose: "migration status contract" },
   { path: "/api/workspaces/", purpose: "legacy API contract" },
   { path: "/auth/login", purpose: "legacy auth contract" },
@@ -60,14 +63,21 @@ app.get("/healthz", (c) =>
 
 app.get("/api/instances/", async (c) => c.json(await buildInstancePayload(c.env)));
 
+app.get("/api/cloudflare/d1/workspaces", (c) => handleD1WorkspacesRequest(c.req.raw, c.env));
+
+app.get("/api/cloudflare/d1/workspaces/:workspaceSlug/projects", (c) =>
+  handleD1WorkspaceProjectsRequest(c.req.raw, c.env, c.req.param("workspaceSlug"))
+);
+
 app.get("/api/cloudflare/migration-status", (c) =>
   c.json({
-    status: "frontend-edge-routing",
-    active_phase: "frontend-edge-routing",
+    status: "d1-backend-rewrite",
+    active_phase: "d1-backend-rewrite",
     app_origin: c.env.APP_ORIGIN ?? "https://app.manut.xyz",
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
     r2_uploads_read_enabled: isR2UploadsReadEnabled(c.env),
     data_target: "d1",
+    d1_shadow_domains: ["workspaces", "projects"],
     upload_target: "r2",
     queue_target: "cloudflare-queues",
     live_target: "durable-objects",

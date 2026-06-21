@@ -20,7 +20,9 @@ function parseArgs(argv) {
   const options = { json: false };
 
   for (const arg of argv) {
-    if (arg === "--help" || arg === "-h") {
+    if (arg === "--") {
+      continue;
+    } else if (arg === "--help" || arg === "-h") {
       options.help = true;
     } else if (arg === "--json") {
       options.json = true;

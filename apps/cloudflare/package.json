@@ -6,6 +6,8 @@
   "scripts": {
     "baseline": "node tools/capture-baseline.mjs",
     "check": "tsc --noEmit",
+    "d1:compare": "node tools/compare-row-counts.mjs",
+    "d1:inventory": "node tools/django-model-inventory.mjs",
     "uploads:compare": "node tools/compare-upload-manifests.mjs",
     "deploy:preview": "wrangler deploy --env=\"\"",
     "deploy:production": "wrangler deploy --env production",

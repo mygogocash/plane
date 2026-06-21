@@ -71,6 +71,17 @@ translation of Django tables:
 - `upload_object_audit`
 - `job_audit`
 
+Phase 4 now adds the first D1 shadow domain tables:
+
+- `workspaces`
+- `projects`
+
+These are intentionally a read-only subset for shadow validation. They preserve
+core identity, slug, active-row, timestamp, workspace foreign-key, project
+identifier, and project network fields. They do not yet represent the complete
+Django model surface, membership/auth checks, JSON preferences, archive/close
+settings, cover/logo asset joins, or write behavior.
+
 ## Representative High-Risk Models
 
 | Model       | Table         | Fields | Relations | Static concerns                                                                                |
@@ -160,3 +171,23 @@ Start D1 API parity with read-only instance metadata:
 
 This candidate aligns with the existing `/api/instances/` public contract and has
 the smallest relational blast radius in the current inventory.
+
+## First Shadow Domain Slice
+
+The first true D1-backed domain slice is read-only workspace/project metadata:
+
+- `GET /api/cloudflare/d1/workspaces`
+- `GET /api/cloudflare/d1/workspaces/:workspaceSlug/projects`
+
+These routes are Cloudflare-only diagnostics. They do not replace production
+`/api/v1/*` routes, and they intentionally report `cutover_ready: false`.
+
+Validation requirements before this slice can graduate beyond shadow reads:
+
+- export row counts for `workspaces` and `projects` from Cloud SQL;
+- import the same rows into D1;
+- compare counts with `pnpm --filter @manut/cloudflare d1:compare`;
+- validate project-to-workspace relationships and active soft-delete filters;
+- add contract tests comparing representative GKE and Worker responses;
+- add auth/membership enforcement before any user-facing production route uses
+  the D1 implementation.

@@ -54,3 +54,25 @@ export const jobAudit = sqliteTable("job_audit", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const workspaces = sqliteTable("workspaces", {
+  id: text("id").primaryKey().notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  logo: text("logo"),
+  timezone: text("timezone").notNull().default("UTC"),
+  deletedAt: text("deleted_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey().notNull(),
+  workspaceId: text("workspace_id").notNull(),
+  name: text("name").notNull(),
+  identifier: text("identifier").notNull(),
+  network: integer("network").notNull().default(2),
+  deletedAt: text("deleted_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});

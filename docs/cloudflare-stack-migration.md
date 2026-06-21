@@ -52,6 +52,8 @@ The Cloudflare token must be a raw API token, not a Global API Key, not a
 pnpm --filter @manut/cloudflare check
 pnpm --filter @manut/cloudflare test
 pnpm --filter @manut/cloudflare baseline
+pnpm --filter @manut/cloudflare d1:inventory -- --root apps/api/plane
+pnpm --filter @manut/cloudflare d1:compare -- <postgres-counts.json> <d1-counts.json>
 pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manifest.json>
 ```
 
@@ -97,3 +99,30 @@ Accepted manifest rows can include `key`, `name`, `object`, `objectKey`, or
 The R2 bucket must deny anonymous listing for bare `/uploads` and allow object
 reads only through the Worker route. CORS for `manut-uploads-prod` should allow
 `https://app.manut.xyz` for the methods used by the app upload flow.
+
+## D1 Shadow Reads
+
+The first D1-backed backend slice is intentionally exposed only through
+Cloudflare diagnostic routes:
+
+- `GET /api/cloudflare/d1/workspaces`
+- `GET /api/cloudflare/d1/workspaces/:workspaceSlug/projects`
+
+These routes require the `MANUT_DB` binding. If it is missing, they return
+`503 D1_BINDING_MISSING`. They do not replace production `/api/v1/*` routes and
+always report `cutover_ready: false`.
+
+Before any production API route can use this D1 implementation:
+
+1. Export Cloud SQL row counts for the selected tables.
+2. Import the same rows into the matching D1 tables.
+3. Compare counts:
+
+```bash
+pnpm --filter @manut/cloudflare d1:compare -- postgres-counts.json d1-counts.json
+```
+
+4. Validate relationships such as `projects.workspace_id -> workspaces.id`.
+5. Add contract tests comparing GKE and Worker responses for representative
+   workspaces/projects.
+6. Add auth and membership enforcement for any user-facing route.

@@ -9,6 +9,55 @@ const env = {
   INSTANCE_VERSION: "test-version",
 } satisfies CloudflareBindings;
 
+type FakeD1Handler = {
+  match: string;
+  rows: Record<string, unknown>[];
+};
+
+function fakeD1(...handlers: FakeD1Handler[]): D1Database {
+  return {
+    prepare(query: string) {
+      const handler = handlers.find(({ match }) => query.includes(match));
+      const state = {
+        args: [] as unknown[],
+      };
+
+      return {
+        bind(...args: unknown[]) {
+          state.args = args;
+          return this;
+        },
+        async all<T>() {
+          const rows =
+            handler?.rows.filter((row) => {
+              if (!query.includes("w.slug = ?")) {
+                return true;
+              }
+              return row.slug === state.args[0] || row.workspace_slug === state.args[0];
+            }) ?? [];
+
+          return {
+            results: rows as T[],
+            success: true,
+            meta: {},
+          };
+        },
+        async first<T>() {
+          const rows =
+            handler?.rows.filter((row) => {
+              if (!query.includes("slug = ?")) {
+                return true;
+              }
+              return row.slug === state.args[0];
+            }) ?? [];
+
+          return (rows[0] ?? null) as T | null;
+        },
+      } as unknown as D1PreparedStatement;
+    },
+  } as unknown as D1Database;
+}
+
 describe("Manut Cloudflare Worker foundation", () => {
   it("reports health for the Cloudflare runtime", async () => {
     const response = await app.request("/healthz", {}, env);
@@ -47,10 +96,11 @@ describe("Manut Cloudflare Worker foundation", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      status: "frontend-edge-routing",
-      active_phase: "frontend-edge-routing",
+      status: "d1-backend-rewrite",
+      active_phase: "d1-backend-rewrite",
       app_origin: "https://app.manut.xyz",
       legacy_proxy_configured: false,
+      d1_shadow_domains: ["workspaces", "projects"],
       data_target: "d1",
       upload_target: "r2",
       queue_target: "cloudflare-queues",
@@ -111,6 +161,104 @@ describe("Manut Cloudflare Worker foundation", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: "R2_UPLOADS_BINDING_MISSING",
       key: "workspace/logo.png",
+    });
+  });
+
+  it("returns an explicit D1 error when workspace shadow reads are not configured", async () => {
+    const response = await app.request("/api/cloudflare/d1/workspaces", {}, env);
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "D1_BINDING_MISSING",
+      domain: "workspaces",
+    });
+  });
+
+  it("lists D1 workspaces through the shadow read endpoint", async () => {
+    const response = await app.request(
+      "/api/cloudflare/d1/workspaces",
+      {},
+      {
+        ...env,
+        MANUT_DB: fakeD1({
+          match: "FROM workspaces",
+          rows: [
+            {
+              id: "workspace-1",
+              name: "GoGoCash",
+              slug: "gogocash",
+              logo: null,
+              timezone: "Asia/Bangkok",
+              created_at: "2026-06-01T00:00:00.000Z",
+              updated_at: "2026-06-02T00:00:00.000Z",
+            },
+          ],
+        }),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      status: "shadow",
+      source: "d1",
+      cutover_ready: false,
+      workspaces: [
+        {
+          id: "workspace-1",
+          name: "GoGoCash",
+          slug: "gogocash",
+          logo_url: null,
+          timezone: "Asia/Bangkok",
+        },
+      ],
+    });
+  });
+
+  it("lists D1 projects scoped to a workspace slug through the shadow read endpoint", async () => {
+    const response = await app.request(
+      "/api/cloudflare/d1/workspaces/gogocash/projects",
+      {},
+      {
+        ...env,
+        MANUT_DB: fakeD1(
+          {
+            match: "FROM workspaces",
+            rows: [{ id: "workspace-1", slug: "gogocash" }],
+          },
+          {
+            match: "FROM projects",
+            rows: [
+              {
+                id: "project-1",
+                workspace_id: "workspace-1",
+                workspace_slug: "gogocash",
+                name: "Mobile App",
+                identifier: "MOB",
+                network: 2,
+                created_at: "2026-06-03T00:00:00.000Z",
+                updated_at: "2026-06-04T00:00:00.000Z",
+              },
+            ],
+          }
+        ),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      status: "shadow",
+      source: "d1",
+      cutover_ready: false,
+      workspace_slug: "gogocash",
+      projects: [
+        {
+          id: "project-1",
+          workspace_id: "workspace-1",
+          name: "Mobile App",
+          identifier: "MOB",
+          network: 2,
+        },
+      ],
     });
   });
 

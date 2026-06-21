@@ -23,6 +23,7 @@ const localWorkerPaths = new Set([
   "/healthz",
   "/api/instances",
   "/api/instances/",
+  "/api/cloudflare/d1/workspaces",
   "/api/cloudflare/migration-status",
   "/api/cloudflare/routes",
 ]);
@@ -61,7 +62,7 @@ function pathMatches(path: string, basePath: string): boolean {
 }
 
 function isLocalWorkerPath(path: string): boolean {
-  return localWorkerPaths.has(path);
+  return localWorkerPaths.has(path) || /^\/api\/cloudflare\/d1\/workspaces\/[^/]+\/projects\/?$/.test(path);
 }
 
 function isStaticPath(path: string): boolean {
