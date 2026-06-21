@@ -3,11 +3,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 function usage() {
-  return `Usage: node apps/cloudflare/tools/betterstack-cutover-report.mjs [--json] [--out <report.json>]
+  return `Usage: node apps/cloudflare/tools/betterstack-cutover-report.mjs [--json] [--out <report.json>] [--require-endpoint-probes]
 
 Captures Phase 7 Better Stack cutover evidence for manut.xyz, app.manut.xyz,
-and app.manut.xyz/api/instances/. The command also probes the live endpoints so
-the report proves both external monitor state and current HTTP behavior.
+and app.manut.xyz/api/instances/. The command also records live endpoint probes
+as supplemental evidence. Use --require-endpoint-probes only from a network that
+is allowed through Cloudflare bot protection.
 
 Environment:
   BETTERSTACK_API_TOKEN       required for ok:true monitor evidence
@@ -28,6 +29,7 @@ function parseArgs(argv) {
   const options = {
     json: false,
     outPath: null,
+    requireEndpointProbes: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -44,6 +46,11 @@ function parseArgs(argv) {
 
     if (arg === "--json") {
       options.json = true;
+      continue;
+    }
+
+    if (arg === "--require-endpoint-probes") {
+      options.requireEndpointProbes = true;
       continue;
     }
 
@@ -298,10 +305,13 @@ async function main() {
   }
 
   const failedEndpointChecks = endpointChecks.filter((check) => !check.ok);
+  const requireEndpointProbes =
+    options.requireEndpointProbes || process.env.BETTERSTACK_REQUIRE_ENDPOINT_PROBES === "true";
   const report = {
     generated_at: new Date().toISOString(),
-    ok: monitorReport.ok && failedEndpointChecks.length === 0,
+    ok: monitorReport.ok && (!requireEndpointProbes || failedEndpointChecks.length === 0),
     api_base: apiBase,
+    endpoint_probes_required: requireEndpointProbes,
     monitor_summary: monitorReport.summary,
     endpoint_summary: {
       total: endpointChecks.length,

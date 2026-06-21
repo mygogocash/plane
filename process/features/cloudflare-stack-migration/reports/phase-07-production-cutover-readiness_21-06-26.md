@@ -46,6 +46,10 @@ pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/feat
 That report requires `BETTERSTACK_API_TOKEN` and expects all three Better Stack
 monitors to be `up`: `manut.xyz`, `app.manut.xyz`, and
 `app.manut.xyz API instances`.
+Direct endpoint probes in that report are supplemental unless
+`BETTERSTACK_REQUIRE_ENDPOINT_PROBES=true` is set. Keep the separate production
+smoke evidence as the source of truth for live HTTP behavior when GitHub-hosted
+runners are challenged by Cloudflare.
 
 ## Preview Cloudflare Smoke
 

@@ -51,17 +51,19 @@ jobs:
 
       - name: Capture Better Stack cutover report
         if: ${{ inputs.dry_run == false }}
+        continue-on-error: true
         run: |
           node apps/cloudflare/tools/betterstack-cutover-report.mjs \
             --json \
             --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
 
       - name: Upload Better Stack cutover report
-        if: ${{ inputs.dry_run == false }}
+        if: ${{ always() && inputs.dry_run == false }}
         uses: actions/upload-artifact@v4
         with:
           name: phase-07-betterstack-cutover
           path: ${{ runner.temp }}/phase-07-betterstack-cutover_21-06-26.json
+          if-no-files-found: warn
 
       - name: Write monitoring summary
         run: |

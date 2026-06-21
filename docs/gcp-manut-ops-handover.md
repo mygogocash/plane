@@ -132,6 +132,9 @@ The workflow also uploads `phase-07-betterstack-cutover`, a JSON evidence report
 by `apps/cloudflare/tools/betterstack-cutover-report.mjs`. Download that artifact and commit
 it as `process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json`
 when all three monitors are `up` and the live endpoint probes pass.
+The report records direct endpoint probes as supplemental evidence by default;
+set `BETTERSTACK_REQUIRE_ENDPOINT_PROBES=true` only from a runner/network allowed
+through Cloudflare bot protection.
 
 Required GitHub secret:
 
@@ -151,6 +154,7 @@ Optional repository variables:
 - `BETTERSTACK_SITE_KEYWORD`, default `Manut`
 - `BETTERSTACK_API_KEYWORD`, default `current_version`
 - `BETTERSTACK_INCLUDE_API_MONITOR`, default `true`
+- `BETTERSTACK_REQUIRE_ENDPOINT_PROBES`, default `false`
 - `BETTERSTACK_POLICY_ID`
 - `BETTERSTACK_MONITOR_GROUP_ID`
 
