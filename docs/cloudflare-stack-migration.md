@@ -55,6 +55,7 @@ pnpm --filter @manut/cloudflare baseline
 pnpm --filter @manut/cloudflare d1:inventory -- --root apps/api/plane
 pnpm --filter @manut/cloudflare d1:compare -- <postgres-counts.json> <d1-counts.json>
 pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manifest.json>
+pnpm --filter @manut/cloudflare cutover:readiness
 ```
 
 ## Provisioning Order
@@ -95,6 +96,40 @@ Manual deploy requires:
 
 The deploy job writes `Production DNS changed: false` and does not update
 `app.manut.xyz` routing. DNS cutover remains a separate Phase 7 operator action.
+
+## Cutover Readiness Checker
+
+Phase 7 and Phase 8 are blocked until the local readiness gate passes:
+
+```bash
+pnpm --filter @manut/cloudflare cutover:readiness
+pnpm --filter @manut/cloudflare cutover:readiness -- --phase phase-08
+```
+
+The checker is non-destructive. By default it evaluates the Phase 7 production
+cutover gate. Use `--phase phase-08` for decommission, or `--phase all` for a
+full program audit. It reads local phase reports plus explicit evidence paths
+from environment variables and exits `1` while hard gates are missing.
+
+Required Phase 7 evidence:
+
+- `CLOUDFLARE_PREVIEW_SMOKE_REPORT`
+- `CLOUDFLARE_PRODUCTION_DEPLOY_REPORT`
+- `D1_IMPORT_VALIDATION_REPORT`
+- `R2_MANIFEST_VALIDATION_REPORT`
+- `LIVE_SHADOW_TEST_REPORT`
+- `AUTHENTICATED_SMOKE_REPORT`
+- `BETTERSTACK_CUTOVER_REPORT`
+- `CUTOVER_APPROVED=true`
+
+Required Phase 8 evidence:
+
+- `SEVEN_GREEN_DAYS_REPORT`
+
+At the current migration state the expected output is `Cutover readiness:
+BLOCKED`. That is correct until preview/prod deploy evidence, D1/R2 validation,
+authenticated smoke, Better Stack checks, and explicit operator approval are
+recorded.
 
 ## Cutover Rule
 

@@ -9,6 +9,7 @@
     "d1:compare": "node tools/compare-row-counts.mjs",
     "d1:inventory": "node tools/django-model-inventory.mjs",
     "uploads:compare": "node tools/compare-upload-manifests.mjs",
+    "cutover:readiness": "node tools/cutover-readiness.mjs",
     "deploy:preview": "wrangler deploy --env=\"\"",
     "deploy:production": "wrangler deploy --env production",
     "dev": "wrangler dev",
