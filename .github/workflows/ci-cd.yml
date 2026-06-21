@@ -94,9 +94,57 @@ jobs:
       backend: ${{ steps.flags.outputs.backend }}
       proxy: ${{ steps.flags.outputs.proxy }}
       migrations: ${{ steps.flags.outputs.migrations }}
+      cloudflare_only: ${{ steps.cloudflare_only.outputs.cloudflare_only }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect Cloudflare-only change set
+        id: cloudflare_only
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          before="${{ github.event.before }}"
+          after="${GITHUB_SHA}"
+          zero="0000000000000000000000000000000000000000"
+
+          if [ "$before" = "$zero" ] || ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            before="$(git rev-parse "${after}^" 2>/dev/null || true)"
+          fi
+
+          if [ -z "$before" ]; then
+            echo "cloudflare_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mapfile -t changed < <(git diff --name-only "$before" "$after")
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "cloudflare_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cloudflare_seen="false"
+          disallowed_seen="false"
+          for path in "${changed[@]}"; do
+            case "$path" in
+              apps/cloudflare/*|apps/cloudflare/**|process/features/cloudflare-stack-migration/*|process/features/cloudflare-stack-migration/**|docs/cloudflare-stack-migration.md|.github/workflows/cloudflare-ci-cd.yml|.github/workflows/ci-cd.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)
+                cloudflare_seen="true"
+                ;;
+              *)
+                disallowed_seen="true"
+                ;;
+            esac
+          done
+
+          if [ "$cloudflare_seen" = "true" ] && [ "$disallowed_seen" = "false" ]; then
+            echo "cloudflare_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cloudflare_only=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Path filter
         id: filter
@@ -140,6 +188,7 @@ jobs:
           F_BACKEND: ${{ steps.filter.outputs.backend }}
           F_PROXY: ${{ steps.filter.outputs.proxy }}
           F_MIGRATIONS: ${{ steps.filter.outputs.migrations }}
+          CLOUDFLARE_ONLY: ${{ steps.cloudflare_only.outputs.cloudflare_only }}
         run: |
           set -euo pipefail
           # workflow_dispatch has no diff base -> force every component (full rebuild escape hatch).
@@ -148,6 +197,7 @@ jobs:
           emit() {
             local name="$1" val="$2"
             [ "$force" = "true" ] && val="true"
+            [ "${CLOUDFLARE_ONLY:-false}" = "true" ] && val="false"
             [ -z "$val" ] && val="false"
             echo "${name}=${val}" >> "$GITHUB_OUTPUT"
           }

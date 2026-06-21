@@ -15,7 +15,7 @@ Cloudflare runtime cutover work touches production traffic.
 
 ## Implementation Tasks
 
-- Add `apps/cloudflare/scripts/capture-baseline.mjs`.
+- Add `apps/cloudflare/tools/capture-baseline.mjs`.
 - Capture `manut.xyz`, `app.manut.xyz/api/instances/`, `app.manut.xyz/uploads`,
   and DNS resolution.
 - Store future baseline reports under

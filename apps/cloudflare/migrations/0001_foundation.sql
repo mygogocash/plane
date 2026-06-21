@@ -43,5 +43,4 @@ CREATE TABLE IF NOT EXISTS job_audit (
 INSERT OR IGNORE INTO instance_config (key, value)
 VALUES
   ('name', 'Manut'),
-  ('deployment_target', 'cloudflare-foundation'),
-  ('current_version', 'cloudflare-preview');
+  ('deployment_target', 'cloudflare-foundation');

@@ -1,0 +1,215 @@
+import type { CloudflareBindings } from "./types";
+
+export type LegacyRouteContract = "api" | "auth" | "live" | "uploads" | "spaces" | "god-mode" | "static" | "app-shell";
+
+export type EdgeRouteClassification =
+  | {
+      action: "local";
+      path: string;
+      reason: "worker-route" | "future-worker-route";
+    }
+  | {
+      action: "legacy-proxy";
+      contract: LegacyRouteContract;
+      path: string;
+    }
+  | {
+      action: "not-found";
+      path: string;
+      reason: "unsupported-app-shell-method";
+    };
+
+const localWorkerPaths = new Set(["/healthz", "/api/instances", "/api/instances/", "/api/cloudflare/migration-status"]);
+
+const staticPathPrefixes = ["/assets/", "/static/", "/_next/", "/build/", "/images/", "/fonts/", "/icons/"] as const;
+
+const staticFileNames = new Set([
+  "/favicon.ico",
+  "/manifest.json",
+  "/robots.txt",
+  "/service-worker.js",
+  "/site.webmanifest",
+]);
+
+const staticExtensionPattern =
+  /\.(?:avif|css|gif|ico|jpe?g|js|json|map|mjs|png|svg|ttf|txt|webmanifest|webp|woff2?|xml)$/i;
+
+function getUrl(input: Request | URL | string): URL {
+  if (input instanceof Request) {
+    return new URL(input.url);
+  }
+
+  if (input instanceof URL) {
+    return input;
+  }
+
+  return new URL(input, "https://app.manut.xyz");
+}
+
+function getMethod(input: Request | URL | string): string {
+  return input instanceof Request ? input.method.toUpperCase() : "GET";
+}
+
+function pathMatches(path: string, basePath: string): boolean {
+  return path === basePath || path.startsWith(`${basePath}/`);
+}
+
+function isLocalWorkerPath(path: string): boolean {
+  return localWorkerPaths.has(path);
+}
+
+function isStaticPath(path: string): boolean {
+  return (
+    staticFileNames.has(path) ||
+    staticPathPrefixes.some((prefix) => path.startsWith(prefix)) ||
+    staticExtensionPattern.test(path)
+  );
+}
+
+function isAppShellMethod(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
+
+function classifyLegacyContract(path: string): LegacyRouteContract | null {
+  if (pathMatches(path, "/api")) {
+    return "api";
+  }
+
+  if (pathMatches(path, "/auth")) {
+    return "auth";
+  }
+
+  if (pathMatches(path, "/live")) {
+    return "live";
+  }
+
+  if (pathMatches(path, "/uploads")) {
+    return "uploads";
+  }
+
+  if (pathMatches(path, "/spaces")) {
+    return "spaces";
+  }
+
+  if (pathMatches(path, "/god-mode")) {
+    return "god-mode";
+  }
+
+  if (isStaticPath(path)) {
+    return "static";
+  }
+
+  return null;
+}
+
+export function classifyEdgeRoute(input: Request | URL | string): EdgeRouteClassification {
+  const url = getUrl(input);
+  const path = url.pathname;
+
+  if (isLocalWorkerPath(path)) {
+    return {
+      action: "local",
+      path,
+      reason: path.startsWith("/uploads") ? "future-worker-route" : "worker-route",
+    };
+  }
+
+  const legacyContract = classifyLegacyContract(path);
+
+  if (legacyContract) {
+    return {
+      action: "legacy-proxy",
+      contract: legacyContract,
+      path,
+    };
+  }
+
+  const method = getMethod(input);
+
+  if (isAppShellMethod(method)) {
+    return {
+      action: "legacy-proxy",
+      contract: "app-shell",
+      path,
+    };
+  }
+
+  return {
+    action: "not-found",
+    path,
+    reason: "unsupported-app-shell-method",
+  };
+}
+
+function buildLegacyUrl(requestUrl: URL, legacyOrigin: string): URL {
+  const target = new URL(legacyOrigin);
+  target.pathname = requestUrl.pathname;
+  target.search = requestUrl.search;
+  target.hash = "";
+  return target;
+}
+
+function hasRequestBody(method: string): boolean {
+  return method !== "GET" && method !== "HEAD";
+}
+
+export function buildLegacyProxyRequest(request: Request, legacyOrigin: string): Request {
+  const requestUrl = new URL(request.url);
+  const targetUrl = buildLegacyUrl(requestUrl, legacyOrigin);
+  const headers = new Headers(request.headers);
+
+  headers.delete("host");
+  headers.set("x-forwarded-host", requestUrl.host);
+  headers.set("x-forwarded-proto", requestUrl.protocol.replace(":", ""));
+  headers.set("x-manut-edge-route", "legacy-gke");
+
+  const init: RequestInit = {
+    headers,
+    method: request.method,
+    redirect: "manual",
+  };
+
+  if (hasRequestBody(request.method)) {
+    init.body = request.body;
+  }
+
+  return new Request(targetUrl.toString(), init);
+}
+
+function legacyOriginResponse(error: string, message: string): Response {
+  return Response.json(
+    {
+      error,
+      message,
+    },
+    { status: 502 }
+  );
+}
+
+export async function proxyToLegacyOrigin(request: Request, env: CloudflareBindings): Promise<Response> {
+  const legacyOrigin = env.LEGACY_GKE_ORIGIN?.trim();
+
+  if (!legacyOrigin) {
+    return legacyOriginResponse(
+      "LEGACY_GKE_ORIGIN_NOT_CONFIGURED",
+      "This route is a legacy proxy candidate, but LEGACY_GKE_ORIGIN is not configured."
+    );
+  }
+
+  try {
+    const requestUrl = new URL(request.url);
+    const legacyUrl = new URL(legacyOrigin);
+
+    if (legacyUrl.origin === requestUrl.origin) {
+      return legacyOriginResponse(
+        "LEGACY_GKE_ORIGIN_MATCHES_WORKER_ORIGIN",
+        "Refusing to proxy to the same origin as the Worker request."
+      );
+    }
+
+    return await fetch(buildLegacyProxyRequest(request, legacyOrigin));
+  } catch (error) {
+    console.error("LEGACY_GKE_PROXY_FAILED", error);
+    return legacyOriginResponse("LEGACY_GKE_PROXY_FAILED", "Failed to proxy the request to the legacy GKE origin.");
+  }
+}

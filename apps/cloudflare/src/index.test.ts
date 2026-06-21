@@ -26,14 +26,19 @@ describe("Manut Cloudflare Worker foundation", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      current_version: "test-version",
-      deployment_target: "cloudflare",
-      is_email_password_enabled: true,
-      is_google_enabled: false,
-      is_setup_done: true,
-      is_signup_enabled: false,
-      name: "Manut",
-      smtp: true,
+      config: {
+        enable_signup: false,
+        is_email_password_enabled: true,
+        is_google_enabled: false,
+        is_smtp_configured: true,
+      },
+      instance: {
+        current_version: "test-version",
+        edition: "PLANE_COMMUNITY",
+        instance_name: "Manut",
+        is_setup_done: true,
+        workspaces_exist: true,
+      },
     });
   });
 
@@ -45,7 +50,7 @@ describe("Manut Cloudflare Worker foundation", () => {
       status: "foundation",
       active_phase: "cloudflare-foundation",
       app_origin: "https://app.manut.xyz",
-      legacy_origin: "https://app.manut.xyz",
+      legacy_proxy_configured: false,
       data_target: "d1",
       upload_target: "r2",
       queue_target: "cloudflare-queues",
@@ -53,12 +58,12 @@ describe("Manut Cloudflare Worker foundation", () => {
     });
   });
 
-  it("keeps uploads blocked until the R2 phase implements compatibility", async () => {
+  it("keeps uploads on the legacy path until R2 cutover is configured", async () => {
     const response = await app.request("/uploads/workspace/logo.png", {}, env);
 
-    expect(response.status).toBe(501);
+    expect(response.status).toBe(502);
     await expect(response.json()).resolves.toMatchObject({
-      error: "R2_UPLOAD_ROUTE_NOT_IMPLEMENTED",
+      error: "LEGACY_GKE_ORIGIN_NOT_CONFIGURED",
     });
   });
 

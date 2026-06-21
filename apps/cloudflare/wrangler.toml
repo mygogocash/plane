@@ -9,7 +9,6 @@ enabled = true
 [vars]
 APP_ENV = "preview"
 APP_ORIGIN = "https://app.manut.xyz"
-LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-preview"
 
 [[d1_databases]]
@@ -49,7 +48,6 @@ name = "manut-app"
 [env.production.vars]
 APP_ENV = "production"
 APP_ORIGIN = "https://app.manut.xyz"
-LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-production"
 
 [[env.production.d1_databases]]

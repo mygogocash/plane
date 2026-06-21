@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
 import { buildInstancePayload } from "./instance";
 import { LiveRoomDurableObject } from "./live-room";
 import type { CloudflareBindings } from "./types";
@@ -35,7 +36,7 @@ app.get("/api/cloudflare/migration-status", (c) =>
     status: "foundation",
     active_phase: "cloudflare-foundation",
     app_origin: c.env.APP_ORIGIN ?? "https://app.manut.xyz",
-    legacy_origin: c.env.LEGACY_GKE_ORIGIN ?? "https://app.manut.xyz",
+    legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
     data_target: "d1",
     upload_target: "r2",
     queue_target: "cloudflare-queues",
@@ -44,15 +45,23 @@ app.get("/api/cloudflare/migration-status", (c) =>
   })
 );
 
-app.all("/uploads/*", (c) =>
-  c.json(
+app.all("*", async (c) => {
+  const classification = classifyEdgeRoute(c.req.raw);
+
+  if (classification.action === "legacy-proxy") {
+    return proxyToLegacyOrigin(c.req.raw, c.env);
+  }
+
+  return c.json(
     {
-      error: "R2_UPLOAD_ROUTE_NOT_IMPLEMENTED",
-      message: "The R2 uploads compatibility route is scheduled for Phase 3.",
+      error: "CLOUDFLARE_ROUTE_NOT_IMPLEMENTED",
+      message: "This route has not been migrated to the Cloudflare runtime yet.",
+      route_action: classification.action,
+      route_reason: classification.reason,
     },
     { status: 501 }
-  )
-);
+  );
+});
 
 app.notFound((c) =>
   c.json(
