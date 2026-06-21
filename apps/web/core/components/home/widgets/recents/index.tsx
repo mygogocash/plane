@@ -94,6 +94,7 @@ export const RecentActivityWidget = observer(function RecentActivityWidget(props
       containerClassName="box-border min-h-[250px]"
       fallback={<></>}
       buttonClassName="bg-surface-2/20"
+      disableOverflowOnMobile
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="text-14 font-semibold text-tertiary">{t("home.recents.title")}</div>

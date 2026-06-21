@@ -29,6 +29,7 @@ export function RecentProject(props: BlockProps) {
   if (!projectDetails) return <></>;
 
   const projectLink = `/${workspaceSlug}/projects/${projectDetails?.id}/issues`;
+  const visitedAt = calculateTimeAgo(activity.visited_at);
 
   return (
     <ListItem
@@ -40,16 +41,17 @@ export function RecentProject(props: BlockProps) {
           <div className="grid size-8 flex-shrink-0 place-items-center rounded-sm bg-layer-2">
             <Logo logo={projectDetails?.logo_props} size={16} />
           </div>
-          <div className="text-13 font-medium whitespace-nowrap text-placeholder">{projectDetails?.identifier}</div>
+          <div className="max-w-[7.5rem] truncate text-13 font-medium whitespace-nowrap text-placeholder sm:max-w-none">
+            {projectDetails?.identifier}
+          </div>
         </div>
       }
       appendTitleElement={
-        <div className="flex-shrink-0 text-11 font-medium text-placeholder">
-          {calculateTimeAgo(activity.visited_at)}
-        </div>
+        <div className="hidden flex-shrink-0 text-11 font-medium text-placeholder sm:block">{visitedAt}</div>
       }
       quickActionElement={
-        <div className="flex gap-4">
+        <div className="flex w-full items-center justify-between gap-3 text-placeholder sm:w-auto sm:justify-start sm:gap-4">
+          <span className="text-11 font-medium sm:hidden">{visitedAt}</span>
           {projectDetails?.project_members?.length > 0 && (
             <div className="h-5">
               <MemberDropdown
@@ -73,8 +75,10 @@ export function RecentProject(props: BlockProps) {
       }
       parentRef={ref}
       disableLink={false}
-      className="my-auto border-none !px-2 py-3"
-      itemClassName="my-auto"
+      isMobile
+      className="shadow-sm my-auto rounded-lg !border border-subtle bg-layer-1 !px-3 py-3 sm:rounded-none sm:!border-none sm:bg-layer-transparent sm:!px-2 sm:shadow-none"
+      itemClassName="my-auto flex-col !items-start gap-2 sm:flex-row sm:items-center sm:gap-3"
+      leftElementClassName="min-w-0 flex-1"
       onItemClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

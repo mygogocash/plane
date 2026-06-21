@@ -45,12 +45,12 @@ export function UserGreetingsView(props: IUserGreetingsView) {
   const greeting = parseInt(hour, 10) < 12 ? "morning" : parseInt(hour, 10) < 18 ? "afternoon" : "evening";
 
   return (
-    <div className="my-6 flex flex-col items-center">
-      <h2 className="text-center text-20 font-semibold">
+    <div className="my-5 flex flex-col items-start px-1 sm:my-6 sm:items-center sm:px-0">
+      <h2 className="w-full text-left text-20 font-semibold text-pretty text-primary sm:text-center">
         {t("good")} {t(greeting)}, {user?.first_name} {user?.last_name}
       </h2>
-      <h5 className="flex items-center gap-2 font-medium text-placeholder">
-        <div>{greeting === "morning" ? "🌤️" : greeting === "afternoon" ? "🌥️" : "🌙️"}</div>
+      <h5 className="mt-1 flex flex-wrap items-center gap-2 text-14 font-medium text-placeholder sm:justify-center">
+        <div className="leading-none">{greeting === "morning" ? "🌤️" : greeting === "afternoon" ? "🌥️" : "🌙️"}</div>
         <div>
           {weekDay}, {date} {timeString}
         </div>

@@ -54,7 +54,7 @@ export const WorkspaceHomeView = observer(function WorkspaceHomeView() {
       )}
       <>
         <HomePeekOverviewsRoot />
-        <ContentWrapper className="mx-auto scrollbar-hide gap-6 bg-surface-1 px-page-x">
+        <ContentWrapper className="mx-auto scrollbar-hide gap-4 bg-surface-1 px-4 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:gap-6 sm:px-page-x sm:pb-0">
           <div className="mx-auto w-full max-w-[800px]">
             {currentUser && <UserGreetingsView user={currentUser} />}
             <DashboardWidgets />

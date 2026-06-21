@@ -83,7 +83,7 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
   if (loading || loader !== "loaded") return <HomeLoader />;
 
   return (
-    <div className="relative flex h-full w-full flex-col gap-7">
+    <div className="relative flex h-full w-full flex-col gap-5 sm:gap-7">
       <HomePageHeader />
       <ManageWidgetsModal
         workspaceSlug={workspaceSlugValue}
@@ -99,7 +99,7 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
             const isEnabled = widgetsMap[key]?.is_enabled;
             if (!WidgetComponent || !isEnabled) return null;
             return (
-              <div key={key} className="py-4">
+              <div key={key} className="py-3 sm:py-4">
                 <WidgetComponent workspaceSlug={workspaceSlugValue} />
               </div>
             );
