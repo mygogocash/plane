@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildBlockedMonitorReport,
   buildMonitorReport,
   findMatchingMonitor,
   normalizeMonitorUrl,
@@ -100,6 +101,32 @@ describe("Better Stack cutover report helpers", () => {
           monitor_id: null,
         }),
       ])
+    );
+  });
+
+  it("builds blocked monitor evidence when the Better Stack API cannot be queried", () => {
+    const definitions = requiredMonitorDefinitions(env);
+    const report = buildBlockedMonitorReport(definitions, "Better Stack API request failed with HTTP 401.");
+
+    expect(report).toMatchObject({
+      ok: false,
+      summary: {
+        total: 3,
+        passed: 0,
+        failed: 3,
+      },
+    });
+    expect(report.checks).toEqual(
+      definitions.map((definition) =>
+        expect.objectContaining({
+          id: definition.id,
+          ok: false,
+          expected_name: definition.name,
+          expected_url: definition.url,
+          status: null,
+          remediation: "Better Stack API request failed with HTTP 401.",
+        })
+      )
     );
   });
 });

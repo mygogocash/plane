@@ -73,7 +73,7 @@ jobs:
             echo "App URL: \`${BETTERSTACK_APP_URL}\`"
             echo "Site URL: \`${BETTERSTACK_SITE_URL}\`"
             echo "Check frequency: \`${BETTERSTACK_CHECK_FREQUENCY}s\`"
-            echo "Monitors: \`${BETTERSTACK_APP_MONITOR_NAME}\` and \`${BETTERSTACK_SITE_MONITOR_NAME}\`"
+            echo "Monitors: \`${BETTERSTACK_APP_MONITOR_NAME}\`, \`${BETTERSTACK_SITE_MONITOR_NAME}\`, and \`${BETTERSTACK_API_MONITOR_NAME}\`"
             echo "API monitor enabled: \`${BETTERSTACK_INCLUDE_API_MONITOR}\`"
             echo "Cutover report artifact: \`phase-07-betterstack-cutover\`"
           } >> "$GITHUB_STEP_SUMMARY"

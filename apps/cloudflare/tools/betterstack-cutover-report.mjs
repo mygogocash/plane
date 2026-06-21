@@ -171,6 +171,27 @@ export function buildMonitorReport(monitors, definitions = requiredMonitorDefini
   };
 }
 
+export function buildBlockedMonitorReport(definitions = requiredMonitorDefinitions(), remediation) {
+  const checks = definitions.map((definition) => ({
+    id: definition.id,
+    ok: false,
+    expected_name: definition.name,
+    expected_url: definition.url,
+    status: null,
+    remediation,
+  }));
+
+  return {
+    ok: false,
+    summary: {
+      total: checks.length,
+      passed: 0,
+      failed: checks.length,
+    },
+    checks,
+  };
+}
+
 async function fetchJson(url, token) {
   const response = await fetch(url, {
     headers: {
@@ -279,29 +300,23 @@ async function main() {
 
   const definitions = requiredMonitorDefinitions();
   const endpointChecks = await Promise.all(definitions.map((definition) => probeEndpoint(definition)));
-  let monitorReport = {
-    ok: false,
-    summary: {
-      total: definitions.length,
-      passed: 0,
-      failed: definitions.length,
-    },
-    checks: definitions.map((definition) => ({
-      id: definition.id,
-      ok: false,
-      expected_name: definition.name,
-      expected_url: definition.url,
-      status: null,
-      remediation: "BETTERSTACK_API_TOKEN is required to verify monitor state.",
-    })),
-  };
+  let monitorReport = buildBlockedMonitorReport(
+    definitions,
+    "BETTERSTACK_API_TOKEN is required to verify monitor state."
+  );
+  let betterStackApiError = null;
 
   const token = process.env.BETTERSTACK_API_TOKEN;
   const apiBase = process.env.BETTERSTACK_API_BASE || "https://uptime.betterstack.com/api/v2";
 
   if (token) {
-    const monitors = await listBetterStackMonitors(apiBase, token);
-    monitorReport = buildMonitorReport(monitors, definitions);
+    try {
+      const monitors = await listBetterStackMonitors(apiBase, token);
+      monitorReport = buildMonitorReport(monitors, definitions);
+    } catch (error) {
+      betterStackApiError = error.message;
+      monitorReport = buildBlockedMonitorReport(definitions, `Better Stack API request failed: ${error.message}`);
+    }
   }
 
   const failedEndpointChecks = endpointChecks.filter((check) => !check.ok);
@@ -311,6 +326,7 @@ async function main() {
     generated_at: new Date().toISOString(),
     ok: monitorReport.ok && (!requireEndpointProbes || failedEndpointChecks.length === 0),
     api_base: apiBase,
+    betterstack_api_error: betterStackApiError,
     endpoint_probes_required: requireEndpointProbes,
     monitor_summary: monitorReport.summary,
     endpoint_summary: {
