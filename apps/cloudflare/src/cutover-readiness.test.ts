@@ -85,4 +85,22 @@ describe("cutover readiness evidence gate", () => {
       remediation: "Evidence file exists but is empty.",
     });
   });
+
+  it("rejects authenticated smoke reports that do not include required workflow checks", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-authenticated-smoke_21-06-26.json"),
+      JSON.stringify({ ok: true, checks: [{ id: "login", ok: true, evidence: "login screenshot" }] })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "authenticated-smoke");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Authenticated smoke report is missing session-refresh.",
+    });
+  });
 });

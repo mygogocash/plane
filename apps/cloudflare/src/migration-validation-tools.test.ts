@@ -75,7 +75,7 @@ describe("migration validation tools", () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
     const sourcePath = path.join(root, "postgres-counts.json");
     const targetPath = path.join(root, "d1-counts.json");
-    const relativeOutPath = ".tmp/manut-cloudflare-test/d1-report.json";
+    const relativeOutPath = `.tmp/${path.basename(root)}/d1-report.json`;
     const repoOutPath = path.join(repoRoot, relativeOutPath);
     const packageOutPath = path.join(packageRoot, relativeOutPath);
 

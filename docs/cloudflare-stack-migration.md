@@ -62,6 +62,7 @@ pnpm --filter @manut/cloudflare d1:validate-import -- <postgres-counts.json> <d1
 pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manifest.json>
 pnpm --filter @manut/cloudflare uploads:validate -- <gcs-manifest.json> <r2-manifest.json> --out process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json
 pnpm --filter @manut/cloudflare live:shadow -- https://manut-app.bettergogocash.workers.dev --out process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json
+pnpm --filter @manut/cloudflare auth:smoke-report -- --input <manual-auth-smoke.json> --out process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json
 pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json
 pnpm --filter @manut/cloudflare cutover:readiness
 pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app-preview.bettergogocash.workers.dev
@@ -200,6 +201,48 @@ until Phase 7 cutover passes. Use `pnpm --filter @manut/cloudflare live:shadow`
 against the deployed Worker URL to validate health, metadata, lock
 acquire/conflict/release behavior, and WebSocket echo. Only commit
 `phase-07-live-shadow-validation_21-06-26.json` when the report has `ok: true`.
+
+## Authenticated Smoke Evidence
+
+Authenticated smoke is operator-captured because it requires a real user
+session and must not embed credentials in the repo. Capture manual evidence as
+JSON and normalize it with:
+
+```bash
+pnpm --filter @manut/cloudflare auth:smoke-report -- --input manual-auth-smoke.json --out process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json
+```
+
+The readiness gate rejects weak `ok: true` placeholders. Every required check
+must pass and include evidence:
+
+- `login`
+- `session-refresh`
+- `workspace-sidebar`
+- `project-list`
+- `work-item-create`
+- `work-item-edit`
+- `work-item-delete`
+- `upload-attachment`
+- `live-update`
+- `admin-route`
+- `public-space-route`
+
+Minimal input shape:
+
+```json
+{
+  "actor": "operator@example.com",
+  "target_origin": "https://app.manut.xyz",
+  "checks": [
+    {
+      "id": "login",
+      "ok": true,
+      "evidence": "screenshot path, recording id, or concise operator note",
+      "observed_at": "2026-06-21T12:00:00.000Z"
+    }
+  ]
+}
+```
 
 ## R2 Upload Validation
 

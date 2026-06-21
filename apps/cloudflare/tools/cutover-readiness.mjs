@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { validateAuthenticatedSmokeReport } from "./authenticated-smoke-report.mjs";
+
 function usage() {
   return `Usage: node apps/cloudflare/tools/cutover-readiness.mjs [--json] [--root <repo-root>] [--phase phase-07|phase-08|all]
 
@@ -188,12 +190,18 @@ async function validateEvidenceJson(filePath) {
 
   try {
     const json = JSON.parse(await readFile(filePath, "utf8"));
-    return json.ok === true
-      ? { ok: true }
-      : {
-          ok: false,
-          message: "Evidence JSON must contain ok: true.",
-        };
+    if (json.ok !== true) {
+      return {
+        ok: false,
+        message: "Evidence JSON must contain ok: true.",
+      };
+    }
+
+    if (path.basename(filePath).includes("authenticated-smoke")) {
+      return validateAuthenticatedSmokeReport(json);
+    }
+
+    return { ok: true };
   } catch (error) {
     return {
       ok: false,

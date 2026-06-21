@@ -35,7 +35,7 @@ Expected current result:
 - `Cutover readiness: BLOCKED`
 - `Phase 7 cutover ready: no`
 - `Phase 8 decommission ready: no`
-- `Selected checks passed: 10/16`
+- `Selected checks passed: 12/17`
 
 Better Stack cutover evidence command:
 
@@ -89,7 +89,7 @@ Deploy result:
 
 - Worker: `manut-app`
 - URL: `https://manut-app.bettergogocash.workers.dev`
-- Version ID: `6549b2cf-5254-495c-a407-549242cb7595`
+- Version ID: `053b5b6c-4a64-41ed-ab68-9c2eabe9f924`
 - D1: `manut-prod` (`a29a2712-f899-45ee-8ab9-f64afded7e1c`)
 - R2: `manut-uploads-prod`
 - KV: `manut-config-prod` (`e3fdd6cf29dc4f03a9a240830814c629`)
@@ -109,12 +109,15 @@ Smoke result:
   `x-manut-edge-route: legacy-gke`.
 - `/uploads` proxied to legacy GKE/GCS and returned HTTP `403` with
   `x-manut-edge-route: legacy-gke`.
+- Live shadow validation passed against
+  `https://manut-app.bettergogocash.workers.dev/api/cloudflare/live/rooms/*`
+  with HTTP health/metadata/planned-response, lock acquire/conflict/release,
+  and WebSocket echo checks.
 
 ## Blocking Evidence Gaps
 
 - No final D1 import validation report is recorded.
 - No final R2 manifest validation report is recorded.
-- No Durable Object live shadow test report is recorded.
 - No authenticated app smoke report is recorded.
 - No Better Stack cutover-green report is recorded.
 - No explicit `CUTOVER_APPROVED=true` operator approval is recorded.
