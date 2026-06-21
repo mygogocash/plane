@@ -93,6 +93,7 @@ Pushes to `preview` deploy through `.github/workflows/ci-cd.yml`:
 3. Run the backend migrator image as `manut-app-api-migrate-*`.
 4. Set GKE deployment images for `manut-app-*` workloads.
 5. Wait for rollout status and smoke `https://app.manut.xyz/api/instances/`.
+6. Sync Better Stack uptime monitors when `BETTERSTACK_API_TOKEN` is configured.
 
 Required repository variables:
 
@@ -107,6 +108,55 @@ Defaulted repository variables:
 - `GCP_REGION`
 - `GKE_CLUSTER`
 - `GKE_NAMESPACE`
+
+## Better Stack Monitoring
+
+Better Stack monitor provisioning is tracked in:
+
+- `.github/ops/betterstack/sync-manut-monitors.sh`
+- `.github/workflows/betterstack-monitoring.yml`
+
+The script creates or updates two uptime monitors:
+
+- `Manut production app`: `https://app.manut.xyz/`, expects `200` and keyword `Manut`.
+- `Manut production API instances`: `https://app.manut.xyz/api/instances/`, expects `200`
+  and keyword `current_version`.
+
+Required GitHub secret:
+
+- `BETTERSTACK_API_TOKEN`: Better Stack Uptime API token with monitor read/write access.
+
+Optional repository variables:
+
+- `BETTERSTACK_API_BASE`, default `https://uptime.betterstack.com/api/v2`
+- `BETTERSTACK_APP_URL`, default `GCP_APP_URL` or `https://app.manut.xyz`
+- `BETTERSTACK_CHECK_FREQUENCY`, default `60`
+- `BETTERSTACK_REQUEST_TIMEOUT`, default `30`
+- `BETTERSTACK_APP_KEYWORD`, default `Manut`
+- `BETTERSTACK_API_KEYWORD`, default `current_version`
+- `BETTERSTACK_POLICY_ID`
+- `BETTERSTACK_MONITOR_GROUP_ID`
+
+Provision or refresh monitors manually:
+
+```bash
+gh secret set BETTERSTACK_API_TOKEN -R mygogocash/plane
+gh workflow run "Better Stack Monitoring" \
+  -R mygogocash/plane \
+  -f dry_run=false
+```
+
+Validate the payload without calling Better Stack:
+
+```bash
+gh workflow run "Better Stack Monitoring" \
+  -R mygogocash/plane \
+  -f dry_run=true
+```
+
+If `BETTERSTACK_API_TOKEN` is missing, the workflow exits successfully with a warning and
+does not create monitors. This keeps production deploys from failing because an external
+monitoring token has not been installed yet.
 
 ## Smoke Checks
 

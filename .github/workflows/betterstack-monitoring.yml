@@ -1,0 +1,54 @@
+name: Better Stack Monitoring
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print monitor payloads without calling Better Stack"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  BETTERSTACK_API_BASE: ${{ vars.BETTERSTACK_API_BASE || 'https://uptime.betterstack.com/api/v2' }}
+  BETTERSTACK_APP_URL: ${{ vars.BETTERSTACK_APP_URL || vars.GCP_APP_URL || 'https://app.manut.xyz' }}
+  BETTERSTACK_CHECK_FREQUENCY: ${{ vars.BETTERSTACK_CHECK_FREQUENCY || '60' }}
+  BETTERSTACK_REQUEST_TIMEOUT: ${{ vars.BETTERSTACK_REQUEST_TIMEOUT || '30' }}
+  BETTERSTACK_APP_KEYWORD: ${{ vars.BETTERSTACK_APP_KEYWORD || 'Manut' }}
+  BETTERSTACK_API_KEYWORD: ${{ vars.BETTERSTACK_API_KEYWORD || 'current_version' }}
+  BETTERSTACK_POLICY_ID: ${{ vars.BETTERSTACK_POLICY_ID }}
+  BETTERSTACK_MONITOR_GROUP_ID: ${{ vars.BETTERSTACK_MONITOR_GROUP_ID }}
+
+jobs:
+  sync:
+    name: Sync Manut uptime monitors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BETTERSTACK_API_TOKEN: ${{ secrets.BETTERSTACK_API_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Sync Better Stack monitors
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          ./.github/ops/betterstack/sync-manut-monitors.sh "${args[@]}"
+
+      - name: Write monitoring summary
+        run: |
+          {
+            echo "### Better Stack monitoring"
+            echo ""
+            echo "App URL: \`${BETTERSTACK_APP_URL}\`"
+            echo "Check frequency: \`${BETTERSTACK_CHECK_FREQUENCY}s\`"
+            echo "Monitors: app root and /api/instances/"
+          } >> "$GITHUB_STEP_SUMMARY"

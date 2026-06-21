@@ -553,3 +553,38 @@ jobs:
             echo "Image tag: \`${{ needs.metadata.outputs.version_tag }}\`"
             echo "Smoke URL: \`${GCP_APP_URL}/api/instances/\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  betterstack-monitoring:
+    name: Sync Better Stack monitors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - deploy-gcp
+    if: ${{ needs.deploy-gcp.result == 'success' }}
+    permissions:
+      contents: read
+    env:
+      BETTERSTACK_API_TOKEN: ${{ secrets.BETTERSTACK_API_TOKEN }}
+      BETTERSTACK_API_BASE: ${{ vars.BETTERSTACK_API_BASE || 'https://uptime.betterstack.com/api/v2' }}
+      BETTERSTACK_APP_URL: ${{ vars.BETTERSTACK_APP_URL || vars.GCP_APP_URL || 'https://app.manut.xyz' }}
+      BETTERSTACK_CHECK_FREQUENCY: ${{ vars.BETTERSTACK_CHECK_FREQUENCY || '60' }}
+      BETTERSTACK_REQUEST_TIMEOUT: ${{ vars.BETTERSTACK_REQUEST_TIMEOUT || '30' }}
+      BETTERSTACK_APP_KEYWORD: ${{ vars.BETTERSTACK_APP_KEYWORD || 'Manut' }}
+      BETTERSTACK_API_KEYWORD: ${{ vars.BETTERSTACK_API_KEYWORD || 'current_version' }}
+      BETTERSTACK_POLICY_ID: ${{ vars.BETTERSTACK_POLICY_ID }}
+      BETTERSTACK_MONITOR_GROUP_ID: ${{ vars.BETTERSTACK_MONITOR_GROUP_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Sync Better Stack uptime monitors
+        run: ./.github/ops/betterstack/sync-manut-monitors.sh
+
+      - name: Write Better Stack summary
+        run: |
+          {
+            echo "### Better Stack monitoring"
+            echo ""
+            echo "App URL: \`${BETTERSTACK_APP_URL}\`"
+            echo "Monitors: app root and /api/instances/"
+          } >> "$GITHUB_STEP_SUMMARY"
