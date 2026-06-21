@@ -373,6 +373,10 @@ function validateBetterStackCutoverReport(report) {
     return { ok: false, message: "Better Stack monitor checks must all be up." };
   }
 
+  if (report.monitor_checks.some((check) => check?.url_matches !== true)) {
+    return { ok: false, message: "Better Stack monitor checks must target the expected URLs." };
+  }
+
   return { ok: true };
 }
 

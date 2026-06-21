@@ -49,7 +49,7 @@ describe("authenticated smoke report", () => {
 
     expect(report).toMatchObject({
       ok: false,
-      validation_error: "Evidence JSON must contain ok: true.",
+      validation_error: "Authenticated smoke report is missing work-item-delete.",
     });
     expect(report.checks).toContainEqual(
       expect.objectContaining({
@@ -77,6 +77,68 @@ describe("authenticated smoke report", () => {
         }),
       ])
     );
+  });
+
+  it("blocks object evidence without meaningful values", () => {
+    const input = passingInput();
+    input.checks[0] = { ...input.checks[0], evidence: { url: "", note: " " } };
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke check login is missing evidence.",
+    });
+    expect(report.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "login",
+          status: "evidence_missing",
+        }),
+      ])
+    );
+  });
+
+  it("requires an explicit production target origin", () => {
+    const input = passingInput();
+    delete input.target_origin;
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      target_origin: null,
+      validation_error: "Authenticated smoke report target_origin must be https://app.manut.xyz.",
+    });
+    expect(validateAuthenticatedSmokeReport(report)).toMatchObject({
+      ok: false,
+      message: "Evidence JSON must contain ok: true.",
+    });
+  });
+
+  it("rejects authenticated smoke captured against a non-production origin", () => {
+    const input = passingInput();
+    input.target_origin = "https://staging.manut.xyz";
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      target_origin: "https://staging.manut.xyz",
+      validation_error: "Authenticated smoke report target_origin must be https://app.manut.xyz.",
+    });
+  });
+
+  it("requires an explicit actor for auditability", () => {
+    const input = passingInput();
+    input.actor = " ";
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke report must include actor.",
+    });
   });
 
   it("writes repo-root-relative reports when run through the package", async () => {

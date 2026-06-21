@@ -108,11 +108,32 @@ function hasEvidence(value) {
     return value.trim().length > 0;
   }
 
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+
   if (Array.isArray(value)) {
     return value.some((item) => hasEvidence(item));
   }
 
-  return isRecord(value) && Object.keys(value).length > 0;
+  return isRecord(value) && Object.values(value).some((item) => hasEvidence(item));
+}
+
+function validateTargetOrigin(value) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return { ok: false, message: "Seven green days report target_origin must be https://app.manut.xyz." };
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.origin !== "https://app.manut.xyz") {
+      return { ok: false, message: "Seven green days report target_origin must be https://app.manut.xyz." };
+    }
+  } catch {
+    return { ok: false, message: "Seven green days report target_origin must be https://app.manut.xyz." };
+  }
+
+  return { ok: true };
 }
 
 function parseTimestamp(value, label) {
@@ -204,6 +225,11 @@ export function validateSevenGreenDaysReport(report) {
     return { ok: false, message: "Seven green days report must set green_days_verified: true." };
   }
 
+  const targetOrigin = validateTargetOrigin(report.target_origin);
+  if (!targetOrigin.ok) {
+    return targetOrigin;
+  }
+
   const window = stabilityWindowDays(report.cutover_at, report.verified_through);
   if (!window.ok) {
     return { ok: false, message: window.message };
@@ -282,11 +308,7 @@ export function buildSevenGreenDaysReport(input, options = {}) {
     generated_at: new Date().toISOString(),
     ok: window.ok && failed.length === 0,
     green_days_verified: window.ok && failed.length === 0,
-    target_origin:
-      options.targetOrigin ??
-      input.target_origin ??
-      process.env.SEVEN_GREEN_DAYS_TARGET_ORIGIN ??
-      "https://app.manut.xyz",
+    target_origin: options.targetOrigin ?? input.target_origin ?? null,
     cutover_at: input.cutover_at ?? null,
     verified_through: input.verified_through ?? null,
     stability_window_days: window.days ?? 0,
@@ -304,7 +326,9 @@ export function buildSevenGreenDaysReport(input, options = {}) {
     : failed.length > 0
       ? { ok: false, message: failedCheckMessage(failed[0]) }
       : validateSevenGreenDaysReport(report);
-  return validation.ok ? report : { ...report, validation_error: validation.message };
+  return validation.ok
+    ? report
+    : { ...report, ok: false, green_days_verified: false, validation_error: validation.message };
 }
 
 async function loadInput(inputPath) {

@@ -5,6 +5,28 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+const REQUIRED_AUTHENTICATED_SMOKE_IDS = [
+  "login",
+  "session-refresh",
+  "workspace-sidebar",
+  "project-list",
+  "work-item-create",
+  "work-item-edit",
+  "work-item-delete",
+  "upload-attachment",
+  "live-update",
+  "admin-route",
+  "public-space-route",
+];
+
+const REQUIRED_SEVEN_GREEN_DAYS_IDS = [
+  "betterstack-monitors",
+  "cloudflare-worker-logs",
+  "d1-backup-export",
+  "r2-backup-export",
+  "rollback-retention",
+];
+
 function runReadiness(root: string, env: NodeJS.ProcessEnv = {}) {
   try {
     const stdout = execFileSync("node", ["tools/cutover-readiness.mjs", "--json", "--root", root], {
@@ -92,7 +114,12 @@ describe("cutover readiness evidence gate", () => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, "phase-07-authenticated-smoke_21-06-26.json"),
-      JSON.stringify({ ok: true, checks: [{ id: "login", ok: true, evidence: "login screenshot" }] })
+      JSON.stringify({
+        ok: true,
+        target_origin: "https://app.manut.xyz",
+        actor: "operator@example.com",
+        checks: [{ id: "login", ok: true, evidence: "login screenshot" }],
+      })
     );
 
     const report = runReadiness(root);
@@ -101,6 +128,31 @@ describe("cutover readiness evidence gate", () => {
     expect(check).toMatchObject({
       status: "blocked",
       remediation: "Authenticated smoke report is missing session-refresh.",
+    });
+  });
+
+  it("rejects authenticated smoke reports without production audit context", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-authenticated-smoke_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        checks: REQUIRED_AUTHENTICATED_SMOKE_IDS.map((id) => ({
+          id,
+          ok: true,
+          evidence: `${id} screenshot`,
+        })),
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "authenticated-smoke");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Authenticated smoke report target_origin must be https://app.manut.xyz.",
     });
   });
 
@@ -308,6 +360,32 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
+  it("rejects Better Stack reports without URL match proof", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        monitor_summary: { total: 3, passed: 3, failed: 0 },
+        monitor_checks: [
+          { id: "public-site", ok: true, status: "up", url: "https://manut.xyz" },
+          { id: "app-root", ok: true, status: "up", url: "https://legacy.manut.example" },
+          { id: "api-instances", ok: true, status: "up", url: "https://app.manut.xyz/api/instances/" },
+        ],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Better Stack monitor checks must target the expected URLs.",
+    });
+  });
+
   it("rejects weak Better Stack env override evidence even when the file name is generic", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const evidencePath = path.join(root, "betterstack-final-evidence.json");
@@ -337,6 +415,35 @@ describe("cutover readiness evidence gate", () => {
     expect(check).toMatchObject({
       status: "blocked",
       remediation: "Seven green days report must set green_days_verified: true.",
+    });
+  });
+
+  it("rejects seven-green-days reports without production target context", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "phase8-final-evidence.json");
+    await writeFile(
+      evidencePath,
+      JSON.stringify({
+        ok: true,
+        green_days_verified: true,
+        cutover_at: "2026-06-21T00:00:00.000Z",
+        verified_through: "2026-06-28T00:00:00.000Z",
+        checks: REQUIRED_SEVEN_GREEN_DAYS_IDS.map((id) => ({
+          id,
+          ok: true,
+          evidence: `${id} evidence`,
+        })),
+      })
+    );
+
+    const report = runReadiness(root, {
+      SEVEN_GREEN_DAYS_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "phase8-seven-green-days");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Seven green days report target_origin must be https://app.manut.xyz.",
     });
   });
 
@@ -457,9 +564,9 @@ describe("cutover readiness evidence gate", () => {
         ok: true,
         monitor_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [
-          { id: "public-site", ok: true, status: "up" },
-          { id: "app-root", ok: true, status: "up" },
-          { id: "api-instances", ok: true, status: "up" },
+          { id: "public-site", ok: true, status: "up", url_matches: true },
+          { id: "app-root", ok: true, status: "up", url_matches: true },
+          { id: "api-instances", ok: true, status: "up", url_matches: true },
         ],
       })
     );

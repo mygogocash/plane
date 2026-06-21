@@ -74,6 +74,17 @@ The report must include `approved_by`, `approved_at`, a valid
 rollback checkpoint, DNS change approval, write freeze, and smoke-plan
 readiness. `CUTOVER_APPROVED=true` is only valid after that report exists.
 
+`AUTHENTICATED_SMOKE_REPORT` must also be canonicalized with
+`auth:smoke-report` and include `actor`, `target_origin:
+https://app.manut.xyz`, every required authenticated workflow, and meaningful
+evidence for each check. Blank strings or empty evidence objects are not valid
+Phase 7 smoke evidence.
+
+`BETTERSTACK_CUTOVER_REPORT` must be generated with
+`betterstack:cutover-report` or an equivalent canonical shape where every
+required monitor is `up` and has `url_matches: true` for the expected Manut
+production URL.
+
 ## Rollback Strategy
 
 Rollback remains DNS/routing based until Phase 8:

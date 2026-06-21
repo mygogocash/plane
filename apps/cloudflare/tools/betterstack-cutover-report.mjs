@@ -120,17 +120,27 @@ function monitorAttributes(monitor) {
 }
 
 export function findMatchingMonitor(monitors, definition) {
-  const targetUrl = normalizeMonitorUrl(definition.url);
-
   return (
     monitors.find((monitor) => {
       const attributes = monitorAttributes(monitor);
       const name = attributes.pronounceable_name;
       const url = attributes.url;
 
-      return name === definition.name || (typeof url === "string" && normalizeMonitorUrl(url) === targetUrl);
+      return name === definition.name || monitorUrlMatches(url, definition.url);
     }) ?? null
   );
+}
+
+function monitorUrlMatches(rawUrl, expectedUrl) {
+  if (typeof rawUrl !== "string" || rawUrl.trim() === "") {
+    return false;
+  }
+
+  try {
+    return normalizeMonitorUrl(rawUrl) === normalizeMonitorUrl(expectedUrl);
+  } catch {
+    return false;
+  }
 }
 
 export function buildMonitorReport(monitors, definitions = requiredMonitorDefinitions()) {
@@ -138,7 +148,24 @@ export function buildMonitorReport(monitors, definitions = requiredMonitorDefini
     const monitor = findMatchingMonitor(monitors, definition);
     const attributes = monitorAttributes(monitor);
     const status = typeof attributes.status === "string" ? attributes.status : null;
-    const ok = Boolean(monitor) && status === "up";
+    const url = typeof attributes.url === "string" ? attributes.url : null;
+    const urlMatches = monitorUrlMatches(url, definition.url);
+    const ok = Boolean(monitor) && status === "up" && urlMatches;
+    const remediation = (() => {
+      if (ok) {
+        return null;
+      }
+
+      if (!monitor) {
+        return `Better Stack monitor ${definition.name} was not found by name or URL.`;
+      }
+
+      if (!urlMatches) {
+        return `Better Stack monitor ${definition.name} points to ${url ?? "missing URL"}, expected ${definition.url}.`;
+      }
+
+      return `Better Stack monitor ${definition.name} is ${status ?? "missing status"}, expected up.`;
+    })();
 
     return {
       id: definition.id,
@@ -147,17 +174,14 @@ export function buildMonitorReport(monitors, definitions = requiredMonitorDefini
       monitor_id: monitor?.id ?? null,
       monitor_name: attributes.pronounceable_name ?? null,
       expected_name: definition.name,
-      url: attributes.url ?? null,
+      url,
       expected_url: definition.url,
+      url_matches: urlMatches,
       required_keyword: attributes.required_keyword ?? definition.required_keyword,
       status,
       last_checked_at: attributes.last_checked_at ?? null,
       updated_at: attributes.updated_at ?? null,
-      remediation: ok
-        ? null
-        : monitor
-          ? `Better Stack monitor ${definition.name} is ${status ?? "missing status"}, expected up.`
-          : `Better Stack monitor ${definition.name} was not found by name or URL.`,
+      remediation,
     };
   });
   const failed = checks.filter((check) => !check.ok);

@@ -75,6 +75,55 @@ describe("seven green days report", () => {
     );
   });
 
+  it("blocks object evidence without meaningful values", () => {
+    const input = passingInput();
+    input.checks[0] = { ...input.checks[0], evidence: { url: "", note: " " } };
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      green_days_verified: false,
+      validation_error: "Seven green days check betterstack-monitors is missing evidence.",
+    });
+    expect(report.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "betterstack-monitors",
+          status: "evidence_missing",
+        }),
+      ])
+    );
+  });
+
+  it("requires an explicit production target origin", () => {
+    const input = passingInput();
+    delete input.target_origin;
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      green_days_verified: false,
+      target_origin: null,
+      validation_error: "Seven green days report target_origin must be https://app.manut.xyz.",
+    });
+  });
+
+  it("rejects seven-green-days evidence captured against a non-production origin", () => {
+    const input = passingInput();
+    input.target_origin = "https://staging.manut.xyz";
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      green_days_verified: false,
+      target_origin: "https://staging.manut.xyz",
+      validation_error: "Seven green days report target_origin must be https://app.manut.xyz.",
+    });
+  });
+
   it("writes repo-root-relative reports when run through the package", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-seven-green-days-"));
     const inputPath = path.join(root, "phase8-evidence.json");

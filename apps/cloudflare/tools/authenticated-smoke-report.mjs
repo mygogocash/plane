@@ -131,11 +131,32 @@ function hasEvidence(value) {
     return value.trim().length > 0;
   }
 
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+
   if (Array.isArray(value)) {
     return value.some((item) => hasEvidence(item));
   }
 
-  return isRecord(value) && Object.keys(value).length > 0;
+  return isRecord(value) && Object.values(value).some((item) => hasEvidence(item));
+}
+
+function validateTargetOrigin(value) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return { ok: false, message: "Authenticated smoke report target_origin must be https://app.manut.xyz." };
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.origin !== "https://app.manut.xyz") {
+      return { ok: false, message: "Authenticated smoke report target_origin must be https://app.manut.xyz." };
+    }
+  } catch {
+    return { ok: false, message: "Authenticated smoke report target_origin must be https://app.manut.xyz." };
+  }
+
+  return { ok: true };
 }
 
 function normalizeInputChecks(input) {
@@ -184,6 +205,15 @@ export function validateAuthenticatedSmokeReport(report) {
     return { ok: false, message: "Evidence JSON must contain ok: true." };
   }
 
+  const targetOrigin = validateTargetOrigin(report.target_origin);
+  if (!targetOrigin.ok) {
+    return targetOrigin;
+  }
+
+  if (typeof report.actor !== "string" || report.actor.trim() === "") {
+    return { ok: false, message: "Authenticated smoke report must include actor." };
+  }
+
   if (!Array.isArray(report.checks)) {
     return { ok: false, message: "Authenticated smoke report must include checks[]." };
   }
@@ -203,6 +233,18 @@ export function validateAuthenticatedSmokeReport(report) {
   }
 
   return { ok: true };
+}
+
+function failedCheckMessage(check) {
+  if (check.status === "missing") {
+    return `Authenticated smoke report is missing ${check.id}.`;
+  }
+
+  if (check.status === "evidence_missing") {
+    return `Authenticated smoke check ${check.id} is missing evidence.`;
+  }
+
+  return `Authenticated smoke check ${check.id} is not passing.`;
 }
 
 export function buildAuthenticatedSmokeReport(input, options = {}) {
@@ -239,9 +281,8 @@ export function buildAuthenticatedSmokeReport(input, options = {}) {
   const report = {
     generated_at: new Date().toISOString(),
     ok: failed.length === 0,
-    target_origin:
-      options.targetOrigin ?? input.target_origin ?? process.env.AUTH_SMOKE_TARGET_ORIGIN ?? "https://app.manut.xyz",
-    actor: options.actor ?? input.actor ?? null,
+    target_origin: options.targetOrigin ?? (isRecord(input) ? input.target_origin : null) ?? null,
+    actor: options.actor ?? (isRecord(input) ? input.actor : null) ?? null,
     summary: {
       total: checks.length,
       passed: checks.length - failed.length,
@@ -251,8 +292,11 @@ export function buildAuthenticatedSmokeReport(input, options = {}) {
     checks,
   };
 
-  const validation = validateAuthenticatedSmokeReport(report);
-  return validation.ok ? report : { ...report, validation_error: validation.message };
+  const validation =
+    failed.length > 0
+      ? { ok: false, message: failedCheckMessage(failed[0]) }
+      : validateAuthenticatedSmokeReport(report);
+  return validation.ok ? report : { ...report, ok: false, validation_error: validation.message };
 }
 
 async function loadInput(inputPath) {

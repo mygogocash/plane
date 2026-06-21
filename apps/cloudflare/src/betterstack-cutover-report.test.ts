@@ -56,6 +56,35 @@ describe("Better Stack cutover report helpers", () => {
     expect(findMatchingMonitor([monitor], definitions[2])).toBe(monitor);
   });
 
+  it("ignores invalid monitor URLs while looking for a matching monitor", () => {
+    const definitions = requiredMonitorDefinitions(env);
+    const matchingMonitor = {
+      id: "monitor-api",
+      attributes: {
+        pronounceable_name: "api",
+        url: "https://app.manut.xyz/api/instances/",
+        status: "up",
+      },
+    };
+
+    expect(
+      findMatchingMonitor(
+        [
+          {
+            id: "broken-monitor",
+            attributes: {
+              pronounceable_name: "broken",
+              url: "not a url",
+              status: "up",
+            },
+          },
+          matchingMonitor,
+        ],
+        definitions[2]
+      )
+    ).toBe(matchingMonitor);
+  });
+
   it("blocks cutover evidence when any required monitor is missing or not up", () => {
     const definitions = requiredMonitorDefinitions(env);
     const report = buildMonitorReport(
@@ -102,6 +131,42 @@ describe("Better Stack cutover report helpers", () => {
         }),
       ])
     );
+  });
+
+  it("blocks name-matched monitors that point at the wrong URL", () => {
+    const definitions = requiredMonitorDefinitions(env);
+    const report = buildMonitorReport(
+      [
+        {
+          id: "monitor-app",
+          attributes: {
+            pronounceable_name: "app.manut.xyz",
+            url: "https://legacy.manut.example/",
+            status: "up",
+          },
+        },
+      ],
+      [definitions[1]]
+    );
+
+    expect(report).toMatchObject({
+      ok: false,
+      summary: {
+        total: 1,
+        passed: 0,
+        failed: 1,
+      },
+    });
+    expect(report.checks[0]).toMatchObject({
+      id: "app-root",
+      ok: false,
+      status: "up",
+      url: "https://legacy.manut.example/",
+      expected_url: "https://app.manut.xyz",
+      url_matches: false,
+      remediation:
+        "Better Stack monitor app.manut.xyz points to https://legacy.manut.example/, expected https://app.manut.xyz.",
+    });
   });
 
   it("builds blocked monitor evidence when the Better Stack API cannot be queried", () => {
