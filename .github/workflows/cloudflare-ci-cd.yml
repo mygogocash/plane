@@ -8,6 +8,30 @@ on:
         required: true
         default: false
         type: boolean
+      deploy_target:
+        description: "Optional Cloudflare Worker deploy target"
+        required: true
+        default: "none"
+        type: choice
+        options:
+          - "none"
+          - "preview"
+          - "production"
+      apply_d1_migrations:
+        description: "Apply D1 migrations for the selected deploy target"
+        required: true
+        default: false
+        type: boolean
+      run_r2_manifest_validation:
+        description: "Run synthetic R2 manifest validation"
+        required: true
+        default: true
+        type: boolean
+      cloudflare_preview_url:
+        description: "Optional deployed preview Worker URL for smoke checks"
+        required: false
+        default: ""
+        type: string
   pull_request:
     branches:
       - "preview"
@@ -63,6 +87,36 @@ jobs:
       - name: Test Cloudflare Worker
         run: pnpm --filter @manut/cloudflare test
 
+      - name: Dry-run Cloudflare Worker bundle
+        run: pnpm --filter @manut/cloudflare exec wrangler deploy --dry-run --env="" --outdir /tmp/manut-cloudflare-worker-dry-run
+
+      - name: Run synthetic D1 row-count validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          cat > "$tmp_dir/postgres-counts.json" <<'JSON'
+          {"counts":{"workspaces":1,"projects":2}}
+          JSON
+          cat > "$tmp_dir/d1-counts.json" <<'JSON'
+          [{"table":"workspaces","count":1},{"table":"projects","rows":"2"}]
+          JSON
+          pnpm --filter @manut/cloudflare d1:compare -- "$tmp_dir/postgres-counts.json" "$tmp_dir/d1-counts.json" --json
+
+      - name: Run synthetic R2 manifest validation
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_r2_manifest_validation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          cat > "$tmp_dir/gcs-manifest.json" <<'JSON'
+          [{"key":"workspace/logo.png","size":12,"crc32c":"abc"}]
+          JSON
+          cat > "$tmp_dir/r2-manifest.json" <<'JSON'
+          {"objects":[{"name":"workspace/logo.png","metadata":{"size":"12","crc32c":"abc"}}]}
+          JSON
+          pnpm --filter @manut/cloudflare uploads:compare -- "$tmp_dir/gcs-manifest.json" "$tmp_dir/r2-manifest.json" --json
+
       - name: Run live baseline
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_baseline }}
         run: pnpm --filter @manut/cloudflare baseline
@@ -74,6 +128,93 @@ jobs:
             echo ""
             echo "- Worker package: \`@manut/cloudflare\`"
             echo "- Production traffic moved: \`false\`"
+            echo "- Worker dry-run: \`passed\`"
+            echo "- D1 synthetic row-count validation: \`passed\`"
+            echo "- R2 synthetic manifest validation: \`${{ github.event_name != 'workflow_dispatch' || inputs.run_r2_manifest_validation }}\`"
             echo "- Required deploy secret for future phases: \`CLOUDFLARE_API_TOKEN\`"
             echo "- Required deploy variables for future phases: \`CLOUDFLARE_ACCOUNT_ID\`, \`CLOUDFLARE_ZONE_ID\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-cloudflare-worker:
+    name: Deploy Cloudflare Worker (${{ inputs.deploy_target }})
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_target != 'none' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - validate-cloudflare-foundation
+    permissions:
+      contents: read
+    environment: ${{ inputs.deploy_target == 'production' && 'cloudflare-production' || 'cloudflare-preview' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack and pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate required Cloudflare deploy credentials
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ZONE_ID"
+
+      - name: Apply preview D1 migrations
+        if: ${{ inputs.deploy_target == 'preview' && inputs.apply_d1_migrations }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare db:migrate:preview
+
+      - name: Apply production D1 migrations
+        if: ${{ inputs.deploy_target == 'production' && inputs.apply_d1_migrations }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare db:migrate:production
+
+      - name: Deploy preview Worker
+        if: ${{ inputs.deploy_target == 'preview' }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare deploy:preview
+
+      - name: Deploy production Worker
+        if: ${{ inputs.deploy_target == 'production' }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare deploy:production
+
+      - name: Smoke optional preview URL
+        if: ${{ inputs.cloudflare_preview_url != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "${{ inputs.cloudflare_preview_url }}/healthz"
+          curl -fsS "${{ inputs.cloudflare_preview_url }}/api/cloudflare/migration-status"
+
+      - name: Write deploy summary
+        run: |
+          {
+            echo "### Cloudflare deploy"
+            echo ""
+            echo "- Target: \`${{ inputs.deploy_target }}\`"
+            echo "- D1 migrations requested: \`${{ inputs.apply_d1_migrations }}\`"
+            echo "- Production DNS changed: \`false\`"
+            echo "- GKE rollback retained: \`true\`"
           } >> "$GITHUB_STEP_SUMMARY"

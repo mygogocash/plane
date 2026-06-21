@@ -65,6 +65,37 @@ pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manif
 4. Run contract tests against preview and current GKE.
 5. Repeat for production only after preview is green.
 
+## Cloudflare CI/CD
+
+`.github/workflows/cloudflare-ci-cd.yml` is validation-only for push and pull
+request events. Manual deployment is available only through `workflow_dispatch`.
+
+Manual inputs:
+
+- `deploy_target`: `none`, `preview`, or `production`.
+- `apply_d1_migrations`: applies D1 migrations for the selected target before
+  deploy.
+- `run_live_baseline`: runs the live `manut.xyz` / `app.manut.xyz` baseline.
+- `run_r2_manifest_validation`: runs synthetic upload manifest validation.
+- `cloudflare_preview_url`: optional deployed Worker URL for smoke checks.
+
+Push/PR validation runs:
+
+- `pnpm --filter @manut/cloudflare check`
+- `pnpm --filter @manut/cloudflare test`
+- Worker dry-run bundle
+- synthetic D1 row-count validation
+- synthetic R2 manifest validation
+
+Manual deploy requires:
+
+- GitHub secret `CLOUDFLARE_API_TOKEN`
+- GitHub variable `CLOUDFLARE_ACCOUNT_ID`
+- GitHub variable `CLOUDFLARE_ZONE_ID`
+
+The deploy job writes `Production DNS changed: false` and does not update
+`app.manut.xyz` routing. DNS cutover remains a separate Phase 7 operator action.
+
 ## Cutover Rule
 
 Do not change `app.manut.xyz` routing until the selected phase report proves:

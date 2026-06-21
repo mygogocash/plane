@@ -1,6 +1,6 @@
 # Phase 6 - Cloudflare CI/CD
 
-**Status:** PLANNED
+**Status:** CODE DONE for manual-gated workflow; provider-backed deploy unrun
 
 ## Objective
 
@@ -41,3 +41,15 @@ is performed by CI until migration jobs are explicitly enabled.
 - Preview Cloudflare deploy can run without touching production DNS.
 - Production deploy is manual-gated.
 - Better Stack checks report both current GKE and Cloudflare preview health.
+
+## Phase 6 Evidence
+
+- Report: `process/features/cloudflare-stack-migration/reports/phase-06-cloudflare-cicd-evidence_21-06-26.md`
+- Workflow: `.github/workflows/cloudflare-ci-cd.yml`
+- Manual inputs:
+  - `deploy_target`: `none`, `preview`, or `production`
+  - `apply_d1_migrations`
+  - `run_live_baseline`
+  - `run_r2_manifest_validation`
+  - `cloudflare_preview_url`
+- Production cutover status: blocked; workflow deploy does not change DNS.
