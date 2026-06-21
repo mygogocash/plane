@@ -39,6 +39,8 @@ env:
   GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
   GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'manut-ce-gke' }}
   GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'manut-ce' }}
+  GKE_SMOKE_DELAY_SECONDS: ${{ vars.GKE_SMOKE_DELAY_SECONDS || '60' }}
+  GKE_SMOKE_SAMPLES: ${{ vars.GKE_SMOKE_SAMPLES || '10' }}
   DOCKER_PLATFORMS: linux/amd64
   NODE_VERSION: "22.18.0"
 
@@ -389,7 +391,7 @@ jobs:
   deploy-gcp:
     name: Deploy to GKE
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     needs:
       - metadata
       - changes
@@ -591,7 +593,51 @@ jobs:
           done
 
       - name: Smoke production endpoint
-        run: curl -fsS --retry 5 --retry-delay 5 "${GCP_APP_URL}/api/instances/" >/tmp/manut-instance.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          app_url="${GCP_APP_URL%/}"
+          api_url="${app_url}/api/instances/"
+          root_url="${app_url}/"
+          samples="${GKE_SMOKE_SAMPLES:-10}"
+          delay_seconds="${GKE_SMOKE_DELAY_SECONDS:-60}"
+
+          if ! [[ "$samples" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::GKE_SMOKE_SAMPLES must be a positive integer; got '${samples}'."
+            exit 1
+          fi
+          if ! [[ "$delay_seconds" =~ ^[0-9]+$ ]]; then
+            echo "::error::GKE_SMOKE_DELAY_SECONDS must be a non-negative integer; got '${delay_seconds}'."
+            exit 1
+          fi
+
+          probe() {
+            local name="$1"
+            local url="$2"
+            local output_path="$3"
+            local http_code
+
+            http_code="$(curl -sS --connect-timeout 10 --max-time 30 --retry 2 --retry-delay 3 -o "$output_path" -w "%{http_code}" "$url" || true)"
+            echo "${name}: HTTP ${http_code}"
+
+            if [[ "$http_code" != 2* ]]; then
+              echo "::error::${name} smoke failed for ${url} with HTTP ${http_code}."
+              head -c 1000 "$output_path" || true
+              echo ""
+              return 1
+            fi
+          }
+
+          for attempt in $(seq 1 "$samples"); do
+            echo "Production smoke sample ${attempt}/${samples}"
+            probe "app root" "$root_url" "/tmp/manut-root-${attempt}.html"
+            probe "api instances" "$api_url" "/tmp/manut-instance-${attempt}.json"
+
+            if [ "$attempt" -lt "$samples" ]; then
+              sleep "$delay_seconds"
+            fi
+          done
 
       - name: Write GCP deployment summary
         run: |
@@ -602,6 +648,8 @@ jobs:
             echo "Namespace: \`${GKE_NAMESPACE}\`"
             echo "Image tag: \`${{ needs.metadata.outputs.version_tag }}\`"
             echo "Smoke URL: \`${GCP_APP_URL}/api/instances/\`"
+            echo "Smoke samples: \`${GKE_SMOKE_SAMPLES}\`"
+            echo "Smoke delay seconds: \`${GKE_SMOKE_DELAY_SECONDS}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   betterstack-monitoring:
