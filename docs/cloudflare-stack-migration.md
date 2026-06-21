@@ -38,7 +38,7 @@ Production:
 GitHub variables:
 
 - `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_ZONE_ID`
+- `CLOUDFLARE_ZONE_ID` for future DNS/cutover automation
 - `CLOUDFLARE_APP_URL`, default `https://app.manut.xyz`
 - `CLOUDFLARE_SITE_URL`, default `https://manut.xyz`
 
@@ -101,6 +101,9 @@ Manual deploy requires:
 
 - GitHub secret `CLOUDFLARE_API_TOKEN`
 - GitHub variable `CLOUDFLARE_ACCOUNT_ID`
+
+Future DNS/cutover automation additionally requires:
+
 - GitHub variable `CLOUDFLARE_ZONE_ID`
 
 Current GitHub repository state:
@@ -108,11 +111,12 @@ Current GitHub repository state:
 - `CLOUDFLARE_ACCOUNT_ID` is configured.
 - `CLOUDFLARE_APP_URL` is configured.
 - `CLOUDFLARE_SITE_URL` is configured.
-- `CLOUDFLARE_ZONE_ID` is not configured.
+- `CLOUDFLARE_ZONE_ID` is not configured; this blocks DNS/cutover
+  automation, not Worker deployment to `workers.dev`.
 - `CLOUDFLARE_API_TOKEN` is not configured.
 - Local Wrangler OAuth is authenticated and was used for the first preview
   and production provisioning/deploy, but GitHub Actions still needs a raw API
-  token secret and zone ID variable before manual deploy can run there.
+  token secret before manual Worker deploy can run there.
 
 Current Cloudflare provider state:
 

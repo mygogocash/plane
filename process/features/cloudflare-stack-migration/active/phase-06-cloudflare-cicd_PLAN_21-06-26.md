@@ -19,7 +19,8 @@ production Cloudflare deployment lanes after resources and smoke tests exist.
 
 - Add workflow inputs for preview deploy, production deploy, and migration apply.
 - Require `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
-  `CLOUDFLARE_ZONE_ID`, and `BETTERSTACK_API_TOKEN`.
+  and `BETTERSTACK_API_TOKEN` for deploy/smoke tasks. Document
+  `CLOUDFLARE_ZONE_ID` as required for future DNS/cutover automation only.
 - Add summaries for Worker URL, D1 migration status, R2 validation, and smoke
   endpoints.
 - Add actionlint validation when available in CI.

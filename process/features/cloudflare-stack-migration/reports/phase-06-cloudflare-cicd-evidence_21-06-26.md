@@ -19,7 +19,8 @@ Captured: 2026-06-21T09:08:00Z
 - Added required Cloudflare credential checks:
   - `CLOUDFLARE_API_TOKEN`
   - `CLOUDFLARE_ACCOUNT_ID`
-  - `CLOUDFLARE_ZONE_ID`
+- Documented `CLOUDFLARE_ZONE_ID` as a future DNS/cutover automation
+  variable, not a Worker deploy credential.
 
 ## Manual Gates
 
@@ -73,12 +74,13 @@ Captured after preview provisioning:
 - `CLOUDFLARE_ACCOUNT_ID`: configured.
 - `CLOUDFLARE_APP_URL`: configured.
 - `CLOUDFLARE_SITE_URL`: configured.
-- `CLOUDFLARE_ZONE_ID`: missing.
+- `CLOUDFLARE_ZONE_ID`: missing; blocks DNS/cutover automation, not
+  `workers.dev` Worker deployment.
 - `CLOUDFLARE_API_TOKEN`: missing.
 
-Manual GitHub deploy remains blocked until the zone ID variable and raw API
-token secret are configured. Local Wrangler OAuth was used for the first
-preview and production Worker deploys.
+Manual GitHub Worker deploy remains blocked until the raw API token secret is
+configured. Local Wrangler OAuth was used for the first preview and production
+Worker deploys.
 
 ## Readiness Gate Hardening
 
