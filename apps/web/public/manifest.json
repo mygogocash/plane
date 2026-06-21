@@ -1,6 +1,7 @@
 {
   "name": "Manut",
   "short_name": "Manut",
+  "description": "Manut is the AI cloud workspace for docs, databases, whiteboards, tasks, and a multi-model AI agent.",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -22,6 +23,7 @@
   "theme_color": "#0e0e10",
   "background_color": "#fafaf2",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait"
 }

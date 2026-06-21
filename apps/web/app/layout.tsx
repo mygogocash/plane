@@ -66,7 +66,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content={MANUT_BRAND.darkThemeColor} media="(prefers-color-scheme: dark)" />
         <link rel="icon" type="image/png" sizes="32x32" href={favicon32} />
         <link rel="icon" type="image/png" sizes="16x16" href={favicon16} />
-        <link rel="manifest" href="/site.webmanifest.json" />
         <link rel="shortcut icon" type="image/png" href={favicon32} />
         {/* Meta info for PWA */}
         <meta name="application-name" content={MANUT_BRAND.productName} />

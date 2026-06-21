@@ -26,6 +26,21 @@ describe("Manut public branding assets", () => {
       }
     }
   });
+
+  it("advertises one canonical web app manifest", () => {
+    const sourceFiles = ["apps/web/app/root.tsx", "apps/web/app/layout.tsx"];
+
+    for (const file of sourceFiles) {
+      const contents = readFileSync(resolve(repoRoot, file), "utf8");
+      const manifestLinkCount = contents.match(/rel:\s*"manifest"|rel="manifest"/g)?.length ?? 0;
+
+      expect(manifestLinkCount, `${file} should expose only one manifest link`).toBe(1);
+      expect(contents, `${file} should use the canonical PWA manifest`).toContain("/manifest.json");
+      expect(contents, `${file} should not also advertise the favicon webmanifest`).not.toContain(
+        "/site.webmanifest.json"
+      );
+    }
+  });
 });
 
 describe("Manut user-facing copy", () => {
