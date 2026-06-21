@@ -100,12 +100,12 @@ async function fileStatus(filePath) {
   try {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) {
-      return { exists: false, sizeBytes: 0 };
+      return { exists: false, hasContent: false, sizeBytes: 0 };
     }
-    return { exists: true, sizeBytes: fileStat.size };
+    return { exists: true, hasContent: fileStat.size > 0, sizeBytes: fileStat.size };
   } catch (error) {
     if (error?.code === "ENOENT") {
-      return { exists: false, sizeBytes: 0 };
+      return { exists: false, hasContent: false, sizeBytes: 0 };
     }
     throw error;
   }
@@ -115,18 +115,35 @@ function phaseFile(root, relativePath) {
   return path.resolve(root, relativePath);
 }
 
+function isPresentEvidence(status) {
+  return status.exists && status.hasContent;
+}
+
+function missingEvidenceRemediation(status, fallback) {
+  if (!status.exists) {
+    return fallback;
+  }
+
+  if (status.exists && !status.hasContent) {
+    return "Evidence file exists but is empty.";
+  }
+
+  return null;
+}
+
 async function requiredFileCheck({ id, label, phase, root, relativePath, remediation }) {
   const absolutePath = phaseFile(root, relativePath);
   const status = await fileStatus(absolutePath);
+  const isPass = isPresentEvidence(status);
 
   return {
     id,
     label,
     phase,
-    status: status.exists ? "pass" : "blocked",
+    status: isPass ? "pass" : "blocked",
     evidence: path.relative(root, absolutePath),
     size_bytes: status.exists ? status.sizeBytes : null,
-    remediation: status.exists ? null : remediation,
+    remediation: isPass ? null : missingEvidenceRemediation(status, remediation),
   };
 }
 
@@ -148,19 +165,18 @@ async function envFileCheck({ id, label, phase, root, envName, relativePath, rem
   const absolutePath = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
   const status = await fileStatus(absolutePath);
   const jsonValidation = status.exists ? await validateEvidenceJson(absolutePath) : { ok: true };
+  const fallbackRemediation = relativePath ? remediation : `${envName} points to a missing file.`;
+  const isPass = isPresentEvidence(status) && jsonValidation.ok;
 
   return {
     id,
     label,
     phase,
-    status: status.exists && jsonValidation.ok ? "pass" : "blocked",
+    status: isPass ? "pass" : "blocked",
     evidence: path.relative(root, absolutePath),
     env: process.env[envName] ? envName : null,
     size_bytes: status.exists ? status.sizeBytes : null,
-    remediation:
-      status.exists && jsonValidation.ok
-        ? null
-        : (jsonValidation.message ?? (relativePath ? remediation : `${envName} points to a missing file.`)),
+    remediation: isPass ? null : (missingEvidenceRemediation(status, fallbackRemediation) ?? jsonValidation.message),
   };
 }
 

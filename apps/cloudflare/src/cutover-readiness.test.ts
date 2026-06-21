@@ -58,4 +58,19 @@ describe("cutover readiness evidence gate", () => {
         "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json",
     });
   });
+
+  it("blocks empty local evidence files", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(path.join(reportDir, "phase-01-cloudflare-foundation-evidence_21-06-26.md"), "");
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "phase-01-foundation-report");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Evidence file exists but is empty.",
+    });
+  });
 });

@@ -53,6 +53,14 @@ function coerceCount(value, tableName) {
   return numberValue;
 }
 
+function setUniqueCount(counts, table, rawCount, label) {
+  if (counts.has(table)) {
+    throw new Error(`${label} contains duplicate table: ${table}`);
+  }
+
+  counts.set(table, coerceCount(rawCount, table));
+}
+
 export function normalizeCounts(json, label) {
   const candidate = json && typeof json === "object" && !Array.isArray(json) && json.counts ? json.counts : json;
   const counts = new Map();
@@ -67,7 +75,7 @@ export function normalizeCounts(json, label) {
       if (typeof table !== "string" || table.length === 0) {
         throw new Error(`${label}[${index}] is missing a table/name/model/dbTable string`);
       }
-      counts.set(table, coerceCount(rawCount, table));
+      setUniqueCount(counts, table, rawCount, label);
     }
     return counts;
   }
@@ -79,9 +87,9 @@ export function normalizeCounts(json, label) {
   for (const [table, rawCount] of Object.entries(candidate)) {
     if (rawCount && typeof rawCount === "object" && !Array.isArray(rawCount)) {
       const nestedCount = rawCount.count ?? rawCount.rows ?? rawCount.row_count ?? rawCount.rowCount;
-      counts.set(table, coerceCount(nestedCount, table));
+      setUniqueCount(counts, table, nestedCount, label);
     } else {
-      counts.set(table, coerceCount(rawCount, table));
+      setUniqueCount(counts, table, rawCount, label);
     }
   }
 

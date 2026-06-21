@@ -14,12 +14,15 @@ function runTool(args: string[]) {
       stdout: execFileSync("node", args, {
         cwd: packageRoot,
         encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
       }),
+      stderr: "",
     };
   } catch (error) {
     return {
       exitCode: (error as { status?: number }).status ?? 1,
       stdout: (error as { stdout?: string }).stdout ?? "",
+      stderr: (error as { stderr?: string }).stderr ?? "",
     };
   }
 }
@@ -101,5 +104,26 @@ describe("migration validation tools", () => {
         },
       ],
     });
+  });
+
+  it("rejects duplicate D1 count rows instead of silently overwriting them", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+
+    await writeFile(sourcePath, JSON.stringify([{ table: "workspaces", count: 1 }]));
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table: "workspaces", count: 0 },
+        { table: "workspaces", count: 1 },
+      ])
+    );
+
+    const result = runTool(["tools/validate-d1-import.mjs", sourcePath, targetPath, "--json"]);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("target contains duplicate table: workspaces");
   });
 });

@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { compareCounts, loadCounts } from "./compare-row-counts.mjs";
 
@@ -184,7 +185,9 @@ async function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-main().catch((error) => {
-  console.error(`D1 import validation failed: ${error.message}`);
-  process.exitCode = 2;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`D1 import validation failed: ${error.message}`);
+    process.exitCode = 2;
+  });
+}
