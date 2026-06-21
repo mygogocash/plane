@@ -1,0 +1,80 @@
+name = "manut-app-preview"
+main = "src/index.ts"
+compatibility_date = "2026-06-21"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+APP_ENV = "preview"
+APP_ORIGIN = "https://app.manut.xyz"
+LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
+INSTANCE_VERSION = "cloudflare-preview"
+
+[[d1_databases]]
+binding = "MANUT_DB"
+database_name = "manut-preview"
+database_id = "REPLACE_WITH_PREVIEW_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "manut-uploads-preview"
+
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+
+[[queues.producers]]
+binding = "JOBS"
+queue = "manut-jobs-preview"
+
+[[queues.consumers]]
+queue = "manut-jobs-preview"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[[durable_objects.bindings]]
+name = "LIVE_ROOMS"
+class_name = "LiveRoomDurableObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveRoomDurableObject"]
+
+[env.production]
+name = "manut-app"
+
+[env.production.vars]
+APP_ENV = "production"
+APP_ORIGIN = "https://app.manut.xyz"
+LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
+INSTANCE_VERSION = "cloudflare-production"
+
+[[env.production.d1_databases]]
+binding = "MANUT_DB"
+database_name = "manut-prod"
+database_id = "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[env.production.r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "manut-uploads-prod"
+
+[[env.production.kv_namespaces]]
+binding = "CONFIG"
+id = "REPLACE_WITH_PRODUCTION_KV_NAMESPACE_ID"
+
+[[env.production.queues.producers]]
+binding = "JOBS"
+queue = "manut-jobs-prod"
+
+[[env.production.queues.consumers]]
+queue = "manut-jobs-prod"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[[env.production.durable_objects.bindings]]
+name = "LIVE_ROOMS"
+class_name = "LiveRoomDurableObject"

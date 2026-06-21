@@ -1,0 +1,79 @@
+name: Cloudflare CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_live_baseline:
+        description: "Run live baseline checks against manut.xyz and app.manut.xyz"
+        required: true
+        default: false
+        type: boolean
+  pull_request:
+    branches:
+      - "preview"
+    paths:
+      - "apps/cloudflare/**"
+      - ".github/workflows/cloudflare-ci-cd.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "process/features/cloudflare-stack-migration/**"
+      - "docs/cloudflare-stack-migration.md"
+  push:
+    branches:
+      - "preview"
+    paths:
+      - "apps/cloudflare/**"
+      - ".github/workflows/cloudflare-ci-cd.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "process/features/cloudflare-stack-migration/**"
+      - "docs/cloudflare-stack-migration.md"
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22.18.0"
+
+jobs:
+  validate-cloudflare-foundation:
+    name: Validate Cloudflare foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack and pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check Cloudflare Worker
+        run: pnpm --filter @manut/cloudflare check
+
+      - name: Test Cloudflare Worker
+        run: pnpm --filter @manut/cloudflare test
+
+      - name: Run live baseline
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_baseline }}
+        run: pnpm --filter @manut/cloudflare baseline
+
+      - name: Write Cloudflare summary
+        run: |
+          {
+            echo "### Cloudflare CI/CD foundation"
+            echo ""
+            echo "- Worker package: \`@manut/cloudflare\`"
+            echo "- Production traffic moved: \`false\`"
+            echo "- Required deploy secret for future phases: \`CLOUDFLARE_API_TOKEN\`"
+            echo "- Required deploy variables for future phases: \`CLOUDFLARE_ACCOUNT_ID\`, \`CLOUDFLARE_ZONE_ID\`"
+          } >> "$GITHUB_STEP_SUMMARY"

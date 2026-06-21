@@ -252,3 +252,7 @@ allowBuilds:
   msgpackr-extract: true
   turbo: true
   sharp: false
+  workerd: true
+
+minimumReleaseAgeExclude:
+  - '@cloudflare/workers-types@4.20260621.1'

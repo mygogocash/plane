@@ -1,0 +1,30 @@
+{
+  "name": "@manut/cloudflare",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "baseline": "node tools/capture-baseline.mjs",
+    "check": "tsc --noEmit",
+    "deploy:preview": "wrangler deploy --env=\"\"",
+    "deploy:production": "wrangler deploy --env production",
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply manut-preview --local",
+    "db:migrate:preview": "wrangler d1 migrations apply manut-preview",
+    "db:migrate:production": "wrangler d1 migrations apply manut-prod --env production"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "hono": "4.12.26"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260621.1",
+    "drizzle-kit": "0.31.10",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "4.103.0"
+  }
+}
