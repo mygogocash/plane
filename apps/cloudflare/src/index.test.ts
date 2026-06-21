@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { app, LiveRoomDurableObject } from "./index";
+import cloudflareWorker, { app, LiveRoomDurableObject } from "./index";
 import type { CloudflareBindings } from "./types";
 
 const env = {
@@ -89,6 +89,37 @@ describe("Manut Cloudflare Worker foundation", () => {
         workspaces_exist: true,
       },
     });
+  });
+
+  it("exports a Cloudflare Queue consumer for preview deploy triggers", async () => {
+    const ack = vi.fn();
+
+    await cloudflareWorker.queue?.(
+      {
+        queue: "manut-jobs-test",
+        messages: [
+          {
+            id: "message-upload-audit-1",
+            body: {
+              id: "job-upload-audit-1",
+              schemaVersion: 1,
+              type: "upload-audit",
+              createdAt: "2026-06-21T09:40:00.000Z",
+              payload: {
+                objectKey: "workspaces/demo/logo.png",
+                status: "verified",
+                targetBucket: "manut-uploads-preview",
+              },
+            },
+            ack,
+          },
+        ],
+      } as unknown as MessageBatch<unknown>,
+      env,
+      {} as ExecutionContext
+    );
+
+    expect(ack).toHaveBeenCalledTimes(1);
   });
 
   it("exposes migration status without moving production traffic", async () => {

@@ -58,3 +58,18 @@ production queue, cache, lock, or WebSocket traffic was moved to Cloudflare.
 Do not route production async/cache/live traffic to the Cloudflare primitives.
 If a preview Worker exposes incorrect behavior, revert this phase commit or stop
 deploying the Cloudflare Worker package.
+
+## Preview Queue Consumer Evidence
+
+Captured during Phase 7 preview provisioning:
+
+- Queue: `manut-jobs-preview`
+- Worker consumer script: `manut-app-preview`
+- Consumer ID: `1416f38de996449db614f3eab85f39fb`
+- Batch size: `10`
+- Max retries: `3`
+- Max wait time: `30000ms`
+
+The Worker now exports a Cloudflare `queue` handler and the preview deploy
+attached both producer and consumer triggers. This is still preview-only; no
+production queue traffic has moved.

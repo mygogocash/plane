@@ -87,7 +87,7 @@ export type QueueMessageLike = {
 
 export type QueueBatchLike = {
   queue?: string;
-  messages: QueueMessageLike[];
+  messages: readonly QueueMessageLike[];
 };
 
 export type JobFailureRecord = {

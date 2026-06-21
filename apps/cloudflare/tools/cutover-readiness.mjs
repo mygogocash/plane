@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 function usage() {
@@ -130,8 +130,8 @@ async function requiredFileCheck({ id, label, phase, root, relativePath, remedia
   };
 }
 
-async function envFileCheck({ id, label, phase, root, envName, remediation }) {
-  const rawPath = process.env[envName];
+async function envFileCheck({ id, label, phase, root, envName, relativePath, remediation }) {
+  const rawPath = process.env[envName] ?? relativePath;
 
   if (!rawPath) {
     return {
@@ -147,17 +147,42 @@ async function envFileCheck({ id, label, phase, root, envName, remediation }) {
 
   const absolutePath = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
   const status = await fileStatus(absolutePath);
+  const jsonValidation = status.exists && relativePath ? await validateEvidenceJson(absolutePath) : { ok: true };
 
   return {
     id,
     label,
     phase,
-    status: status.exists ? "pass" : "blocked",
+    status: status.exists && jsonValidation.ok ? "pass" : "blocked",
     evidence: path.relative(root, absolutePath),
-    env: envName,
+    env: process.env[envName] ? envName : null,
     size_bytes: status.exists ? status.sizeBytes : null,
-    remediation: status.exists ? null : `${envName} points to a missing file.`,
+    remediation:
+      status.exists && jsonValidation.ok
+        ? null
+        : (jsonValidation.message ?? (relativePath ? remediation : `${envName} points to a missing file.`)),
   };
+}
+
+async function validateEvidenceJson(filePath) {
+  if (!filePath.endsWith(".json")) {
+    return { ok: true };
+  }
+
+  try {
+    const json = JSON.parse(await readFile(filePath, "utf8"));
+    return json.ok === true
+      ? { ok: true }
+      : {
+          ok: false,
+          message: "Evidence JSON must contain ok: true.",
+        };
+  } catch (error) {
+    return {
+      ok: false,
+      message: `Evidence JSON is invalid: ${error.message}`,
+    };
+  }
 }
 
 function approvalCheck() {
@@ -254,6 +279,8 @@ async function buildReport(root, selectedPhase) {
       label: "Cloudflare preview smoke",
       phase: "phase-07",
       envName: "CLOUDFLARE_PREVIEW_SMOKE_REPORT",
+      relativePath:
+        "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-preview-smoke_21-06-26.json",
       remediation: "Run a preview Worker/Page smoke and record HTTP/status/headers.",
     },
     {

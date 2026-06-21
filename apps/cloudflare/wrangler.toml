@@ -10,11 +10,12 @@ enabled = true
 APP_ENV = "preview"
 APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-preview"
+LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
 
 [[d1_databases]]
 binding = "MANUT_DB"
 database_name = "manut-preview"
-database_id = "REPLACE_WITH_PREVIEW_D1_DATABASE_ID"
+database_id = "28b4db1a-005d-4814-b607-0f82900ce4bd"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
@@ -23,7 +24,7 @@ bucket_name = "manut-uploads-preview"
 
 [[kv_namespaces]]
 binding = "CONFIG"
-id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+id = "fb075b2d3c8e459eb07cd7e82e741b48"
 
 [[queues.producers]]
 binding = "JOBS"

@@ -15,7 +15,7 @@ Latest captured baseline during this report:
 - `app.manut.xyz/` served HTTP `200` from the current app origin.
 - `app.manut.xyz/api/instances/` returned HTTP `503` from the current GKE app
   path at `2026-06-21T09:19:16Z`, then returned HTTP `200` with JSON at
-  `2026-06-21T09:26:47Z`.
+  `2026-06-21T09:26:47Z` and again at `2026-06-21T09:40:09Z`.
 - `app.manut.xyz` DNS still resolved to GKE IP `34.143.231.225`.
 - `/uploads` still returned the current GCS-backed HTTP `403` XML response.
 
@@ -32,11 +32,37 @@ Expected current result:
 - `Cutover readiness: BLOCKED`
 - `Phase 7 cutover ready: no`
 - `Phase 8 decommission ready: no`
-- `Selected checks passed: 8/16`
+- `Selected checks passed: 9/16`
+
+## Preview Cloudflare Smoke
+
+Report:
+`process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-preview-smoke_21-06-26.json`
+
+Result:
+
+- `https://manut-app-preview.bettergogocash.workers.dev/healthz` returned HTTP
+  `200`.
+- `/api/instances/` returned HTTP `200` with Manut instance metadata.
+- `/api/cloudflare/migration-status` returned HTTP `200` and confirmed the
+  legacy proxy is configured.
+- `/api/cloudflare/routes` returned HTTP `200` and `cutover_ready: false`.
+- `/api/cloudflare/d1/workspaces` returned HTTP `200` from D1 shadow reads.
+- `/api/workspaces/` proxied to legacy GKE and returned HTTP `401` with
+  `x-manut-edge-route: legacy-gke`.
+- `/uploads` proxied to legacy GKE/GCS and returned HTTP `403` with
+  `x-manut-edge-route: legacy-gke`.
+
+Preview deploy evidence:
+
+- Worker: `manut-app-preview`
+- URL: `https://manut-app-preview.bettergogocash.workers.dev`
+- Version ID: `2856b18f-2e3d-4a0b-94f9-f9276bd1c2b0`
+- Queue producer: `manut-jobs-preview`
+- Queue consumer: `manut-jobs-preview`
 
 ## Blocking Evidence Gaps
 
-- No Cloudflare preview smoke report is recorded.
 - No production Cloudflare deploy report is recorded.
 - No final D1 import validation report is recorded.
 - No final R2 manifest validation report is recorded.
@@ -56,3 +82,7 @@ The current app API had a transient non-green probe during this phase:
 `/api/instances/` returned HTTP `503` once and later returned HTTP `200`.
 Continue monitoring before using the GKE API as a parity source for Cloudflare
 contract tests or a rollback target.
+
+The latest baseline in this report returned HTTP `200` for
+`https://app.manut.xyz/api/instances/`, while DNS still pointed
+`app.manut.xyz` at GKE IP `34.143.231.225`.

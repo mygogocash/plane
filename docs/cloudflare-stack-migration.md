@@ -14,10 +14,11 @@ intentionally non-destructive until the production cutover phase is approved.
 Preview:
 
 - Worker: `manut-app-preview`
-- D1: `manut-preview`
+- Worker URL: `https://manut-app-preview.bettergogocash.workers.dev`
+- D1: `manut-preview` (`28b4db1a-005d-4814-b607-0f82900ce4bd`)
 - R2: `manut-uploads-preview`
 - Queue: `manut-jobs-preview`
-- KV: `manut-config-preview`
+- KV: `manut-config-preview` (`fb075b2d3c8e459eb07cd7e82e741b48`)
 - Durable Object: `LiveRoomDurableObject`
 
 Production:
@@ -56,6 +57,7 @@ pnpm --filter @manut/cloudflare d1:inventory -- --root apps/api/plane
 pnpm --filter @manut/cloudflare d1:compare -- <postgres-counts.json> <d1-counts.json>
 pnpm --filter @manut/cloudflare uploads:compare -- <gcs-manifest.json> <r2-manifest.json>
 pnpm --filter @manut/cloudflare cutover:readiness
+pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app-preview.bettergogocash.workers.dev
 ```
 
 ## Provisioning Order
@@ -94,6 +96,17 @@ Manual deploy requires:
 - GitHub variable `CLOUDFLARE_ACCOUNT_ID`
 - GitHub variable `CLOUDFLARE_ZONE_ID`
 
+Current GitHub repository state:
+
+- `CLOUDFLARE_ACCOUNT_ID` is configured.
+- `CLOUDFLARE_APP_URL` is configured.
+- `CLOUDFLARE_SITE_URL` is configured.
+- `CLOUDFLARE_ZONE_ID` is not configured.
+- `CLOUDFLARE_API_TOKEN` is not configured.
+- Local Wrangler OAuth is authenticated and was used for the first preview
+  provisioning/deploy, but GitHub Actions still needs a raw API token secret
+  and zone ID variable before manual deploy can run there.
+
 The deploy job writes `Production DNS changed: false` and does not update
 `app.manut.xyz` routing. DNS cutover remains a separate Phase 7 operator action.
 
@@ -130,6 +143,11 @@ At the current migration state the expected output is `Cutover readiness:
 BLOCKED`. That is correct until preview/prod deploy evidence, D1/R2 validation,
 authenticated smoke, Better Stack checks, and explicit operator approval are
 recorded.
+
+The preview smoke gate has local evidence at
+`process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-preview-smoke_21-06-26.json`.
+The readiness checker uses that default path if
+`CLOUDFLARE_PREVIEW_SMOKE_REPORT` is not set.
 
 ## Cutover Rule
 

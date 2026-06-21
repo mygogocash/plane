@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
 import { handleD1WorkspaceProjectsRequest, handleD1WorkspacesRequest } from "./d1-core";
 import { buildInstancePayload } from "./instance";
+import { consumeJobQueue } from "./jobs";
 import { LiveRoomDurableObject } from "./live-room";
 import type { CloudflareBindings } from "./types";
 import { handleUploadsRequest } from "./uploads";
@@ -138,4 +139,20 @@ app.notFound((c) =>
   )
 );
 
-export default app;
+export const worker = {
+  fetch: app.fetch,
+  async queue(batch, env) {
+    const summary = await consumeJobQueue(batch, env);
+    console.log(
+      "MANUT_QUEUE_CONSUMER_SUMMARY",
+      JSON.stringify({
+        accepted: summary.accepted,
+        failed: summary.failed,
+        queueName: summary.queueName,
+        total: summary.total,
+      })
+    );
+  },
+} satisfies ExportedHandler<CloudflareBindings>;
+
+export default worker;

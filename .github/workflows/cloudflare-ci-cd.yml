@@ -205,8 +205,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS "${{ inputs.cloudflare_preview_url }}/healthz"
-          curl -fsS "${{ inputs.cloudflare_preview_url }}/api/cloudflare/migration-status"
+          pnpm --filter @manut/cloudflare smoke:worker -- "${{ inputs.cloudflare_preview_url }}" --json --out "$RUNNER_TEMP/cloudflare-preview-smoke.json"
+          {
+            echo ""
+            echo "### Cloudflare preview smoke"
+            echo ""
+            echo '```json'
+            cat "$RUNNER_TEMP/cloudflare-preview-smoke.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload preview smoke report
+        if: ${{ inputs.cloudflare_preview_url != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-preview-smoke-${{ inputs.deploy_target }}
+          path: ${{ runner.temp }}/cloudflare-preview-smoke.json
 
       - name: Write deploy summary
         run: |

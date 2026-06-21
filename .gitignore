@@ -44,6 +44,10 @@ pnpm-debug.log*
 # Vercel
 .vercel
 
+# Cloudflare Wrangler local state
+.wrangler/
+**/.wrangler/
+
 # Turborepo
 .turbo
 

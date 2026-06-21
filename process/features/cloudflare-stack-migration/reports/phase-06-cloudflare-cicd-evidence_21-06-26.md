@@ -64,6 +64,20 @@ Blocked. The workflow can deploy Workers only when manually dispatched with
 Cloudflare credentials. It does not update `app.manut.xyz` DNS and does not
 replace GKE as production origin.
 
+## Current GitHub Cloudflare Configuration
+
+Captured after preview provisioning:
+
+- `CLOUDFLARE_ACCOUNT_ID`: configured.
+- `CLOUDFLARE_APP_URL`: configured.
+- `CLOUDFLARE_SITE_URL`: configured.
+- `CLOUDFLARE_ZONE_ID`: missing.
+- `CLOUDFLARE_API_TOKEN`: missing.
+
+Manual GitHub deploy remains blocked until the zone ID variable and raw API
+token secret are configured. Local Wrangler OAuth was used for the first
+preview deploy.
+
 ## Rollback
 
 Set `deploy_target=none` or leave the workflow on push/PR validation only.

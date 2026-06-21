@@ -10,14 +10,15 @@
     "d1:inventory": "node tools/django-model-inventory.mjs",
     "uploads:compare": "node tools/compare-upload-manifests.mjs",
     "cutover:readiness": "node tools/cutover-readiness.mjs",
+    "smoke:worker": "node tools/smoke-worker.mjs",
     "deploy:preview": "wrangler deploy --env=\"\"",
     "deploy:production": "wrangler deploy --env production",
     "dev": "wrangler dev",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply manut-preview --local",
-    "db:migrate:preview": "wrangler d1 migrations apply manut-preview",
-    "db:migrate:production": "wrangler d1 migrations apply manut-prod --env production"
+    "db:migrate:preview": "wrangler d1 migrations apply manut-preview --remote",
+    "db:migrate:production": "wrangler d1 migrations apply manut-prod --env production --remote"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
