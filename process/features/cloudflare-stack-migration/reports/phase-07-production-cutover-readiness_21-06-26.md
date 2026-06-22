@@ -150,6 +150,9 @@ pnpm --filter @manut/cloudflare operator:approval-report -- \
   --out process/features/cloudflare-stack-migration/reports/phase-07-operator-cutover-approval_21-06-26.json
 ```
 
+Each operator approval check requires an explicit ISO `observed_at`; approval
+notes without per-check observation timestamps remain blocked evidence.
+
 Authenticated smoke input can be started from the checked-in template:
 
 ```bash

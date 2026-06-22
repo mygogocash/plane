@@ -1061,11 +1061,36 @@ describe("cutover readiness evidence gate", () => {
           end_at: "2026-06-21T14:00:00.000Z",
         },
         checks: [
-          { id: "maintenance-window-announced", ok: true, evidence: "calendar invite" },
-          { id: "rollback-checkpoint-confirmed", ok: true, evidence: "rollback DNS target documented" },
-          { id: "dns-change-approved", ok: true, evidence: "operator approved app.manut.xyz route change" },
-          { id: "write-freeze-confirmed", ok: true, evidence: "maintenance banner scheduled" },
-          { id: "smoke-plan-ready", ok: true, evidence: "public and authenticated smoke checklist ready" },
+          {
+            id: "maintenance-window-announced",
+            ok: true,
+            evidence: "calendar invite",
+            observed_at: "2026-06-21T12:00:00.000Z",
+          },
+          {
+            id: "rollback-checkpoint-confirmed",
+            ok: true,
+            evidence: "rollback DNS target documented",
+            observed_at: "2026-06-21T12:00:00.000Z",
+          },
+          {
+            id: "dns-change-approved",
+            ok: true,
+            evidence: "operator approved app.manut.xyz route change",
+            observed_at: "2026-06-21T12:00:00.000Z",
+          },
+          {
+            id: "write-freeze-confirmed",
+            ok: true,
+            evidence: "maintenance banner scheduled",
+            observed_at: "2026-06-21T12:00:00.000Z",
+          },
+          {
+            id: "smoke-plan-ready",
+            ok: true,
+            evidence: "public and authenticated smoke checklist ready",
+            observed_at: "2026-06-21T12:00:00.000Z",
+          },
         ],
       })
     );

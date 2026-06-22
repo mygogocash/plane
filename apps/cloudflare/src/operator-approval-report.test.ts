@@ -130,6 +130,20 @@ describe("operator approval report", () => {
     });
   });
 
+  it("requires every operator approval check to include an observation timestamp", () => {
+    const input = passingInput();
+    const writeFreeze = input.checks.find((check) => check.id === "write-freeze-confirmed");
+    delete writeFreeze.observed_at;
+
+    const report = buildOperatorApprovalReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      cutover_approved: false,
+      validation_error: "Operator approval report must include checks.write-freeze-confirmed.observed_at.",
+    });
+  });
+
   it("writes repo-root-relative reports when run through the package", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-operator-approval-"));
     const inputPath = path.join(root, "approval-evidence.json");
