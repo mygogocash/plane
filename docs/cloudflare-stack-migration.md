@@ -179,6 +179,23 @@ Bundle input variables:
 - `OPERATOR_APPROVAL_INPUT`
 - `SEVEN_GREEN_DAYS_INPUT`
 
+Source-side GCP inventory is a supporting evidence step before final D1/R2
+parity validation. Capture the raw provider output outside the repo, then write
+only the sanitized derived report:
+
+```bash
+mkdir -p /tmp/manut-gcp-inventory
+gcloud storage buckets describe gs://plane-affine-495114-uploads --format=json > /tmp/manut-gcp-inventory/gcs-bucket.json
+gcloud storage objects list gs://plane-affine-495114-uploads --format=json > /tmp/manut-gcp-inventory/gcs-objects.json
+gcloud sql instances list --format=json > /tmp/manut-gcp-inventory/sql-instances.json
+pnpm --filter @manut/cloudflare gcp:source-inventory -- --gcs-bucket /tmp/manut-gcp-inventory/gcs-bucket.json --gcs-objects /tmp/manut-gcp-inventory/gcs-objects.json --sql-instances /tmp/manut-gcp-inventory/sql-instances.json --json --out process/features/cloudflare-stack-migration/reports/phase-07-gcp-source-inventory_22-06-26.json
+```
+
+The `gcp:source-inventory` report intentionally redacts GCS object names, Cloud
+SQL IP addresses, and Cloud SQL server certificates. It is not accepted by the
+cutover readiness gate as a replacement for final D1 import validation or final
+R2 manifest parity evidence.
+
 Required Phase 7 evidence:
 
 - `CLOUDFLARE_PREVIEW_SMOKE_REPORT`

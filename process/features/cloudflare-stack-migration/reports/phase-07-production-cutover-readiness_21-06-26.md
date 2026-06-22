@@ -37,7 +37,7 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 12/17`
 
-Latest local readiness audit at `2026-06-22T00:49:36Z`:
+Latest local readiness audit at `2026-06-22T01:27:48Z`:
 
 - Phase 7 selected checks: `12/17` passed; blocked on D1 import validation,
   R2 manifest validation, authenticated smoke, Better Stack cutover green, and
@@ -46,6 +46,14 @@ Latest local readiness audit at `2026-06-22T00:49:36Z`:
   plus seven-green-days evidence cannot exist until after cutover.
 - The dry-run evidence bundle skipped all 6 remaining evidence tasks because
   the corresponding local input env vars were unset.
+- Source-side GCP inventory is now recorded at
+  `process/features/cloudflare-stack-migration/reports/phase-07-gcp-source-inventory_22-06-26.json`.
+  The report was generated from read-only `gcloud` output and redacts GCS object
+  names, Cloud SQL IP addresses, and Cloud SQL server certificates. It recorded
+  the `plane-affine-495114-uploads` bucket with `2` objects and `4` likely
+  Postgres source candidates for operator review. This is supporting evidence
+  only; it does not replace final D1 import validation or final R2 manifest
+  parity evidence.
 
 Phase 7/8 evidence bundle command:
 

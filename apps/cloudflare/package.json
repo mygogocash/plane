@@ -9,6 +9,7 @@
     "d1:compare": "node tools/compare-row-counts.mjs",
     "d1:validate-import": "node tools/validate-d1-import.mjs",
     "d1:inventory": "node tools/django-model-inventory.mjs",
+    "gcp:source-inventory": "node tools/gcp-source-inventory.mjs",
     "uploads:compare": "node tools/compare-upload-manifests.mjs",
     "uploads:validate": "node tools/compare-upload-manifests.mjs --require-checksum",
     "auth:smoke-report": "node tools/authenticated-smoke-report.mjs",

@@ -1,0 +1,105 @@
+{
+  "ok": true,
+  "source_inventory_ready": true,
+  "evidence_kind": "gcp-source-inventory",
+  "schema_version": 1,
+  "generated_at": "2026-06-22T01:25:00.692Z",
+  "redactions": ["gcs_object_names", "cloud_sql_ip_addresses", "cloud_sql_server_ca_certificates"],
+  "validation_errors": [],
+  "gcs_bucket": {
+    "name": "plane-affine-495114-uploads",
+    "location": "ASIA-SOUTHEAST1",
+    "storage_class": "STANDARD",
+    "uniform_bucket_level_access_enabled": true,
+    "public_access_prevention": "inherited",
+    "soft_delete_retention_seconds": 604800,
+    "cors_origins": [
+      "http://app.manut.xyz",
+      "http://plane.34.143.231.225.sslip.io",
+      "https://app.manut.xyz",
+      "https://plane.34.143.231.225.sslip.io"
+    ],
+    "object_count": 2,
+    "total_size": 1804851,
+    "checksum_coverage": {
+      "crc32c": 2,
+      "md5": 2
+    },
+    "object_key_policy": "sha256-only",
+    "sample_objects": [
+      {
+        "key_sha256": "1a0958bb1972e5e90f6eaa8dc5d8449eff6467bc496c3ba366ea077dd042a5d0",
+        "size": 976520,
+        "has_crc32c": true,
+        "has_md5": true,
+        "content_type": "image/jpeg",
+        "updated_at": "2026-06-06T08:33:04+0000"
+      },
+      {
+        "key_sha256": "24fa6b97c9a1d2badd662cb377661adc0cacc1a8ae5d2263fd01cf8c816a1a80",
+        "size": 828331,
+        "has_crc32c": true,
+        "has_md5": true,
+        "content_type": "image/jpeg",
+        "updated_at": "2026-06-08T01:16:31+0000"
+      }
+    ]
+  },
+  "cloud_sql": {
+    "instance_count": 4,
+    "candidate_instances": [
+      {
+        "name": "affine-pg",
+        "project": "affine-495114",
+        "database_version": "POSTGRES_16",
+        "region": "asia-southeast1",
+        "state": "RUNNABLE",
+        "deletion_protection_enabled": false,
+        "backup_enabled": true,
+        "point_in_time_recovery_enabled": true,
+        "transaction_log_retention_days": 7,
+        "retained_backups": 0,
+        "retain_backups_on_delete": false
+      },
+      {
+        "name": "manut-pg18-prod",
+        "project": "affine-495114",
+        "database_version": "POSTGRES_18",
+        "region": "asia-southeast1",
+        "state": "RUNNABLE",
+        "deletion_protection_enabled": true,
+        "backup_enabled": true,
+        "point_in_time_recovery_enabled": null,
+        "transaction_log_retention_days": 7,
+        "retained_backups": 0,
+        "retain_backups_on_delete": null
+      },
+      {
+        "name": "plane-pg",
+        "project": "affine-495114",
+        "database_version": "POSTGRES_15",
+        "region": "asia-southeast1",
+        "state": "RUNNABLE",
+        "deletion_protection_enabled": true,
+        "backup_enabled": true,
+        "point_in_time_recovery_enabled": true,
+        "transaction_log_retention_days": 7,
+        "retained_backups": 0,
+        "retain_backups_on_delete": true
+      },
+      {
+        "name": "manut-pg18-rehearsal-20260527001726",
+        "project": "affine-495114",
+        "database_version": "POSTGRES_18",
+        "region": "asia-southeast1",
+        "state": "RUNNABLE",
+        "deletion_protection_enabled": false,
+        "backup_enabled": false,
+        "point_in_time_recovery_enabled": null,
+        "transaction_log_retention_days": 7,
+        "retained_backups": 0,
+        "retain_backups_on_delete": null
+      }
+    ]
+  }
+}
