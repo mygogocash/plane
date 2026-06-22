@@ -91,6 +91,22 @@ function readNested(row, key) {
   if (isRecord(row.httpMetadata) && row.httpMetadata[key] !== undefined) {
     return row.httpMetadata[key];
   }
+  if (isRecord(row.checksums) && row.checksums[key] !== undefined) {
+    return row.checksums[key];
+  }
+  if (isRecord(row.customMetadata) && row.customMetadata[key] !== undefined) {
+    return row.customMetadata[key];
+  }
+  return undefined;
+}
+
+function readAnyNested(row, keys) {
+  for (const key of keys) {
+    const value = readNested(row, key);
+    if (value !== undefined) {
+      return value;
+    }
+  }
   return undefined;
 }
 
@@ -119,10 +135,10 @@ function normalizeObject(row, fallbackKey, label) {
 
   const rawSize = readNested(row, "size") ?? readNested(row, "contentLength") ?? readNested(row, "content_length");
   const checksums = {
-    crc32c: normalizeChecksum(readNested(row, "crc32c")),
+    crc32c: normalizeChecksum(readAnyNested(row, ["crc32c", "crc32cHash", "crc32c_hash"])),
     etag: normalizeChecksum(readNested(row, "etag") ?? readNested(row, "httpEtag")),
-    md5Hash: normalizeChecksum(readNested(row, "md5Hash") ?? readNested(row, "md5")),
-    sha256: normalizeChecksum(readNested(row, "sha256") ?? readNested(row, "checksum")),
+    md5Hash: normalizeChecksum(readAnyNested(row, ["md5Hash", "md5_hash", "md5"])),
+    sha256: normalizeChecksum(readAnyNested(row, ["sha256", "sha256Hash", "sha256_hash", "checksum"])),
   };
 
   return {

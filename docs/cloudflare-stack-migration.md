@@ -396,8 +396,11 @@ pnpm --filter @manut/cloudflare uploads:validate -- gcs-manifest.json r2-manifes
 ```
 
 Accepted manifest rows can include `key`, `name`, `object`, `objectKey`, or
-`path` plus `size` and optional checksum fields such as `crc32c`, `etag`,
-`md5Hash`, or `sha256`.
+`path` plus `size` and optional checksum fields such as `crc32c`,
+`crc32c_hash`, `etag`, `md5Hash`, `md5_hash`, or `sha256`. The comparator also
+accepts nested checksum objects such as `{ "checksums": { "sha256": "..." } }`,
+so raw `gcloud storage objects list --format=json` output can be used as the
+GCS-side manifest without hand editing.
 
 `uploads:validate` requires at least one shared checksum field per object. Use
 plain `uploads:compare` only for exploratory size/key checks; it is not strong

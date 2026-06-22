@@ -222,6 +222,85 @@ describe("migration validation tools", () => {
     });
   });
 
+  it("accepts real gcloud storage checksum field names for upload validation", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-r2-validation-"));
+    const sourcePath = path.join(root, "gcs-manifest.json");
+    const targetPath = path.join(root, "r2-manifest.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        {
+          name: "workspace/logo.png",
+          size: "12",
+          crc32c_hash: "abc123",
+          md5_hash: "def456",
+          content_type: "image/png",
+          update_time: "2026-06-22T01:00:00+0000",
+        },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        {
+          key: "workspace/logo.png",
+          size: 12,
+          crc32c: "abc123",
+          md5Hash: "def456",
+        },
+      ])
+    );
+
+    const result = runTool([
+      "tools/compare-upload-manifests.mjs",
+      sourcePath,
+      targetPath,
+      "--require-checksum",
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(report).toMatchObject({
+      ok: true,
+      sourceObjectCount: 1,
+      targetObjectCount: 1,
+      matchedObjectCount: 1,
+      mismatchedObjectCount: 0,
+      mismatches: [],
+    });
+  });
+
+  it("accepts nested R2 checksum objects for upload validation", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-r2-validation-"));
+    const sourcePath = path.join(root, "gcs-manifest.json");
+    const targetPath = path.join(root, "r2-manifest.json");
+
+    await writeFile(sourcePath, JSON.stringify([{ key: "workspace/logo.png", size: 12, sha256: "abc" }]));
+    await writeFile(
+      targetPath,
+      JSON.stringify([{ key: "workspace/logo.png", size: 12, checksums: { sha256: "abc" } }])
+    );
+
+    const result = runTool([
+      "tools/compare-upload-manifests.mjs",
+      sourcePath,
+      targetPath,
+      "--require-checksum",
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(report).toMatchObject({
+      ok: true,
+      checksumPolicy: {
+        requireSharedChecksum: true,
+      },
+    });
+  });
+
   it("rejects duplicate D1 count rows instead of silently overwriting them", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
     const sourcePath = path.join(root, "postgres-counts.json");

@@ -72,6 +72,12 @@ from a preview or sampled non-production migration and compare them with
 `uploads:validate`. The raw `uploads:compare` command is useful for exploratory
 size/key checks but is not strong enough for Phase 7 cutover evidence.
 
+Follow-up parser hardening on `2026-06-22` made `uploads:validate` accept raw
+`gcloud storage objects list --format=json` checksum fields (`crc32c_hash`,
+`md5_hash`) and nested R2 checksum objects. This removes the manual manifest
+reshaping step, but the Phase 7 gate still requires a real GCS-to-R2 comparison
+report from the final migration target.
+
 ## Rollback
 
 Leave `R2_UPLOADS_READ_ENABLED` unset or set it to any value other than `true`.
