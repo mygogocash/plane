@@ -1,6 +1,6 @@
 # Phase 7 - Production Cutover
 
-**Status:** BLOCKED pending final D1/R2 validation, authenticated smoke, Better Stack green, and explicit operator approval
+**Status:** BLOCKED pending final D1 import validation, authenticated smoke, Better Stack green, and explicit operator approval
 
 ## Objective
 
@@ -144,7 +144,6 @@ Rollback remains DNS/routing based until Phase 8:
 ## Current Blockers
 
 - No final D1 import validation report exists.
-- No final R2 manifest validation report exists.
 - No authenticated smoke report exists.
 - No Better Stack cutover-green report exists.
 - No explicit cutover approval is recorded.

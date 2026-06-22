@@ -20,6 +20,18 @@ describe("Manut CI/CD workflow", () => {
     expect(workflow).not.toContain(".github/workflows/ci-cd.yml|");
   });
 
+  it("does not suppress GKE deploys for shared package manifest changes", () => {
+    const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "ci-cd.yml"), "utf8");
+    const cloudflareOnlyPattern = workflow
+      .split("\n")
+      .find((line) => line.includes("apps/cloudflare/*|apps/cloudflare/**"));
+
+    expect(cloudflareOnlyPattern).toBeDefined();
+    expect(cloudflareOnlyPattern).not.toContain("package.json");
+    expect(cloudflareOnlyPattern).not.toContain("pnpm-lock.yaml");
+    expect(cloudflareOnlyPattern).not.toContain("pnpm-workspace.yaml");
+  });
+
   it("fails production smoke when any sample fails after rollout", () => {
     const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "ci-cd.yml"), "utf8");
 
@@ -46,5 +58,19 @@ describe("Manut CI/CD workflow", () => {
     expect(workflow).toContain(".github/ops/betterstack/summarize-cutover-report.sh");
     expect(workflow).toContain("phase-07-betterstack-cutover_21-06-26.json");
     expect(workflow).toContain("--soft-fail");
+  });
+
+  it("writes Cloudflare deploy evidence with a provider-backed Worker version id", () => {
+    const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "cloudflare-ci-cd.yml"), "utf8");
+
+    expect(workflow).toContain("Resolve deployed Worker version");
+    expect(workflow).toContain("/workers/scripts/${encodeURIComponent(workerName)}/deployments");
+    expect(workflow).toContain("WORKER_VERSION_ID: ${{ steps.worker_version.outputs.version_id }}");
+    expect(workflow).toContain(
+      'evidence_kind: deployTarget === "production" ? "cloudflare-production-deploy" : "cloudflare-preview-deploy"'
+    );
+    expect(workflow).toContain("version_id: process.env.WORKER_VERSION_ID");
+    expect(workflow).not.toContain("version_id: process.env.GITHUB_SHA");
+    expect(workflow).not.toContain("version_id: null");
   });
 });

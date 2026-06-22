@@ -128,12 +128,18 @@ const checks = [
   },
 ];
 
+function diagnosticHeaders() {
+  const token = process.env.MANUT_DIAGNOSTIC_TOKEN?.trim();
+  return token ? { "x-manut-diagnostic-token": token } : {};
+}
+
 async function runCheck(baseUrl, check) {
   const url = new URL(check.path, baseUrl);
   const startedAt = Date.now();
 
   try {
     const response = await fetch(url, {
+      headers: diagnosticHeaders(),
       method: "GET",
       redirect: "manual",
       signal: AbortSignal.timeout(15000),
@@ -239,6 +245,7 @@ async function main() {
   const failed = results.filter((result) => !result.ok);
   const report = {
     generated_at: new Date().toISOString(),
+    evidence_kind: "worker-smoke",
     base_url: baseUrl.toString(),
     ok: failed.length === 0,
     summary: {

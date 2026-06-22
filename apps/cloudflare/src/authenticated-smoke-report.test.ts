@@ -18,6 +18,11 @@ function passingInput() {
   return {
     actor: "operator@example.com",
     target_origin: "https://app.manut.xyz",
+    cloudflare_route_verified: true,
+    cloudflare_route_evidence: {
+      edge_header: "x-manut-cloudflare-phase",
+      worker_url: "https://manut-app.bettergogocash.workers.dev",
+    },
     checks: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((check) => ({
       id: check.id,
       ok: true,
@@ -138,6 +143,30 @@ describe("authenticated smoke report", () => {
     expect(report).toMatchObject({
       ok: false,
       validation_error: "Authenticated smoke report must include actor.",
+    });
+  });
+
+  it("requires Cloudflare route provenance before passing smoke", () => {
+    const input = passingInput();
+    input.cloudflare_route_verified = false;
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke report must set cloudflare_route_verified: true.",
+    });
+  });
+
+  it("requires each smoke check to include an observation timestamp", () => {
+    const input = passingInput();
+    input.checks[0] = { ...input.checks[0], observed_at: null };
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke report must include checks.login.observed_at.",
     });
   });
 

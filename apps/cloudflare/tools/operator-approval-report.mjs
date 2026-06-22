@@ -308,6 +308,7 @@ export function buildOperatorApprovalReport(input, options = {}) {
   const failed = checks.filter((check) => !check.ok);
   const report = {
     generated_at: new Date().toISOString(),
+    evidence_kind: "operator-approval",
     ok: failed.length === 0,
     cutover_approved: failed.length === 0,
     target_origin: options.targetOrigin ?? input.target_origin ?? null,

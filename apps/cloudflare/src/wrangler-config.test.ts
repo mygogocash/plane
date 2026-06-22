@@ -15,4 +15,8 @@ describe("Wrangler production config", () => {
     expect(wranglerConfig).not.toMatch(/^routes?\s*=/m);
     expect(wranglerConfig).not.toMatch(/^custom_domain\s*=/m);
   });
+
+  it("does not check in a self-referential legacy GKE origin", () => {
+    expect(wranglerConfig).not.toContain('LEGACY_GKE_ORIGIN = "https://app.manut.xyz"');
+  });
 });

@@ -120,6 +120,18 @@ describe("Manut Cloudflare Worker foundation", () => {
     });
   });
 
+  it("preserves the /api/instances contract shape without a trailing slash", async () => {
+    const response = await app.request("/api/instances", {}, env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      instance: {
+        current_version: "test-version",
+        instance_name: "Manut",
+      },
+    });
+  });
+
   it("returns an explicit error when instance config D1 reads fail", async () => {
     const response = await app.request(
       "/api/instances/",
@@ -136,8 +148,25 @@ describe("Manut Cloudflare Worker foundation", () => {
     });
   });
 
+  it("does not return fallback instance metadata in production without D1", async () => {
+    const response = await app.request(
+      "/api/instances/",
+      {},
+      {
+        ...env,
+        APP_ENV: "production",
+      }
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "D1_CONFIG_BINDING_MISSING",
+    });
+  });
+
   it("exports a Cloudflare Queue consumer for preview deploy triggers", async () => {
     const ack = vi.fn();
+    const retry = vi.fn();
 
     await cloudflareWorker.queue?.(
       {
@@ -157,6 +186,7 @@ describe("Manut Cloudflare Worker foundation", () => {
               },
             },
             ack,
+            retry,
           },
         ],
       } as unknown as MessageBatch<unknown>,
@@ -164,7 +194,8 @@ describe("Manut Cloudflare Worker foundation", () => {
       {} as ExecutionContext
     );
 
-    expect(ack).toHaveBeenCalledTimes(1);
+    expect(ack).not.toHaveBeenCalled();
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   it("exposes migration status without moving production traffic", async () => {
@@ -248,6 +279,53 @@ describe("Manut Cloudflare Worker foundation", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
       error: "D1_BINDING_MISSING",
+      domain: "workspaces",
+    });
+  });
+
+  it("requires an internal diagnostic token for production D1 shadow reads", async () => {
+    const response = await app.request(
+      "/api/cloudflare/d1/workspaces",
+      {},
+      {
+        ...env,
+        APP_ENV: "production",
+        MANUT_DB: fakeD1({
+          match: "FROM workspaces",
+          rows: [],
+        }),
+        MANUT_DIAGNOSTIC_TOKEN: "diagnostic-secret",
+      }
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "MANUT_DIAGNOSTIC_ACCESS_DENIED",
+    });
+  });
+
+  it("allows production D1 shadow reads with the internal diagnostic token", async () => {
+    const response = await app.request(
+      "/api/cloudflare/d1/workspaces",
+      {
+        headers: {
+          "x-manut-diagnostic-token": "diagnostic-secret",
+        },
+      },
+      {
+        ...env,
+        APP_ENV: "production",
+        MANUT_DB: fakeD1({
+          match: "FROM workspaces",
+          rows: [],
+        }),
+        MANUT_DIAGNOSTIC_TOKEN: "diagnostic-secret",
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      source: "d1",
       domain: "workspaces",
     });
   });
@@ -378,6 +456,24 @@ describe("Manut Cloudflare Worker foundation", () => {
         websocket: true,
         collaboration: true,
       },
+    });
+  });
+
+  it("requires an internal diagnostic token for production live room diagnostics", async () => {
+    const response = await app.request(
+      "/api/cloudflare/live/rooms/shadow-room/health",
+      {},
+      {
+        ...env,
+        APP_ENV: "production",
+        LIVE_ROOMS: fakeLiveRoomsNamespace(),
+        MANUT_DIAGNOSTIC_TOKEN: "diagnostic-secret",
+      }
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "MANUT_DIAGNOSTIC_ACCESS_DENIED",
     });
   });
 });

@@ -10,6 +10,18 @@ import { validateSevenGreenDaysReport } from "./seven-green-days-report.mjs";
 const REQUIRED_D1_COUNT_TABLES = D1_VALIDATION_TABLES.map((table) => table.table);
 const REQUIRED_D1_RELATIONSHIPS = D1_VALIDATION_RELATIONSHIPS.map((relationship) => relationship.name);
 
+const EXPECTED_EVIDENCE_KINDS = {
+  "d1-import-validation": "d1-import-validation",
+  "r2-manifest-validation": "r2-manifest-validation",
+  "worker-smoke": "worker-smoke",
+  "cloudflare-production-deploy": "cloudflare-production-deploy",
+  "live-shadow-validation": "live-shadow-validation",
+  "authenticated-smoke": "authenticated-smoke",
+  "betterstack-cutover": "betterstack-cutover",
+  "operator-approval": "operator-approval",
+  "seven-green-days": "seven-green-days",
+};
+
 function usage() {
   return `Usage: node apps/cloudflare/tools/cutover-readiness.mjs [--json] [--root <repo-root>] [--phase phase-07|phase-08|all]
 
@@ -210,41 +222,52 @@ async function validateEvidenceJson(filePath, validationKind = null) {
     const filename = path.basename(filePath);
     const kind = validationKind ?? inferValidationKindFromFilename(filename);
 
+    let validation = { ok: true };
+
     if (kind === "d1-import-validation") {
-      return validateD1ImportReport(json);
-    }
-    if (kind === "r2-manifest-validation") {
-      return validateR2ManifestReport(json);
-    }
-    if (kind === "worker-smoke") {
-      return validateWorkerSmokeReport(json);
-    }
-    if (kind === "cloudflare-production-deploy") {
-      return validateCloudflareProductionDeployReport(json);
-    }
-    if (kind === "live-shadow-validation") {
-      return validateLiveShadowReport(json);
-    }
-    if (kind === "authenticated-smoke") {
-      return validateAuthenticatedSmokeReport(json);
-    }
-    if (kind === "betterstack-cutover") {
-      return validateBetterStackCutoverReport(json);
-    }
-    if (kind === "operator-approval") {
-      return validateOperatorApprovalReport(json);
-    }
-    if (kind === "seven-green-days") {
-      return validateSevenGreenDaysReport(json);
+      validation = validateD1ImportReport(json);
+    } else if (kind === "r2-manifest-validation") {
+      validation = validateR2ManifestReport(json);
+    } else if (kind === "worker-smoke") {
+      validation = validateWorkerSmokeReport(json);
+    } else if (kind === "cloudflare-production-deploy") {
+      validation = validateCloudflareProductionDeployReport(json);
+    } else if (kind === "live-shadow-validation") {
+      validation = validateLiveShadowReport(json);
+    } else if (kind === "authenticated-smoke") {
+      validation = validateAuthenticatedSmokeReport(json);
+    } else if (kind === "betterstack-cutover") {
+      validation = validateBetterStackCutoverReport(json);
+    } else if (kind === "operator-approval") {
+      validation = validateOperatorApprovalReport(json);
+    } else if (kind === "seven-green-days") {
+      validation = validateSevenGreenDaysReport(json);
     }
 
-    return { ok: true };
+    if (!validation.ok) {
+      return validation;
+    }
+
+    return validateExpectedEvidenceKind(json, kind);
   } catch (error) {
     return {
       ok: false,
       message: `Evidence JSON is invalid: ${error.message}`,
     };
   }
+}
+
+function validateExpectedEvidenceKind(report, kind) {
+  const expectedKind = EXPECTED_EVIDENCE_KINDS[kind];
+  if (!expectedKind) {
+    return { ok: true };
+  }
+
+  if (report.evidence_kind !== expectedKind) {
+    return { ok: false, message: `Evidence JSON evidence_kind must be ${expectedKind}.` };
+  }
+
+  return { ok: true };
 }
 
 function inferValidationKindFromFilename(filename) {
@@ -283,21 +306,46 @@ function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function coerceNonNegativeInteger(value, label) {
+  const numberValue = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+
+  if (!Number.isSafeInteger(numberValue) || numberValue < 0) {
+    return { ok: false, message: `${label} must be a non-negative integer.` };
+  }
+
+  return { ok: true, value: numberValue };
+}
+
+function readTableName(match) {
+  return match?.table_name ?? match?.tableName ?? match?.table ?? match?.name;
+}
+
 function validateD1ImportReport(report) {
   if (!isRecord(report.summary)) {
     return { ok: false, message: "D1 import report must include summary." };
   }
 
-  const matchedCountTables = report.summary.count_tables_matched ?? report.count_report?.matchedTableCount;
-  if (!Number.isSafeInteger(matchedCountTables) || matchedCountTables <= 0) {
+  const matchedCountTables = coerceNonNegativeInteger(
+    report.summary.count_tables_matched ?? report.count_report?.matchedTableCount,
+    "D1 import matched count table count"
+  );
+  if (!matchedCountTables.ok || matchedCountTables.value <= 0) {
     return { ok: false, message: "D1 import report must include at least one matched count table." };
   }
 
-  if (report.summary.count_tables_mismatched !== 0) {
+  const mismatchedCountTables = coerceNonNegativeInteger(
+    report.summary.count_tables_mismatched,
+    "D1 import mismatched count table count"
+  );
+  if (!mismatchedCountTables.ok || mismatchedCountTables.value !== 0) {
     return { ok: false, message: "D1 import report must have zero count table mismatches." };
   }
 
-  if (report.summary.relationship_checks_failed !== 0) {
+  const failedRelationshipChecks = coerceNonNegativeInteger(
+    report.summary.relationship_checks_failed,
+    "D1 import failed relationship check count"
+  );
+  if (!failedRelationshipChecks.ok || failedRelationshipChecks.value !== 0) {
     return { ok: false, message: "D1 import report must have zero failed relationship checks." };
   }
 
@@ -316,9 +364,7 @@ function validateD1ImportReport(report) {
 
   const matchedTables = new Set(
     Array.isArray(report.count_report.matches)
-      ? report.count_report.matches
-          .map((match) => match?.table_name ?? match?.tableName ?? match?.table ?? match?.name)
-          .filter((table) => typeof table === "string" && table.length > 0)
+      ? report.count_report.matches.map(readTableName).filter((table) => typeof table === "string" && table.length > 0)
       : []
   );
   const missingTables = REQUIRED_D1_COUNT_TABLES.filter((table) => !matchedTables.has(table));
@@ -327,6 +373,20 @@ function validateD1ImportReport(report) {
       ok: false,
       message: `D1 import report must cover required tables: missing ${missingTables.join(", ")}.`,
     };
+  }
+
+  const scopeSourceRows = coerceNonNegativeInteger(
+    report.summary.required_scope_source_rows ??
+      sumRequiredScopeRows(report.count_report.matches, "sourceCount", "source_count", "source"),
+    "D1 import required source row count"
+  );
+  const scopeTargetRows = coerceNonNegativeInteger(
+    report.summary.required_scope_target_rows ??
+      sumRequiredScopeRows(report.count_report.matches, "targetCount", "target_count", "target"),
+    "D1 import required target row count"
+  );
+  if (!scopeSourceRows.ok || !scopeTargetRows.ok || scopeSourceRows.value <= 0 || scopeTargetRows.value <= 0) {
+    return { ok: false, message: "D1 import report must include non-empty required table counts." };
   }
 
   if (Array.isArray(report.validation_errors) && report.validation_errors.length > 0) {
@@ -351,14 +411,39 @@ function validateD1ImportReport(report) {
   }
 
   const failedRelationship = report.relationship_checks.find((check) => {
-    const orphanCount = check?.orphan_count ?? check?.orphanCount;
-    return check?.ok !== true || orphanCount !== 0;
+    const orphanCount = coerceNonNegativeInteger(
+      check?.orphan_count ?? check?.orphanCount,
+      "D1 import relationship orphan count"
+    );
+    return check?.ok !== true || !orphanCount.ok || orphanCount.value !== 0;
   });
   if (failedRelationship) {
     return { ok: false, message: "D1 import relationship checks must all pass with zero orphans." };
   }
 
   return { ok: true };
+}
+
+function sumRequiredScopeRows(matches, ...fieldNames) {
+  if (!Array.isArray(matches)) {
+    return null;
+  }
+
+  let total = 0;
+  for (const match of matches) {
+    if (!REQUIRED_D1_COUNT_TABLES.includes(readTableName(match))) {
+      continue;
+    }
+
+    const rawValue = fieldNames.map((field) => match?.[field]).find((value) => value !== undefined);
+    const count = coerceNonNegativeInteger(rawValue, "D1 import required table row count");
+    if (!count.ok) {
+      return null;
+    }
+    total += count.value;
+  }
+
+  return total;
 }
 
 function validateR2ManifestReport(report) {
@@ -463,6 +548,10 @@ function validateCloudflareProductionDeployReport(report) {
     return { ok: false, message: "Cloudflare deploy report must include worker version_id." };
   }
 
+  if (/^[a-f0-9]{40}$/i.test(report.worker.version_id)) {
+    return { ok: false, message: "Cloudflare deploy report worker version_id must be provider-backed, not a git SHA." };
+  }
+
   if (!isRecord(report.checks) || Object.values(report.checks).some((value) => value !== true)) {
     return { ok: false, message: "Cloudflare deploy report checks must all be true." };
   }
@@ -501,6 +590,40 @@ function validateLiveShadowReport(report) {
 }
 
 const REQUIRED_BETTERSTACK_MONITOR_IDS = ["public-site", "app-root", "api-instances"];
+const REQUIRED_BETTERSTACK_URLS = {
+  "public-site": "https://manut.xyz",
+  "app-root": "https://app.manut.xyz",
+  "api-instances": "https://app.manut.xyz/api/instances/",
+};
+
+function normalizeEvidenceUrl(rawUrl) {
+  if (typeof rawUrl !== "string" || rawUrl.trim() === "") {
+    return null;
+  }
+
+  try {
+    const url = new URL(rawUrl);
+    url.hash = "";
+    url.hostname = url.hostname.toLowerCase();
+    if (url.pathname !== "/") {
+      url.pathname = url.pathname.replace(/\/+$/, "");
+    }
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function hasCanonicalBetterStackUrl(check, id) {
+  const canonicalUrl = normalizeEvidenceUrl(REQUIRED_BETTERSTACK_URLS[id]);
+  return (
+    normalizeEvidenceUrl(check?.url) === canonicalUrl && normalizeEvidenceUrl(check?.expected_url) === canonicalUrl
+  );
+}
+
+function hasCanonicalEndpointUrl(check, id) {
+  return normalizeEvidenceUrl(check?.url) === normalizeEvidenceUrl(REQUIRED_BETTERSTACK_URLS[id]);
+}
 
 function validateBetterStackCutoverReport(report) {
   if (!isRecord(report.monitor_summary)) {
@@ -537,6 +660,10 @@ function validateBetterStackCutoverReport(report) {
     return { ok: false, message: "Better Stack monitor checks must target the expected URLs." };
   }
 
+  if (requiredChecks.some((check) => !hasCanonicalBetterStackUrl(check, check.id))) {
+    return { ok: false, message: "Better Stack monitor checks must target canonical Manut production URLs." };
+  }
+
   if (!isRecord(report.endpoint_summary)) {
     return { ok: false, message: "Better Stack report must include endpoint_summary." };
   }
@@ -568,6 +695,9 @@ function validateBetterStackCutoverReport(report) {
     }
     if (check.ok !== true || check.status !== 200 || check.keyword_found !== true) {
       return { ok: false, message: "Better Stack endpoint probes must all pass." };
+    }
+    if (!hasCanonicalEndpointUrl(check, id)) {
+      return { ok: false, message: "Better Stack endpoint probes must target canonical Manut production URLs." };
     }
   }
 

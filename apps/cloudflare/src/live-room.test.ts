@@ -134,4 +134,18 @@ describe("LiveRoomDurableObject foundation contract", () => {
       },
     });
   });
+
+  it("rejects Durable Object room lock operations without an explicit holder", async () => {
+    const response = await createLiveRoom().fetch(
+      new Request("https://app.manut.xyz/live/room-lock/locks/import/acquire", {
+        body: JSON.stringify({ ttl_seconds: 60 }),
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "LIVE_ROOM_LOCK_HOLDER_REQUIRED",
+    });
+  });
 });

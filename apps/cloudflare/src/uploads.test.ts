@@ -166,6 +166,25 @@ describe("R2 uploads compatibility handler", () => {
     expect(response.headers.get("content-type")).toBe("image/png");
     expect(response.headers.get("etag")).toBe('"fake-etag"');
     expect(response.headers.get("last-modified")).toBe("Sun, 21 Jun 2026 07:00:00 GMT");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("forces active upload content to download with nosniff headers", async () => {
+    const object = buildFakeObject({
+      body: "<script>alert(1)</script>",
+      contentDisposition: "inline",
+      contentType: "text/html",
+      key: "workspace/import.html",
+    });
+    const bucket = new FakeR2Bucket(new Map([[object.key, object]]));
+
+    const response = await handleUploadsRequest(request("/uploads/workspace/import.html"), env(bucket));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/octet-stream");
+    expect(response.headers.get("content-disposition")).toBe("attachment");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("content-security-policy")).toBe("sandbox");
   });
 
   it("returns HEAD object metadata without a response body", async () => {

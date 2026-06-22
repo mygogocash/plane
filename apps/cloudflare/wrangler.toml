@@ -11,7 +11,8 @@ enabled = true
 APP_ENV = "preview"
 APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-preview"
-LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
+# Set LEGACY_GKE_ORIGIN outside checked-in config to a distinct GKE origin
+# before enabling legacy proxy smoke. Do not point it at APP_ORIGIN.
 
 [[d1_databases]]
 binding = "MANUT_DB"
@@ -51,7 +52,8 @@ name = "manut-app"
 APP_ENV = "production"
 APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-production"
-LEGACY_GKE_ORIGIN = "https://app.manut.xyz"
+# Set LEGACY_GKE_ORIGIN outside checked-in config to a distinct GKE origin
+# before enabling legacy proxy smoke. Do not point it at APP_ORIGIN.
 
 [[env.production.d1_databases]]
 binding = "MANUT_DB"

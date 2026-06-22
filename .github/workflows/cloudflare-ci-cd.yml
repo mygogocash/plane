@@ -202,6 +202,80 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: pnpm --filter @manut/cloudflare deploy:production
 
+      - name: Resolve deployed Worker version
+        id: worker_version
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          function asArray(value) {
+            return Array.isArray(value) ? value : [];
+          }
+
+          function readDeployments(result) {
+            if (Array.isArray(result)) {
+              return result;
+            }
+            if (result && typeof result === "object") {
+              return asArray(result.deployments).concat(asArray(result.items));
+            }
+            return [];
+          }
+
+          function readActiveVersion(deployments) {
+            for (const deployment of deployments) {
+              const versions = asArray(deployment?.versions);
+              const fullTrafficVersion = versions.find((version) => Number(version?.percentage) === 100);
+              if (fullTrafficVersion) {
+                return fullTrafficVersion.version_id || fullTrafficVersion.id;
+              }
+              const firstVersion = versions[0];
+              if (firstVersion) {
+                return firstVersion.version_id || firstVersion.id;
+              }
+              if (typeof deployment?.version_id === "string") {
+                return deployment.version_id;
+              }
+            }
+            return "";
+          }
+
+          (async () => {
+            const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+            const token = process.env.CLOUDFLARE_API_TOKEN;
+            const workerName = process.env.DEPLOY_TARGET === "production" ? "manut-app" : "manut-app-preview";
+            const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${encodeURIComponent(workerName)}/deployments`;
+            const response = await fetch(endpoint, {
+              headers: {
+                authorization: `Bearer ${token}`,
+                accept: "application/json",
+              },
+            });
+            const body = await response.text();
+            if (!response.ok) {
+              throw new Error(`Cloudflare deployments API returned HTTP ${response.status}: ${body.slice(0, 240)}`);
+            }
+            const json = body ? JSON.parse(body) : {};
+            if (json.success === false) {
+              throw new Error(`Cloudflare deployments API returned success=false: ${body.slice(0, 240)}`);
+            }
+            const versionId = readActiveVersion(readDeployments(json.result));
+            if (!versionId || /^[a-f0-9]{40}$/i.test(versionId)) {
+              throw new Error("Cloudflare deployments API did not return a provider-backed Worker version_id.");
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `version_id=${versionId}\n`);
+          })().catch((error) => {
+            console.error(error.message);
+            process.exit(1);
+          });
+          NODE
+
       - name: Resolve Worker smoke URL
         id: smoke
         env:
@@ -228,12 +302,16 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Smoke deployed Worker
+        env:
+          MANUT_DIAGNOSTIC_TOKEN: ${{ secrets.MANUT_DIAGNOSTIC_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
           pnpm --filter @manut/cloudflare smoke:worker -- "${{ steps.smoke.outputs.url }}" --json --out "${{ steps.smoke.outputs.smoke_report }}"
 
       - name: Run live shadow validation
+        env:
+          MANUT_DIAGNOSTIC_TOKEN: ${{ secrets.MANUT_DIAGNOSTIC_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
@@ -247,6 +325,7 @@ jobs:
           LIVE_SHADOW_REPORT: ${{ steps.smoke.outputs.live_shadow_report }}
           SMOKE_REPORT: ${{ steps.smoke.outputs.smoke_report }}
           SMOKE_URL: ${{ steps.smoke.outputs.url }}
+          WORKER_VERSION_ID: ${{ steps.worker_version.outputs.version_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -265,13 +344,15 @@ jobs:
           };
           const report = {
             generated_at: new Date().toISOString(),
+            evidence_kind: deployTarget === "production" ? "cloudflare-production-deploy" : "cloudflare-preview-deploy",
             ok: Object.values(checks).every(Boolean),
             environment: deployTarget,
             dns_changed: false,
             worker: {
               name: deployTarget === "production" ? "manut-app" : "manut-app-preview",
               url: process.env.SMOKE_URL,
-              version_id: process.env.GITHUB_SHA,
+              version_id: process.env.WORKER_VERSION_ID,
+              git_sha: process.env.GITHUB_SHA,
             },
             checks,
             evidence: {

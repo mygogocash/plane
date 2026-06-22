@@ -37,7 +37,7 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 13/17`
 
-Latest local readiness audit at `2026-06-22T03:08:08Z`:
+Latest local readiness audit at `2026-06-22T08:43:58Z`:
 
 - Phase 7 selected checks: `13/17` passed; blocked on D1 import validation,
   authenticated smoke, Better Stack cutover green, and explicit operator
@@ -189,7 +189,6 @@ Smoke result:
 ## Blocking Evidence Gaps
 
 - No final D1 import validation report is recorded.
-- No final R2 manifest validation report is recorded.
 - No authenticated app smoke report is recorded.
 - No Better Stack cutover-green report is recorded.
 - No explicit `CUTOVER_APPROVED=true` operator approval is recorded.

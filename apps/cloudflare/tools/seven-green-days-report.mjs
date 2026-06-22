@@ -306,6 +306,7 @@ export function buildSevenGreenDaysReport(input, options = {}) {
   const failed = checks.filter((check) => !check.ok);
   const report = {
     generated_at: new Date().toISOString(),
+    evidence_kind: "seven-green-days",
     ok: window.ok && failed.length === 0,
     green_days_verified: window.ok && failed.length === 0,
     target_origin: options.targetOrigin ?? input.target_origin ?? null,

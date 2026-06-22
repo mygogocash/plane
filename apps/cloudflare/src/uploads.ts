@@ -2,6 +2,14 @@ import type { CloudflareBindings } from "./types";
 
 const UPLOADS_PREFIX = "/uploads";
 const ALLOWED_METHODS = "GET, HEAD";
+const SAFE_INLINE_CONTENT_TYPES = new Set([
+  "image/avif",
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/x-icon",
+]);
 
 type JsonDetails = Record<string, string | string[]>;
 
@@ -61,7 +69,25 @@ function buildObjectHeaders(object: R2Object): Headers {
     headers.set("expires", object.httpMetadata.cacheExpiry.toUTCString());
   }
 
+  applySafeUploadHeaders(headers);
+
   return headers;
+}
+
+function contentTypeBase(headers: Headers): string {
+  return (headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+}
+
+function applySafeUploadHeaders(headers: Headers): void {
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("content-security-policy", "sandbox");
+
+  if (SAFE_INLINE_CONTENT_TYPES.has(contentTypeBase(headers))) {
+    return;
+  }
+
+  headers.set("content-type", "application/octet-stream");
+  headers.set("content-disposition", "attachment");
 }
 
 function methodNotAllowed(): Response {

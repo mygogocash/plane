@@ -40,7 +40,7 @@ describe("Cloudflare edge route classification", () => {
     });
   });
 
-  it("does not treat non-shell unsafe methods as app shell fallbacks", () => {
+  it("keeps unsafe app-shell methods on the legacy app during shadow routing", () => {
     expect(
       classifyEdgeRoute(
         new Request("https://app.manut.xyz/workspace/my-workspace/issues/123", {
@@ -48,7 +48,8 @@ describe("Cloudflare edge route classification", () => {
         })
       )
     ).toMatchObject({
-      action: "not-found",
+      action: "legacy-proxy",
+      contract: "app-shell",
     });
   });
 });
@@ -66,6 +67,25 @@ describe("legacy proxy helper", () => {
     expect(proxyRequest.headers.get("x-forwarded-host")).toBe("app.manut.xyz");
     expect(proxyRequest.headers.get("x-manut-edge-route")).toBe("legacy-gke");
     expect(proxyRequest.headers.get("x-manut-edge-contract")).toBe("api");
+  });
+
+  it("builds a legacy origin request while preserving unsafe method bodies", async () => {
+    const proxyRequest = buildLegacyProxyRequest(
+      new Request("https://app.manut.xyz/workspace/my-workspace/issues/123", {
+        body: JSON.stringify({ name: "Updated issue" }),
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "POST",
+      }),
+      "https://legacy-gke.manut.internal",
+      "app-shell"
+    );
+
+    expect(proxyRequest.url).toBe("https://legacy-gke.manut.internal/workspace/my-workspace/issues/123");
+    expect(proxyRequest.method).toBe("POST");
+    expect(proxyRequest.headers.get("content-type")).toBe("application/json");
+    await expect(proxyRequest.json()).resolves.toEqual({ name: "Updated issue" });
   });
 
   it("proxies candidate routes to the configured legacy GKE origin", async () => {

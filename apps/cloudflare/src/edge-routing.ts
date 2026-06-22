@@ -53,10 +53,6 @@ function getUrl(input: Request | URL | string): URL {
   return new URL(input, "https://app.manut.xyz");
 }
 
-function getMethod(input: Request | URL | string): string {
-  return input instanceof Request ? input.method.toUpperCase() : "GET";
-}
-
 function pathMatches(path: string, basePath: string): boolean {
   return path === basePath || path.startsWith(`${basePath}/`);
 }
@@ -75,10 +71,6 @@ function isStaticPath(path: string): boolean {
     staticPathPrefixes.some((prefix) => path.startsWith(prefix)) ||
     staticExtensionPattern.test(path)
   );
-}
-
-function isAppShellMethod(method: string): boolean {
-  return method === "GET" || method === "HEAD";
 }
 
 function classifyLegacyContract(path: string): LegacyRouteContract | null {
@@ -135,20 +127,10 @@ export function classifyEdgeRoute(input: Request | URL | string): EdgeRouteClass
     };
   }
 
-  const method = getMethod(input);
-
-  if (isAppShellMethod(method)) {
-    return {
-      action: "legacy-proxy",
-      contract: "app-shell",
-      path,
-    };
-  }
-
   return {
-    action: "not-found",
+    action: "legacy-proxy",
+    contract: "app-shell",
     path,
-    reason: "unsupported-app-shell-method",
   };
 }
 
@@ -181,14 +163,15 @@ export function buildLegacyProxyRequest(
     headers.set("x-manut-edge-contract", contract);
   }
 
-  const init: RequestInit = {
+  const init: RequestInit & { duplex?: "half" } = {
     headers,
     method: request.method,
     redirect: "manual",
   };
 
-  if (hasRequestBody(request.method)) {
+  if (hasRequestBody(request.method) && request.body) {
     init.body = request.body;
+    init.duplex = "half";
   }
 
   return new Request(targetUrl.toString(), init);

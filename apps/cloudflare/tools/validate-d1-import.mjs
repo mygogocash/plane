@@ -178,14 +178,29 @@ function findMissingRelationships(relationshipChecks) {
   return REQUIRED_RELATIONSHIPS.filter((relationship) => !observed.has(relationship));
 }
 
+function requiredScopeTotals(sourceCounts, targetCounts) {
+  return REQUIRED_COUNT_TABLES.reduce(
+    (totals, table) => ({
+      source: totals.source + (sourceCounts.get(table) ?? 0),
+      target: totals.target + (targetCounts.get(table) ?? 0),
+    }),
+    { source: 0, target: 0 }
+  );
+}
+
 function buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks, sourceCounts, targetCounts) {
   const failedRelationshipChecks = relationshipChecks.filter((check) => !check.ok);
   const missingCountTables = findMissingCountTables(sourceCounts, targetCounts);
   const missingRelationships = findMissingRelationships(relationshipChecks);
+  const scopeTotals = requiredScopeTotals(sourceCounts, targetCounts);
   const validationErrors = [];
 
   if (countReport.matchedTableCount <= 0) {
     validationErrors.push("D1 import validation requires at least one matched count table.");
+  }
+
+  if (missingCountTables.length === 0 && (scopeTotals.source <= 0 || scopeTotals.target <= 0)) {
+    validationErrors.push("D1 import validation requires non-empty required table counts.");
   }
 
   if (relationshipChecks.length === 0) {
@@ -213,6 +228,8 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
     summary: {
       count_tables_matched: countReport.matchedTableCount,
       count_tables_mismatched: countReport.mismatchedTableCount,
+      required_scope_source_rows: scopeTotals.source,
+      required_scope_target_rows: scopeTotals.target,
       relationship_checks_total: relationshipChecks.length,
       relationship_checks_failed: failedRelationshipChecks.length,
     },

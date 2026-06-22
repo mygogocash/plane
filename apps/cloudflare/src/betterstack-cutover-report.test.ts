@@ -95,6 +95,28 @@ describe("Better Stack cutover report helpers", () => {
     expect(findMatchingMonitor([monitor], definitions[2])).toBe(monitor);
   });
 
+  it("prefers the canonical URL match over a stale duplicate monitor name", () => {
+    const definitions = requiredMonitorDefinitions(env);
+    const staleNameMatch = {
+      id: "monitor-stale-app",
+      attributes: {
+        pronounceable_name: "app.manut.xyz",
+        url: "https://staging.manut.xyz",
+        status: "up",
+      },
+    };
+    const canonicalUrlMatch = {
+      id: "monitor-canonical-app",
+      attributes: {
+        pronounceable_name: "legacy display name",
+        url: "https://app.manut.xyz/",
+        status: "up",
+      },
+    };
+
+    expect(findMatchingMonitor([staleNameMatch, canonicalUrlMatch], definitions[1])).toBe(canonicalUrlMatch);
+  });
+
   it("ignores invalid monitor URLs while looking for a matching monitor", () => {
     const definitions = requiredMonitorDefinitions(env);
     const matchingMonitor = {

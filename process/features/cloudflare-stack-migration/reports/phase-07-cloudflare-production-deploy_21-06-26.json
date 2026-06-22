@@ -1,5 +1,6 @@
 {
   "generated_at": "2026-06-21T11:34:34.000Z",
+  "evidence_kind": "cloudflare-production-deploy",
   "ok": true,
   "environment": "production",
   "dns_changed": false,

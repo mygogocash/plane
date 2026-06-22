@@ -33,6 +33,11 @@ function authenticatedSmokeInput() {
   return {
     actor: "operator@example.com",
     target_origin: "https://app.manut.xyz",
+    cloudflare_route_verified: true,
+    cloudflare_route_evidence: {
+      edge_header: "x-manut-cloudflare-phase",
+      worker_url: "https://manut-app.bettergogocash.workers.dev",
+    },
     checks: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((check) => ({
       id: check.id,
       ok: true,

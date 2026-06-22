@@ -1,5 +1,6 @@
 {
   "generated_at": "2026-06-21T11:38:58.489Z",
+  "evidence_kind": "live-shadow-validation",
   "base_url": "https://manut-app.bettergogocash.workers.dev/",
   "room": "phase-07-shadow-room",
   "lock_key": "phase-07-shadow-a725c288-f1ad-41cd-95f9-46f897996e08",

@@ -1,5 +1,6 @@
 {
   "generated_at": "2026-06-22T03:05:54.219Z",
+  "evidence_kind": "r2-manifest-validation",
   "ok": true,
   "source_manifest": "/tmp/manut-r2-backfill/manifests/gcs-manifest.json",
   "target_manifest": "/tmp/manut-r2-backfill/manifests/r2-manifest.json",

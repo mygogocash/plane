@@ -127,15 +127,12 @@ function monitorAttributes(monitor) {
 }
 
 export function findMatchingMonitor(monitors, definition) {
-  return (
-    monitors.find((monitor) => {
-      const attributes = monitorAttributes(monitor);
-      const name = attributes.pronounceable_name;
-      const url = attributes.url;
+  const urlMatch = monitors.find((monitor) => monitorUrlMatches(monitorAttributes(monitor).url, definition.url));
+  if (urlMatch) {
+    return urlMatch;
+  }
 
-      return name === definition.name || monitorUrlMatches(url, definition.url);
-    }) ?? null
-  );
+  return monitors.find((monitor) => monitorAttributes(monitor).pronounceable_name === definition.name) ?? null;
 }
 
 function monitorUrlMatches(rawUrl, expectedUrl) {
@@ -305,6 +302,7 @@ export function buildCutoverReport({ apiBase, betterStackApiError, endpointCheck
 
   return {
     generated_at: new Date().toISOString(),
+    evidence_kind: "betterstack-cutover",
     ok: monitorReport.ok && failedEndpointChecks.length === 0,
     api_base: apiBase,
     betterstack_api_error: betterStackApiError,

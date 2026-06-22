@@ -144,6 +144,7 @@ describe("cutover readiness evidence gate", () => {
       path.join(reportDir, "phase-07-cloudflare-production-deploy_21-06-26.json"),
       JSON.stringify({
         ok: true,
+        evidence_kind: "cloudflare-production-deploy",
         environment: "production",
         worker: {
           name: "manut-app",
@@ -171,6 +172,43 @@ describe("cutover readiness evidence gate", () => {
       status: "pass",
       evidence:
         "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json",
+    });
+  });
+
+  it("rejects Cloudflare deploy evidence that uses a git SHA as the Worker version", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-cloudflare-production-deploy_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "cloudflare-production-deploy",
+        environment: "production",
+        worker: {
+          name: "manut-app",
+          url: "https://manut-app.bettergogocash.workers.dev",
+          version_id: "0123456789abcdef0123456789abcdef01234567",
+          git_sha: "0123456789abcdef0123456789abcdef01234567",
+        },
+        checks: {
+          remote_d1_migrations: true,
+          worker_deploy: true,
+          worker_smoke: true,
+          live_shadow: true,
+        },
+        evidence: {
+          smoke_report: "phase-07-cloudflare-production-smoke_21-06-26.json",
+        },
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "cloudflare-production-deploy");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Cloudflare deploy report worker version_id must be provider-backed, not a git SHA.",
     });
   });
 
@@ -209,9 +247,19 @@ describe("cutover readiness evidence gate", () => {
       path.join(reportDir, "phase-07-authenticated-smoke_21-06-26.json"),
       JSON.stringify({
         ok: true,
+        evidence_kind: "authenticated-smoke",
         target_origin: "https://app.manut.xyz",
         actor: "operator@example.com",
-        checks: [{ id: "login", ok: true, evidence: "login screenshot" }],
+        cloudflare_route_verified: true,
+        cloudflare_route_evidence: "x-manut-cloudflare-phase header observed on app.manut.xyz",
+        checks: [
+          {
+            id: "login",
+            ok: true,
+            evidence: "login screenshot",
+            observed_at: "2026-06-21T12:00:00.000Z",
+          },
+        ],
       })
     );
 
@@ -246,6 +294,35 @@ describe("cutover readiness evidence gate", () => {
     expect(check).toMatchObject({
       status: "blocked",
       remediation: "Authenticated smoke report target_origin must be https://app.manut.xyz.",
+    });
+  });
+
+  it("rejects authenticated smoke reports without Cloudflare route provenance", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-authenticated-smoke_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "authenticated-smoke",
+        target_origin: "https://app.manut.xyz",
+        actor: "operator@example.com",
+        checks: REQUIRED_AUTHENTICATED_SMOKE_IDS.map((id) => ({
+          id,
+          ok: true,
+          evidence: `${id} screenshot`,
+          observed_at: "2026-06-21T12:00:00.000Z",
+        })),
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "authenticated-smoke");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Authenticated smoke report must set cloudflare_route_verified: true.",
     });
   });
 
@@ -363,6 +440,86 @@ describe("cutover readiness evidence gate", () => {
     expect(check).toMatchObject({
       status: "blocked",
       remediation: "D1 import report must include at least one matched count table.",
+    });
+  });
+
+  it("rejects D1 reports when all required table counts are empty", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "d1-import-validation",
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_matched: 2,
+          count_tables_mismatched: 0,
+          required_scope_source_rows: 0,
+          required_scope_target_rows: 0,
+          relationship_checks_failed: 0,
+        },
+        count_report: {
+          ok: true,
+          matchedTableCount: 2,
+          mismatchedTableCount: 0,
+          matches: [
+            { table: "workspaces", sourceCount: 0, targetCount: 0 },
+            { table: "projects", sourceCount: 0, targetCount: 0 },
+          ],
+        },
+        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import report must include non-empty required table counts.",
+    });
+  });
+
+  it("rejects D1 reports with the wrong evidence kind even when the shape passes", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "r2-manifest-validation",
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_matched: 2,
+          count_tables_mismatched: 0,
+          required_scope_source_rows: 3,
+          required_scope_target_rows: 3,
+          relationship_checks_failed: 0,
+        },
+        count_report: {
+          ok: true,
+          matchedTableCount: 2,
+          mismatchedTableCount: 0,
+          matches: [
+            { table: "workspaces", sourceCount: 1, targetCount: 1 },
+            { table: "projects", sourceCount: 2, targetCount: 2 },
+          ],
+        },
+        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Evidence JSON evidence_kind must be d1-import-validation.",
     });
   });
 
@@ -634,9 +791,30 @@ describe("cutover readiness evidence gate", () => {
         monitor_summary: { total: 3, passed: 3, failed: 0 },
         endpoint_summary: { total: 3, passed: 2, failed: 1 },
         monitor_checks: [
-          { id: "public-site", ok: true, status: "up", url_matches: true },
-          { id: "app-root", ok: true, status: "up", url_matches: true },
-          { id: "api-instances", ok: true, status: "up", url_matches: true },
+          {
+            id: "public-site",
+            ok: true,
+            status: "up",
+            url: "https://manut.xyz",
+            expected_url: "https://manut.xyz",
+            url_matches: true,
+          },
+          {
+            id: "app-root",
+            ok: true,
+            status: "up",
+            url: "https://app.manut.xyz",
+            expected_url: "https://app.manut.xyz",
+            url_matches: true,
+          },
+          {
+            id: "api-instances",
+            ok: true,
+            status: "up",
+            url: "https://app.manut.xyz/api/instances/",
+            expected_url: "https://app.manut.xyz/api/instances/",
+            url_matches: true,
+          },
         ],
         endpoint_checks: [
           { id: "public-site", ok: true, status: 200, keyword_found: true },
@@ -663,18 +841,46 @@ describe("cutover readiness evidence gate", () => {
       path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
       JSON.stringify({
         ok: true,
+        evidence_kind: "betterstack-cutover",
         monitor_summary: { total: 4, passed: 3, failed: 1 },
         endpoint_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [
-          { id: "public-site", ok: true, status: "up", url_matches: true },
-          { id: "app-root", ok: true, status: "up", url_matches: true },
-          { id: "api-instances", ok: true, status: "up", url_matches: true },
+          {
+            id: "public-site",
+            ok: true,
+            status: "up",
+            url: "https://manut.xyz",
+            expected_url: "https://manut.xyz",
+            url_matches: true,
+          },
+          {
+            id: "app-root",
+            ok: true,
+            status: "up",
+            url: "https://app.manut.xyz",
+            expected_url: "https://app.manut.xyz",
+            url_matches: true,
+          },
+          {
+            id: "api-instances",
+            ok: true,
+            status: "up",
+            url: "https://app.manut.xyz/api/instances/",
+            expected_url: "https://app.manut.xyz/api/instances/",
+            url_matches: true,
+          },
           { id: "staging-app", ok: false, status: "down", url_matches: true },
         ],
         endpoint_checks: [
-          { id: "public-site", ok: true, status: 200, keyword_found: true },
-          { id: "app-root", ok: true, status: 200, keyword_found: true },
-          { id: "api-instances", ok: true, status: 200, keyword_found: true },
+          { id: "public-site", ok: true, status: 200, keyword_found: true, url: "https://manut.xyz" },
+          { id: "app-root", ok: true, status: 200, keyword_found: true, url: "https://app.manut.xyz" },
+          {
+            id: "api-instances",
+            ok: true,
+            status: 200,
+            keyword_found: true,
+            url: "https://app.manut.xyz/api/instances/",
+          },
         ],
       })
     );
@@ -683,6 +889,66 @@ describe("cutover readiness evidence gate", () => {
     const check = report.checks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
 
     expect(check).toMatchObject({ status: "pass" });
+  });
+
+  it("rejects structurally green Better Stack reports for non-production URLs", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "betterstack-cutover",
+        monitor_summary: { total: 3, passed: 3, failed: 0 },
+        endpoint_summary: { total: 3, passed: 3, failed: 0 },
+        monitor_checks: [
+          {
+            id: "public-site",
+            ok: true,
+            status: "up",
+            url: "https://staging.example.com",
+            expected_url: "https://staging.example.com",
+            url_matches: true,
+          },
+          {
+            id: "app-root",
+            ok: true,
+            status: "up",
+            url: "https://staging.example.com/app",
+            expected_url: "https://staging.example.com/app",
+            url_matches: true,
+          },
+          {
+            id: "api-instances",
+            ok: true,
+            status: "up",
+            url: "https://staging.example.com/api/instances/",
+            expected_url: "https://staging.example.com/api/instances/",
+            url_matches: true,
+          },
+        ],
+        endpoint_checks: [
+          { id: "public-site", ok: true, status: 200, keyword_found: true, url: "https://staging.example.com" },
+          { id: "app-root", ok: true, status: 200, keyword_found: true, url: "https://staging.example.com/app" },
+          {
+            id: "api-instances",
+            ok: true,
+            status: 200,
+            keyword_found: true,
+            url: "https://staging.example.com/api/instances/",
+          },
+        ],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Better Stack monitor checks must target canonical Manut production URLs.",
+    });
   });
 
   it("rejects weak Better Stack env override evidence even when the file name is generic", async () => {
@@ -785,6 +1051,7 @@ describe("cutover readiness evidence gate", () => {
       evidencePath,
       JSON.stringify({
         ok: true,
+        evidence_kind: "operator-approval",
         cutover_approved: true,
         approved_by: "operator@example.com",
         approved_at: "2026-06-21T12:00:00.000Z",
@@ -831,12 +1098,15 @@ describe("cutover readiness evidence gate", () => {
       path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
       JSON.stringify({
         ok: true,
+        evidence_kind: "d1-import-validation",
         source_counts: "postgres-counts.json",
         target_counts: "d1-counts.json",
         summary: {
           count_tables_matched: 2,
-          count_tables_mismatched: 0,
-          relationship_checks_failed: 0,
+          count_tables_mismatched: "0",
+          required_scope_source_rows: "3",
+          required_scope_target_rows: "3",
+          relationship_checks_failed: "0",
         },
         count_report: {
           ok: true,
@@ -847,13 +1117,14 @@ describe("cutover readiness evidence gate", () => {
             { table: "projects", sourceCount: 2, targetCount: 2 },
           ],
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphanCount: 0 }],
+        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphanCount: "0" }],
       })
     );
     await writeFile(
       path.join(reportDir, "phase-07-r2-manifest-validation_21-06-26.json"),
       JSON.stringify({
         ok: true,
+        evidence_kind: "r2-manifest-validation",
         source_manifest: "gcs-manifest.json",
         target_manifest: "r2-manifest.json",
         checksumPolicy: { requireSharedChecksum: true },
@@ -868,17 +1139,45 @@ describe("cutover readiness evidence gate", () => {
       path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
       JSON.stringify({
         ok: true,
+        evidence_kind: "betterstack-cutover",
         monitor_summary: { total: 3, passed: 3, failed: 0 },
         endpoint_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [
-          { id: "public-site", ok: true, status: "up", url_matches: true },
-          { id: "app-root", ok: true, status: "up", url_matches: true },
-          { id: "api-instances", ok: true, status: "up", url_matches: true },
+          {
+            id: "public-site",
+            ok: true,
+            status: "up",
+            url: "https://manut.xyz",
+            url_matches: true,
+            expected_url: "https://manut.xyz",
+          },
+          {
+            id: "app-root",
+            ok: true,
+            status: "up",
+            url: "https://app.manut.xyz",
+            url_matches: true,
+            expected_url: "https://app.manut.xyz",
+          },
+          {
+            id: "api-instances",
+            ok: true,
+            status: "up",
+            url: "https://app.manut.xyz/api/instances/",
+            url_matches: true,
+            expected_url: "https://app.manut.xyz/api/instances/",
+          },
         ],
         endpoint_checks: [
-          { id: "public-site", ok: true, status: 200, keyword_found: true },
-          { id: "app-root", ok: true, status: 200, keyword_found: true },
-          { id: "api-instances", ok: true, status: 200, keyword_found: true },
+          { id: "public-site", ok: true, status: 200, keyword_found: true, url: "https://manut.xyz" },
+          { id: "app-root", ok: true, status: 200, keyword_found: true, url: "https://app.manut.xyz" },
+          {
+            id: "api-instances",
+            ok: true,
+            status: 200,
+            keyword_found: true,
+            url: "https://app.manut.xyz/api/instances/",
+          },
         ],
       })
     );

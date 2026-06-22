@@ -55,6 +55,40 @@ function isR2UploadsReadEnabled(env: CloudflareBindings): boolean {
   return env.R2_UPLOADS_READ_ENABLED?.toLowerCase() === "true";
 }
 
+function readBearerToken(request: Request): string | null {
+  const authorization = request.headers.get("authorization") ?? "";
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || null;
+}
+
+function diagnosticAccessFailure(request: Request, env: CloudflareBindings): Response | null {
+  if (env.APP_ENV !== "production") {
+    return null;
+  }
+
+  const expectedToken = env.MANUT_DIAGNOSTIC_TOKEN?.trim();
+  const diagnosticToken = new URL(request.url).searchParams.get("diagnostic_token")?.trim();
+  const providedToken =
+    request.headers.get("x-manut-diagnostic-token")?.trim() || readBearerToken(request) || diagnosticToken;
+
+  if (expectedToken && providedToken === expectedToken) {
+    return null;
+  }
+
+  return Response.json(
+    {
+      error: "MANUT_DIAGNOSTIC_ACCESS_DENIED",
+      message: "Production Cloudflare diagnostics require an internal diagnostic token.",
+    },
+    {
+      headers: {
+        "cache-control": "no-store",
+      },
+      status: 403,
+    }
+  );
+}
+
 app.get("/healthz", (c) =>
   c.json({
     ok: true,
@@ -63,11 +97,21 @@ app.get("/healthz", (c) =>
   })
 );
 
-app.get("/api/instances/", async (c) => {
+async function buildInstancesResponse(env: CloudflareBindings): Promise<Response> {
+  if (env.APP_ENV === "production" && !env.MANUT_DB) {
+    return Response.json(
+      {
+        error: "D1_CONFIG_BINDING_MISSING",
+        message: "Production Manut instance metadata requires the MANUT_DB binding.",
+      },
+      { status: 503 }
+    );
+  }
+
   try {
-    return c.json(await buildInstancePayload(c.env));
+    return Response.json(await buildInstancePayload(env));
   } catch {
-    return c.json(
+    return Response.json(
       {
         error: "D1_CONFIG_READ_FAILED",
         message: "Unable to read Manut instance config from D1.",
@@ -75,13 +119,20 @@ app.get("/api/instances/", async (c) => {
       { status: 503 }
     );
   }
+}
+
+app.get("/api/instances", (c) => buildInstancesResponse(c.env));
+app.get("/api/instances/", (c) => buildInstancesResponse(c.env));
+
+app.get("/api/cloudflare/d1/workspaces", (c) => {
+  const accessFailure = diagnosticAccessFailure(c.req.raw, c.env);
+  return accessFailure ?? handleD1WorkspacesRequest(c.req.raw, c.env);
 });
 
-app.get("/api/cloudflare/d1/workspaces", (c) => handleD1WorkspacesRequest(c.req.raw, c.env));
-
-app.get("/api/cloudflare/d1/workspaces/:workspaceSlug/projects", (c) =>
-  handleD1WorkspaceProjectsRequest(c.req.raw, c.env, c.req.param("workspaceSlug"))
-);
+app.get("/api/cloudflare/d1/workspaces/:workspaceSlug/projects", (c) => {
+  const accessFailure = diagnosticAccessFailure(c.req.raw, c.env);
+  return accessFailure ?? handleD1WorkspaceProjectsRequest(c.req.raw, c.env, c.req.param("workspaceSlug"));
+});
 
 app.get("/api/cloudflare/migration-status", (c) =>
   c.json({
@@ -121,6 +172,11 @@ app.get("/api/cloudflare/routes", (c) => {
 });
 
 app.all("/api/cloudflare/live/rooms/*", async (c) => {
+  const accessFailure = diagnosticAccessFailure(c.req.raw, c.env);
+  if (accessFailure) {
+    return accessFailure;
+  }
+
   if (!c.env.LIVE_ROOMS) {
     return c.json(
       {

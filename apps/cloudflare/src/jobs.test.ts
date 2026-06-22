@@ -195,4 +195,45 @@ describe("Cloudflare Queue job primitives", () => {
     expect(ack).not.toHaveBeenCalled();
     expect(retry).toHaveBeenCalledTimes(1);
   });
+
+  it("retries supported queue jobs when no handler is registered", async () => {
+    const ack = vi.fn();
+    const retry = vi.fn();
+    const recordedFailures: JobFailureRecord[] = [];
+    const batch: QueueBatchLike = {
+      queue: "manut-jobs-test",
+      messages: [
+        {
+          id: "message-missing-handler-1",
+          body: validEnvelopes[0],
+          ack,
+          retry,
+        },
+      ],
+    };
+
+    const summary = await consumeJobQueue(batch, env, {
+      now: () => new Date("2026-06-21T08:30:00.000Z"),
+      recordFailure: (failure) => {
+        recordedFailures.push(failure);
+      },
+    });
+
+    expect(summary).toMatchObject({
+      accepted: 0,
+      failed: 1,
+      failures: [
+        {
+          reason: "JOB_HANDLER_MISSING",
+          retryable: true,
+          jobType: "upload-audit",
+          message: "No Cloudflare Queue handler registered for supported job type: upload-audit",
+          createdAt: "2026-06-21T08:30:00.000Z",
+        },
+      ],
+    });
+    expect(recordedFailures).toEqual(summary.failures);
+    expect(ack).not.toHaveBeenCalled();
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
 });

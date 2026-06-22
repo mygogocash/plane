@@ -159,6 +159,18 @@ function validateTargetOrigin(value) {
   return { ok: true };
 }
 
+function parseTimestamp(value, label) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return { ok: false, message: `Authenticated smoke report must include ${label}.` };
+  }
+
+  if (Number.isNaN(Date.parse(value))) {
+    return { ok: false, message: `Authenticated smoke report ${label} must be a valid ISO timestamp.` };
+  }
+
+  return { ok: true };
+}
+
 function normalizeInputChecks(input) {
   if (Array.isArray(input)) {
     return input;
@@ -214,6 +226,14 @@ export function validateAuthenticatedSmokeReport(report) {
     return { ok: false, message: "Authenticated smoke report must include actor." };
   }
 
+  if (report.cloudflare_route_verified !== true) {
+    return { ok: false, message: "Authenticated smoke report must set cloudflare_route_verified: true." };
+  }
+
+  if (!hasEvidence(report.cloudflare_route_evidence)) {
+    return { ok: false, message: "Authenticated smoke report must include cloudflare_route_evidence." };
+  }
+
   if (!Array.isArray(report.checks)) {
     return { ok: false, message: "Authenticated smoke report must include checks[]." };
   }
@@ -229,6 +249,10 @@ export function validateAuthenticatedSmokeReport(report) {
     }
     if (!hasEvidence(check.evidence)) {
       return { ok: false, message: `Authenticated smoke check ${definition.id} is missing evidence.` };
+    }
+    const observedAt = parseTimestamp(check.observed_at, `checks.${definition.id}.observed_at`);
+    if (!observedAt.ok) {
+      return observedAt;
     }
   }
 
@@ -280,9 +304,18 @@ export function buildAuthenticatedSmokeReport(input, options = {}) {
   const failed = checks.filter((check) => !check.ok);
   const report = {
     generated_at: new Date().toISOString(),
+    evidence_kind: "authenticated-smoke",
     ok: failed.length === 0,
     target_origin: options.targetOrigin ?? (isRecord(input) ? input.target_origin : null) ?? null,
     actor: options.actor ?? (isRecord(input) ? input.actor : null) ?? null,
+    cloudflare_route_verified:
+      options.cloudflareRouteVerified ??
+      (isRecord(input) && typeof input.cloudflare_route_verified === "boolean"
+        ? input.cloudflare_route_verified
+        : false),
+    cloudflare_route_evidence:
+      options.cloudflareRouteEvidence ??
+      (isRecord(input) ? (input.cloudflare_route_evidence ?? input.route_provenance ?? null) : null),
     summary: {
       total: checks.length,
       passed: checks.length - failed.length,

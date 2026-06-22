@@ -283,6 +283,7 @@ export function compareManifests(sourceObjects, targetObjects, options = {}) {
 function buildReport(report, sourcePath, targetPath) {
   return {
     generated_at: new Date().toISOString(),
+    evidence_kind: "r2-manifest-validation",
     ok: report.ok,
     source_manifest: path.normalize(sourcePath),
     target_manifest: path.normalize(targetPath),

@@ -134,6 +134,51 @@ describe("migration validation tools", () => {
     expect(fileReport).toMatchObject({ ok: false });
   });
 
+  it("fails D1 import validation when required table counts are all empty", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 0 },
+        { table_name: "projects", count: 0 },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 0 },
+        { table_name: "projects", count: 0 },
+      ])
+    );
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      summary: {
+        required_scope_source_rows: 0,
+        required_scope_target_rows: 0,
+      },
+    });
+    expect(report.validation_errors).toEqual(
+      expect.arrayContaining(["D1 import validation requires non-empty required table counts."])
+    );
+  });
+
   it("writes relative D1 import reports from the repository root when run through the package", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
     const sourcePath = path.join(root, "postgres-counts.json");

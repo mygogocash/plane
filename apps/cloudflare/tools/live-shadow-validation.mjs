@@ -96,6 +96,11 @@ function redactBodySample(body) {
   return body.slice(0, 200);
 }
 
+function diagnosticHeaders() {
+  const token = process.env.MANUT_DIAGNOSTIC_TOKEN?.trim();
+  return token ? { "x-manut-diagnostic-token": token } : {};
+}
+
 async function requestJson(baseUrl, room, check) {
   const url = new URL(roomPath(room, check.path), baseUrl);
   const startedAt = Date.now();
@@ -103,7 +108,10 @@ async function requestJson(baseUrl, room, check) {
   try {
     const response = await fetch(url, {
       body: check.body ? JSON.stringify(check.body) : undefined,
-      headers: check.body ? { "content-type": "application/json" } : undefined,
+      headers: {
+        ...diagnosticHeaders(),
+        ...(check.body ? { "content-type": "application/json" } : {}),
+      },
       method: check.method ?? "GET",
       redirect: "manual",
       signal: AbortSignal.timeout(15000),
@@ -242,6 +250,10 @@ export function buildLockChecks(lockKey) {
 
 function buildWebSocketUrl(baseUrl, room) {
   const url = new URL(roomPath(room, "/socket"), baseUrl);
+  const token = process.env.MANUT_DIAGNOSTIC_TOKEN?.trim();
+  if (token) {
+    url.searchParams.set("diagnostic_token", token);
+  }
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url;
 }
@@ -373,6 +385,7 @@ async function main() {
   const failed = checks.filter((check) => !check.ok);
   const report = {
     generated_at: new Date().toISOString(),
+    evidence_kind: "live-shadow-validation",
     base_url: baseUrl.toString(),
     room: options.room,
     lock_key: lockKey,

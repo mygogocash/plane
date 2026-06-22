@@ -172,7 +172,17 @@ export class LiveRoomDurableObject {
     }
 
     const payload = await readJsonBody(request);
-    const holder = typeof payload.holder === "string" && payload.holder.trim() ? payload.holder.trim() : "anonymous";
+    const holder = typeof payload.holder === "string" && payload.holder.trim() ? payload.holder.trim() : null;
+    if (!holder) {
+      return Response.json(
+        {
+          error: "LIVE_ROOM_LOCK_HOLDER_REQUIRED",
+          message: "Durable Object lock operations require a non-empty holder.",
+        },
+        { status: 400 }
+      );
+    }
+
     const ttlSeconds =
       typeof payload.ttl_seconds === "number" && Number.isSafeInteger(payload.ttl_seconds) && payload.ttl_seconds > 0
         ? Math.min(payload.ttl_seconds, 3600)

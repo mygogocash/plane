@@ -96,7 +96,7 @@ export type JobFailureRecord = {
   messageId: string;
   jobId: string | null;
   jobType: string | null;
-  reason: JobEnvelopeValidationError["code"] | "JOB_HANDLER_FAILED";
+  reason: JobEnvelopeValidationError["code"] | "JOB_HANDLER_FAILED" | "JOB_HANDLER_MISSING";
   message: string;
   retryable: boolean;
   createdAt: string;
@@ -279,19 +279,31 @@ async function runJobHandler(
   context: JobConsumerContext,
   handlers: JobHandlers | undefined
 ): Promise<void> {
+  const handler = handlers?.[envelope.type] as JobHandler | undefined;
+  if (!handler) {
+    throw new MissingJobHandlerError(envelope.type);
+  }
+
   switch (envelope.type) {
     case "upload-audit":
-      await handlers?.["upload-audit"]?.(envelope, context);
+      await handler(envelope, context);
       return;
     case "migration-audit":
-      await handlers?.["migration-audit"]?.(envelope, context);
+      await handler(envelope, context);
       return;
     case "email-dispatch":
-      await handlers?.["email-dispatch"]?.(envelope, context);
+      await handler(envelope, context);
       return;
     case "import-export":
-      await handlers?.["import-export"]?.(envelope, context);
+      await handler(envelope, context);
       return;
+  }
+}
+
+class MissingJobHandlerError extends Error {
+  constructor(readonly jobType: CloudflareJobType) {
+    super(`No Cloudflare Queue handler registered for supported job type: ${jobType}`);
+    this.name = "MissingJobHandlerError";
   }
 }
 
@@ -343,13 +355,15 @@ function buildHandlerFailure(
   error: unknown,
   now: (() => Date) | undefined
 ): JobFailureRecord {
+  const missingHandler = error instanceof MissingJobHandlerError;
+
   return {
     status: "failed",
     queueName,
     messageId,
     jobId: envelope.id,
     jobType: envelope.type,
-    reason: "JOB_HANDLER_FAILED",
+    reason: missingHandler ? "JOB_HANDLER_MISSING" : "JOB_HANDLER_FAILED",
     message: error instanceof Error ? error.message : "Queue job handler failed.",
     retryable: true,
     createdAt: (now?.() ?? new Date()).toISOString(),

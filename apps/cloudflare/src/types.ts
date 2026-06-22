@@ -8,6 +8,7 @@ export type CloudflareBindings = {
   APP_ORIGIN?: string;
   LEGACY_GKE_ORIGIN?: string;
   R2_UPLOADS_READ_ENABLED?: string;
+  MANUT_DIAGNOSTIC_TOKEN?: string;
   INSTANCE_VERSION?: string;
   INSTANCE_ID?: string;
   INSTANCE_NAME?: string;
