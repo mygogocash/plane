@@ -7,6 +7,11 @@ Captured: 2026-06-21T09:20:00Z
 Blocked. The cutover plan now exists, but production cutover cannot safely run
 until external data, smoke, observability, and approval evidence exists.
 
+Latest continuation update at `2026-06-22T12:33:37Z`: production public smoke is
+healthy, Cloudflare CI/CD is green, and Manut CI/CD is intentionally red on the
+post-deploy Better Stack evidence gate. This is an evidence blocker, not a
+confirmed production outage.
+
 ## Latest Known Runtime Baseline
 
 Latest captured baseline during this report:
@@ -21,6 +26,21 @@ Latest captured baseline during this report:
 - Latest post-production-Worker baseline at `2026-06-21T10:01:13Z` returned
   HTTP `200` for `https://app.manut.xyz/api/instances/`, HTTP `403` for
   `/uploads`, and still resolved `app.manut.xyz` to GKE IP `34.143.231.225`.
+- Latest continuation smoke at `2026-06-22T12:33:37Z` returned HTTP `200` for
+  `https://app.manut.xyz/`, title
+  `Manut - AI workspace for docs, tasks and teams`, `9` occurrences of
+  `Manut`, and `0` occurrences of `Plane`.
+- `https://app.manut.xyz/manifest.json` returned HTTP `200` at
+  `2026-06-22T12:33:37Z` with `name: "Manut"`, `short_name: "Manut"`,
+  `theme_color: "#0e0e10"`, `background_color: "#fafaf2"`, and active icon
+  entries for `192x192`, `348x348`, and `512x512`.
+- The active app icons `/icons/icon-192x192.png`, `/icons/icon-348x348.png`,
+  and `/icons/icon-512x512.png` each returned HTTP `200` with `image/png`.
+- `https://app.manut.xyz/api/instances/` returned HTTP `200` at
+  `2026-06-22T12:33:37Z`. The response instance payload reported
+  `instance_name: "GoGoCash"`, `current_version: "1.3.1"`,
+  `latest_version: "v1.3.1"`, and
+  `updated_at: "2026-06-22T11:43:04.032180Z"`.
 
 ## Readiness Gate
 
@@ -107,6 +127,34 @@ Latest local readiness audit at `2026-06-22T08:43:58Z`:
   It covers all 5 required approval checks and defaults every check to
   `ok: false`; it is an approval capture aid only and cannot pass the operator
   approval readiness gate until filled from an explicit approval event.
+
+Latest local readiness audit at `2026-06-22T12:33:08Z`:
+
+- Overall cutover readiness remains `blocked`, with `14/19` total checks passed.
+- Selected Phase 7 readiness remains `blocked`, with `13/17` selected checks
+  passed.
+- Current Phase 7 blockers are unchanged: final D1 import validation,
+  authenticated production smoke, Better Stack cutover monitors green, and
+  explicit operator approval.
+
+Latest public GitHub workflow evidence for commit
+`068fe0c88726c2cc6b45d069c2317ab074b92911`:
+
+- `Cloudflare CI/CD` run `27951815577` completed with conclusion `success` at
+  `2026-06-22T12:14:47Z`.
+- `Better Stack Monitoring` run `27951815795` completed with conclusion
+  `failure` at `2026-06-22T12:14:18Z`.
+- `Manut CI/CD` run `27951815714` completed with conclusion `failure` at
+  `2026-06-22T12:28:55Z`.
+- The Manut CI/CD deploy job completed successfully before the Better Stack
+  evidence assertion failed. The failed stage was the post-deploy Better Stack
+  monitor evidence gate.
+- The blocked Better Stack artifact reported endpoint probes `3/3` passing but
+  Better Stack monitor checks `0/3` passing because `BETTERSTACK_API_TOKEN` was
+  not available to the workflow environment. A repository-secret metadata check
+  during the same continuation returned HTTP `404` for
+  `BETTERSTACK_API_TOKEN`, so the required next action is to add that GitHub
+  repository secret and rerun the Better Stack workflow.
 
 Phase 7/8 evidence bundle command:
 
