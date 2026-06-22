@@ -505,6 +505,42 @@ describe("migration validation tools", () => {
     });
   });
 
+  it("rejects D1 relationship checks without an explicit orphan count", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", ok: true }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("relationships[0] is missing orphan_count/orphanCount/count/rows");
+  });
+
   it("fails upload validation when strict checksum parity has no shared checksum", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-r2-validation-"));
     const sourcePath = path.join(root, "gcs-manifest.json");

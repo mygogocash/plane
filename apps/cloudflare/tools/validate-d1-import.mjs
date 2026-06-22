@@ -82,12 +82,12 @@ function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function coerceNonNegativeInteger(value, fallback = 0) {
-  const candidate = value ?? fallback;
+function coerceNonNegativeInteger(value, label) {
+  const candidate = value;
   const numberValue = typeof candidate === "string" && candidate.trim() !== "" ? Number(candidate) : candidate;
 
   if (!Number.isSafeInteger(numberValue) || numberValue < 0) {
-    throw new Error(`Invalid relationship check count: ${JSON.stringify(value)}`);
+    throw new Error(`Invalid ${label}: ${JSON.stringify(value)}`);
   }
 
   return numberValue;
@@ -103,7 +103,12 @@ function normalizeRelationshipCheck(row, index) {
     throw new Error(`relationships[${index}] is missing a name/relationship/id string`);
   }
 
-  const orphanCount = coerceNonNegativeInteger(row.orphanCount ?? row.orphan_count ?? row.count ?? row.rows, 0);
+  const orphanCountValue = row.orphanCount ?? row.orphan_count ?? row.count ?? row.rows;
+  if (orphanCountValue === undefined) {
+    throw new Error(`relationships[${index}] is missing orphan_count/orphanCount/count/rows`);
+  }
+
+  const orphanCount = coerceNonNegativeInteger(orphanCountValue, `relationship check count for ${name}`);
   const ok = typeof row.ok === "boolean" ? row.ok && orphanCount === 0 : orphanCount === 0;
 
   return {
