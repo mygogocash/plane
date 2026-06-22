@@ -205,6 +205,28 @@ describe("authenticated smoke report", () => {
     });
   });
 
+  it("does not treat a production URL alone as authenticated smoke evidence", () => {
+    const input = passingInput();
+    delete input.checks[0].evidence;
+    input.checks[0] = { ...input.checks[0], url: "https://app.manut.xyz/workspaces/gogocash" };
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke check login is missing evidence.",
+    });
+    expect(report.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "login",
+          url: "https://app.manut.xyz/workspaces/gogocash",
+          status: "evidence_missing",
+        }),
+      ])
+    );
+  });
+
   it("rejects per-check smoke URLs from non-production origins", () => {
     const input = passingInput();
     input.checks[0] = { ...input.checks[0], url: "https://staging.manut.xyz/login" };

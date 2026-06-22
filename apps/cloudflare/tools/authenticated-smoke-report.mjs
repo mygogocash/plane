@@ -230,7 +230,7 @@ function normalizeCheck(row) {
   return {
     id: row.id,
     ok: row.ok === true,
-    evidence: row.evidence ?? row.screenshot ?? row.url ?? row.note ?? row.notes ?? null,
+    evidence: row.evidence ?? row.screenshot ?? row.note ?? row.notes ?? null,
     observed_at: typeof row.observed_at === "string" ? row.observed_at : null,
     url: typeof row.url === "string" ? row.url : null,
     note: typeof row.note === "string" ? row.note : typeof row.notes === "string" ? row.notes : null,
