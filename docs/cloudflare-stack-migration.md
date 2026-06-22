@@ -153,6 +153,29 @@ cutover gate. Use `--phase phase-08` for decommission, or `--phase all` for a
 full program audit. It reads local phase reports plus explicit evidence paths
 from environment variables and exits `1` while hard gates are missing.
 
+To collect all remaining Phase 7/8 evidence reports in one pass, use the
+non-destructive bundle command:
+
+```bash
+pnpm --filter @manut/cloudflare cutover:evidence -- --json --dry-run
+```
+
+Remove `--dry-run` only after the required input paths and tokens are set. The
+bundle writes the canonical reports consumed by `cutover:readiness` and marks
+missing inputs as skipped, so it is safe to run before all evidence exists.
+
+Bundle input variables:
+
+- `D1_POSTGRES_COUNTS`
+- `D1_D1_COUNTS`
+- `D1_RELATIONSHIPS`
+- `R2_GCS_MANIFEST`
+- `R2_R2_MANIFEST`
+- `AUTHENTICATED_SMOKE_INPUT`
+- `BETTERSTACK_API_TOKEN`
+- `OPERATOR_APPROVAL_INPUT`
+- `SEVEN_GREEN_DAYS_INPUT`
+
 Required Phase 7 evidence:
 
 - `CLOUDFLARE_PREVIEW_SMOKE_REPORT`

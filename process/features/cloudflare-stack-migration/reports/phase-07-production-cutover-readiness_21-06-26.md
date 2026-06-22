@@ -37,6 +37,30 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 12/17`
 
+Phase 7/8 evidence bundle command:
+
+```bash
+pnpm --filter @manut/cloudflare cutover:evidence -- --json --dry-run
+```
+
+Use the same command without `--dry-run` after the required local evidence
+inputs are available. The bundle is non-destructive and writes the canonical
+D1, R2, authenticated smoke, Better Stack, operator approval, and seven-green-
+days JSON reports under `process/features/cloudflare-stack-migration/reports/`.
+It skips missing evidence explicitly instead of fabricating green reports.
+
+Required bundle inputs:
+
+- `D1_POSTGRES_COUNTS`
+- `D1_D1_COUNTS`
+- `D1_RELATIONSHIPS`
+- `R2_GCS_MANIFEST`
+- `R2_R2_MANIFEST`
+- `AUTHENTICATED_SMOKE_INPUT`
+- `BETTERSTACK_API_TOKEN`
+- `OPERATOR_APPROVAL_INPUT`
+- `SEVEN_GREEN_DAYS_INPUT`
+
 Better Stack cutover evidence command:
 
 ```bash

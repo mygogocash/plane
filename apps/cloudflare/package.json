@@ -15,6 +15,7 @@
     "betterstack:cutover-report": "node tools/betterstack-cutover-report.mjs",
     "operator:approval-report": "node tools/operator-approval-report.mjs",
     "seven-green-days:report": "node tools/seven-green-days-report.mjs",
+    "cutover:evidence": "node tools/collect-cutover-evidence.mjs",
     "cutover:readiness": "node tools/cutover-readiness.mjs",
     "live:shadow": "node tools/live-shadow-validation.mjs",
     "smoke:worker": "node tools/smoke-worker.mjs",

@@ -48,6 +48,17 @@ pnpm --filter @manut/cloudflare cutover:readiness
 The command must report `Cutover readiness: READY` before routing is changed.
 At the current phase-program state it is expected to report `BLOCKED`.
 
+Use the evidence bundle to generate the remaining canonical evidence reports
+when the required operator-captured inputs are available:
+
+```bash
+pnpm --filter @manut/cloudflare cutover:evidence -- --json --dry-run
+```
+
+The bundle is non-destructive. It reports missing inputs as skipped and writes
+canonical D1, R2, authenticated smoke, Better Stack, operator approval, and
+seven-green-days JSON reports only when real inputs are supplied.
+
 Required evidence variables:
 
 - `CLOUDFLARE_PREVIEW_SMOKE_REPORT`
