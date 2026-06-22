@@ -791,6 +791,22 @@ jobs:
           path: ${{ runner.temp }}/phase-07-betterstack-cutover_21-06-26.json
           if-no-files-found: warn
 
+      - name: Require Better Stack cutover report to pass
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_path="$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+          if [ ! -s "$report_path" ]; then
+            echo "::error::Better Stack cutover report was not generated."
+            exit 1
+          fi
+          if ! jq -e '.ok == true' "$report_path" >/dev/null; then
+            jq '{ok, monitor_summary, endpoint_summary, monitor_checks: [.monitor_checks[]? | {id, ok, status, monitor_id, remediation}]}' "$report_path"
+            echo "::error::Better Stack cutover report is not green."
+            exit 1
+          fi
+
       - name: Write Better Stack summary
         run: |
           {

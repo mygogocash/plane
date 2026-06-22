@@ -52,12 +52,20 @@ describe("Manut CI/CD workflow", () => {
     expect(workflow).toContain("scale_if_exists plane-app-api-wl manut-app-api-wl");
   });
 
-  it("summarizes blocked Better Stack cutover evidence even when monitor sync is non-blocking", () => {
+  it("summarizes Better Stack cutover evidence before enforcing green status", () => {
     const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "ci-cd.yml"), "utf8");
 
     expect(workflow).toContain(".github/ops/betterstack/summarize-cutover-report.sh");
     expect(workflow).toContain("phase-07-betterstack-cutover_21-06-26.json");
     expect(workflow).toContain("--soft-fail");
+  });
+
+  it("fails Better Stack monitoring when the cutover report is not green", () => {
+    const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "ci-cd.yml"), "utf8");
+
+    expect(workflow).toContain("Require Better Stack cutover report to pass");
+    expect(workflow).toContain("jq -e '.ok == true'");
+    expect(workflow).toContain("Better Stack cutover report is not green.");
   });
 
   it("writes Cloudflare deploy evidence with a provider-backed Worker version id", () => {
