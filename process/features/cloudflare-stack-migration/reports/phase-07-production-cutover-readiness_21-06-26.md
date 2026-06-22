@@ -163,13 +163,17 @@ pnpm --filter @manut/cloudflare auth:smoke-report -- \
 
 After a real authenticated smoke run, fill `actor`,
 `cloudflare_route_verified`, route evidence, and every check's `ok`, `evidence`,
-and `observed_at`, then canonicalize it with:
+`observed_at`, and production `app.manut.xyz` `url`, then canonicalize it with:
 
 ```bash
 pnpm --filter @manut/cloudflare auth:smoke-report -- \
   --input <filled-authenticated-smoke-input.json> \
   --out process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json
 ```
+
+Each authenticated smoke check must include a URL under
+`https://app.manut.xyz`; staging URLs, missing URLs, or public-only health probe
+URLs remain blocked evidence.
 
 D1 target-side input files can now be refreshed from remote Cloudflare D1 with:
 

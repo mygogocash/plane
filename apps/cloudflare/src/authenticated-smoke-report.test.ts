@@ -29,6 +29,7 @@ function passingInput() {
       ok: true,
       evidence: `verified ${check.id}`,
       observed_at: "2026-06-21T12:00:00.000Z",
+      url: `https://app.manut.xyz/smoke/${check.id}`,
     })),
   };
 }
@@ -192,6 +193,30 @@ describe("authenticated smoke report", () => {
     });
   });
 
+  it("requires each smoke check to include a production app URL", () => {
+    const input = passingInput();
+    input.checks[0] = { ...input.checks[0], url: "" };
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke check login must include a production app.manut.xyz URL.",
+    });
+  });
+
+  it("rejects per-check smoke URLs from non-production origins", () => {
+    const input = passingInput();
+    input.checks[0] = { ...input.checks[0], url: "https://staging.manut.xyz/login" };
+
+    const report = buildAuthenticatedSmokeReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke check login must include a production app.manut.xyz URL.",
+    });
+  });
+
   it("writes repo-root-relative reports when run through the package", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-auth-smoke-"));
     const inputPath = path.join(root, "manual-evidence.json");
@@ -245,5 +270,33 @@ describe("authenticated smoke report", () => {
       target_origin: "https://app.manut.xyz",
     });
     expect(fileTemplate.checks).toHaveLength(REQUIRED_AUTHENTICATED_SMOKE_CHECKS.length);
+  });
+
+  it("prints a human template summary when the CLI template mode is not JSON", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-auth-smoke-template-human-"));
+    const relativeOutPath = `.tmp/${path.basename(root)}/auth-smoke-template.json`;
+    const repoOutPath = path.join(repoRoot, relativeOutPath);
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    const stdout = execFileSync(
+      "node",
+      ["tools/authenticated-smoke-report.mjs", "--template", "--out", relativeOutPath],
+      {
+        cwd: packageRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    const fileTemplate = JSON.parse(await readFile(repoOutPath, "utf8"));
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    expect(stdout).toContain("Authenticated smoke input template");
+    expect(stdout).toContain(`Checks: ${REQUIRED_AUTHENTICATED_SMOKE_CHECKS.length}`);
+    expect(fileTemplate).toMatchObject({
+      template_kind: "authenticated-smoke-input",
+      target_origin: "https://app.manut.xyz",
+    });
   });
 });

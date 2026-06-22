@@ -182,6 +182,24 @@ function parseTimestamp(value, label) {
   return { ok: true };
 }
 
+function validateProductionCheckUrl(value, checkId) {
+  const message = `Authenticated smoke check ${checkId} must include a production app.manut.xyz URL.`;
+  if (typeof value !== "string" || value.trim() === "") {
+    return { ok: false, message };
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.origin !== "https://app.manut.xyz") {
+      return { ok: false, message };
+    }
+  } catch {
+    return { ok: false, message };
+  }
+
+  return { ok: true };
+}
+
 function normalizeInputChecks(input) {
   if (Array.isArray(input)) {
     return input;
@@ -265,6 +283,10 @@ export function validateAuthenticatedSmokeReport(report) {
     if (!observedAt.ok) {
       return observedAt;
     }
+    const productionUrl = validateProductionCheckUrl(check.url, definition.id);
+    if (!productionUrl.ok) {
+      return productionUrl;
+    }
   }
 
   return { ok: true };
@@ -276,7 +298,7 @@ export function buildAuthenticatedSmokeInputTemplate({ generatedAt = new Date().
     schema_version: 1,
     generated_at: generatedAt,
     instructions:
-      "Fill every ok/evidence/observed_at field from a real authenticated production smoke run, then pass this file to auth:smoke-report. Do not mark checks passing from assumptions or public health probes.",
+      "Fill every ok/evidence/observed_at/url field from a real authenticated production smoke run, then pass this file to auth:smoke-report. Every check URL must be under https://app.manut.xyz. Do not mark checks passing from assumptions or public health probes.",
     actor: "",
     target_origin: "https://app.manut.xyz",
     cloudflare_route_verified: false,
@@ -392,6 +414,15 @@ function printHumanReport(report) {
   }
 }
 
+function printHumanTemplate(template, outPath) {
+  console.log("Authenticated smoke input template");
+  console.log(`Target: ${template.target_origin}`);
+  console.log(`Checks: ${template.checks.length}`);
+  if (outPath) {
+    console.log(`Wrote: ${outPath}`);
+  }
+}
+
 async function main() {
   let options;
   try {
@@ -421,6 +452,8 @@ async function main() {
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
+  } else if (options.template) {
+    printHumanTemplate(report, options.outPath);
   } else {
     printHumanReport(report);
   }

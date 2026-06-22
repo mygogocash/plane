@@ -43,6 +43,7 @@ function authenticatedSmokeInput() {
       ok: true,
       evidence: `verified ${check.id}`,
       observed_at: "2026-06-21T12:00:00.000Z",
+      url: `https://app.manut.xyz/smoke/${check.id}`,
     })),
   };
 }

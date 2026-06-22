@@ -258,6 +258,7 @@ describe("cutover readiness evidence gate", () => {
             ok: true,
             evidence: "login screenshot",
             observed_at: "2026-06-21T12:00:00.000Z",
+            url: "https://app.manut.xyz/",
           },
         ],
       })

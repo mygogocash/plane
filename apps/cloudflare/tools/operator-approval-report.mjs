@@ -396,6 +396,15 @@ function printHumanReport(report) {
   }
 }
 
+function printHumanTemplate(template, outPath) {
+  console.log("Operator approval input template");
+  console.log(`Target: ${template.target_origin}`);
+  console.log(`Checks: ${template.checks.length}`);
+  if (outPath) {
+    console.log(`Wrote: ${outPath}`);
+  }
+}
+
 async function main() {
   let options;
   try {
@@ -425,6 +434,8 @@ async function main() {
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
+  } else if (options.template) {
+    printHumanTemplate(report, options.outPath);
   } else {
     printHumanReport(report);
   }

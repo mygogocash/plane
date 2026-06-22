@@ -198,4 +198,32 @@ describe("operator approval report", () => {
     });
     expect(fileTemplate.checks).toHaveLength(REQUIRED_OPERATOR_APPROVAL_CHECKS.length);
   });
+
+  it("prints a human template summary when the CLI template mode is not JSON", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-operator-approval-template-human-"));
+    const relativeOutPath = `.tmp/${path.basename(root)}/operator-approval-template.json`;
+    const repoOutPath = path.join(repoRoot, relativeOutPath);
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    const stdout = execFileSync(
+      "node",
+      ["tools/operator-approval-report.mjs", "--template", "--out", relativeOutPath],
+      {
+        cwd: packageRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    const fileTemplate = JSON.parse(await readFile(repoOutPath, "utf8"));
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    expect(stdout).toContain("Operator approval input template");
+    expect(stdout).toContain(`Checks: ${REQUIRED_OPERATOR_APPROVAL_CHECKS.length}`);
+    expect(fileTemplate).toMatchObject({
+      template_kind: "operator-approval-input",
+      target_origin: "https://app.manut.xyz",
+    });
+  });
 });

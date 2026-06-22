@@ -99,10 +99,11 @@ to `operator:approval-report`.
 `AUTHENTICATED_SMOKE_REPORT` must also be canonicalized with
 `auth:smoke-report` and include `actor`, `target_origin:
 https://app.manut.xyz`, every required authenticated workflow, and meaningful
-evidence for each check. Blank strings or empty evidence objects are not valid
-Phase 7 smoke evidence.
+evidence, observation timestamp, and production `app.manut.xyz` URL for each
+check. Blank strings, empty evidence objects, and smoke URLs from staging or
+non-production origins are not valid Phase 7 smoke evidence.
 
-A non-passing operator input template is available at
+A non-passing authenticated smoke input template is available at
 `process/features/cloudflare-stack-migration/references/phase-07-authenticated-smoke-input-template_22-06-26.json`.
 Regenerate it with:
 
