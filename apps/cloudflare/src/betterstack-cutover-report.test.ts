@@ -10,6 +10,7 @@ import {
   buildBlockedMonitorReport,
   buildCutoverReport,
   buildMonitorReport,
+  endpointProbeHeaders,
   findMatchingMonitor,
   normalizeMonitorUrl,
   requiredMonitorDefinitions,
@@ -79,6 +80,13 @@ describe("Better Stack cutover report helpers", () => {
         url: "https://app.manut.xyz/api/instances/",
       }),
     ]);
+  });
+
+  it("uses browser-compatible headers for live endpoint probes", () => {
+    expect(endpointProbeHeaders()).toMatchObject({
+      "user-agent": expect.stringContaining("ManutCutoverProbe"),
+      accept: expect.stringContaining("text/html"),
+    });
   });
 
   it("matches existing monitors by name or normalized URL", () => {

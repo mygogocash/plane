@@ -120,6 +120,13 @@ export function requiredMonitorDefinitions(env = process.env) {
   ];
 }
 
+export function endpointProbeHeaders() {
+  return {
+    "user-agent": "Mozilla/5.0 (compatible; ManutCutoverProbe/1.0; +https://manut.xyz)",
+    accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+  };
+}
+
 function monitorAttributes(monitor) {
   return monitor && typeof monitor === "object" && monitor.attributes && typeof monitor.attributes === "object"
     ? monitor.attributes
@@ -258,6 +265,7 @@ async function probeEndpoint(definition) {
   try {
     const response = await fetch(definition.url, {
       method: "GET",
+      headers: endpointProbeHeaders(),
       signal: AbortSignal.timeout(15000),
     });
     const body = await response.text();

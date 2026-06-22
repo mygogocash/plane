@@ -70,6 +70,18 @@ Latest local readiness audit at `2026-06-22T08:43:58Z`:
   `matchedObjectCount: 2` and `mismatchedObjectCount: 0`. R2 upload parity is
   no longer a Phase 7 blocker, but production upload routing remains unchanged
   until the full cutover gate passes.
+- Latest Better Stack workflow evidence for commit
+  `8b7770bed940134abce391cf68d0f628d1c6d7fc` ran as
+  `Better Stack Monitoring` run `27945306455` and completed with GitHub
+  conclusion `success`, but its artifact is diagnostic only and must not be
+  imported as green evidence. The artifact reported `ok: false` because
+  `BETTERSTACK_API_TOKEN` was not available in the workflow environment. A
+  local follow-up diagnostic at `2026-06-22T10:14:57Z` confirmed the live
+  endpoint probe layer passes `3/3` (`manut.xyz`, `app.manut.xyz`, and
+  `app.manut.xyz/api/instances/`) when the evidence collector uses
+  browser-compatible probe headers. The Better Stack monitor layer remains
+  blocked at `0/3` until the repository secret is configured and the workflow is
+  rerun.
 
 Phase 7/8 evidence bundle command:
 
@@ -108,6 +120,14 @@ Direct endpoint probes in that report are required Phase 7 cutover evidence:
 `manut.xyz`, `app.manut.xyz`, and `app.manut.xyz/api/instances/` must return
 HTTP `200` with their expected keywords. Use `--soft-fail` only to capture a
 blocked report for diagnosis.
+
+Current remediation for the Better Stack gate:
+
+1. Add the repository secret `BETTERSTACK_API_TOKEN` with Better Stack Uptime
+   monitor read access.
+2. Rerun the `Better Stack Monitoring` workflow on `preview`.
+3. Import the generated `phase-07-betterstack-cutover_21-06-26.json` only if it
+   contains `ok: true`, monitor checks `3/3`, and endpoint probes `3/3`.
 
 The committed report must include at least the three required monitor checks,
 all of them must be `up`, and all required endpoint probes must pass. Readiness
