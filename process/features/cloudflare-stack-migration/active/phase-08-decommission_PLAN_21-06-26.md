@@ -40,7 +40,9 @@ Decommission cannot begin until:
   `cloudflare-worker-logs`, `d1-backup-export`, `r2-backup-export`, and
   `rollback-retention`. The generated report must include `target_origin:
 https://app.manut.xyz` and meaningful evidence values; blank strings or empty
-  evidence objects are not valid decommission evidence.
+  evidence objects are not valid decommission evidence. Each check must also
+  include an explicit ISO `observed_at` timestamp from the post-cutover
+  stability review.
 - `pnpm --filter @manut/cloudflare cutover:readiness -- --phase phase-08` reports
   `Phase 8 decommission ready: yes`.
 - A separate destructive-action checklist is approved for each provider

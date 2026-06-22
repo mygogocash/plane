@@ -251,6 +251,10 @@ export function validateSevenGreenDaysReport(report) {
     if (!hasEvidence(check.evidence)) {
       return { ok: false, message: `Seven green days check ${definition.id} is missing evidence.` };
     }
+    const observedAt = parseTimestamp(check.observed_at, `checks.${definition.id}.observed_at`);
+    if (!observedAt.ok) {
+      return observedAt;
+    }
   }
 
   return { ok: true };

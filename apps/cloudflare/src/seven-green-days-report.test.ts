@@ -96,6 +96,19 @@ describe("seven green days report", () => {
     );
   });
 
+  it("requires every seven-green-days check to include an observation timestamp", () => {
+    const input = passingInput();
+    input.checks[0] = { ...input.checks[0], observed_at: "" };
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      green_days_verified: false,
+      validation_error: "Seven green days report must include checks.betterstack-monitors.observed_at.",
+    });
+  });
+
   it("requires an explicit production target origin", () => {
     const input = passingInput();
     delete input.target_origin;

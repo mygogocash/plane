@@ -1079,6 +1079,37 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
+  it("rejects seven-green-days reports without per-check observation timestamps", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const evidencePath = path.join(root, "phase8-final-evidence.json");
+    await writeFile(
+      evidencePath,
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "seven-green-days",
+        green_days_verified: true,
+        target_origin: "https://app.manut.xyz",
+        cutover_at: "2026-06-21T00:00:00.000Z",
+        verified_through: "2026-06-28T00:00:00.000Z",
+        checks: REQUIRED_SEVEN_GREEN_DAYS_IDS.map((id) => ({
+          id,
+          ok: true,
+          evidence: `${id} evidence`,
+        })),
+      })
+    );
+
+    const report = runReadiness(root, {
+      SEVEN_GREEN_DAYS_REPORT: evidencePath,
+    });
+    const check = report.checks.find((item: { id: string }) => item.id === "phase8-seven-green-days");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Seven green days report must include checks.betterstack-monitors.observed_at.",
+    });
+  });
+
   it("rejects operator approval when CUTOVER_APPROVED is set without an approval report", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
 
