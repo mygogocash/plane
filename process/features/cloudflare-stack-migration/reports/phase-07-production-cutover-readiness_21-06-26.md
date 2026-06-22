@@ -220,6 +220,8 @@ also validates high-risk evidence report shape for D1 import, R2 manifest
 parity, authenticated smoke, Better Stack monitor and endpoint status, and
 Phase 8 seven-green-days evidence so generic `ok: true` stubs cannot unblock
 cutover.
+Each required Better Stack monitor check must include the Better Stack
+`monitor_id`; status-only or hand-written monitor rows remain blocked evidence.
 
 High-risk evidence validation is bound to the readiness gate, not to the report
 filename. Environment overrides with arbitrary file names still require the

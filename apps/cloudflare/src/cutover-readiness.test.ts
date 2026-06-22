@@ -780,7 +780,7 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
-  it("rejects Better Stack reports when live endpoint probes fail", async () => {
+  it("rejects Better Stack reports without Better Stack monitor ids", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
     await mkdir(reportDir, { recursive: true });
@@ -788,8 +788,9 @@ describe("cutover readiness evidence gate", () => {
       path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
       JSON.stringify({
         ok: true,
+        evidence_kind: "betterstack-cutover",
         monitor_summary: { total: 3, passed: 3, failed: 0 },
-        endpoint_summary: { total: 3, passed: 2, failed: 1 },
+        endpoint_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [
           {
             id: "public-site",
@@ -811,6 +812,68 @@ describe("cutover readiness evidence gate", () => {
             id: "api-instances",
             ok: true,
             status: "up",
+            url: "https://app.manut.xyz/api/instances/",
+            expected_url: "https://app.manut.xyz/api/instances/",
+            url_matches: true,
+          },
+        ],
+        endpoint_checks: [
+          { id: "public-site", ok: true, status: 200, keyword_found: true, url: "https://manut.xyz" },
+          { id: "app-root", ok: true, status: 200, keyword_found: true, url: "https://app.manut.xyz" },
+          {
+            id: "api-instances",
+            ok: true,
+            status: 200,
+            keyword_found: true,
+            url: "https://app.manut.xyz/api/instances/",
+          },
+        ],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "Better Stack monitor checks must include Better Stack monitor ids.",
+    });
+  });
+
+  it("rejects Better Stack reports when live endpoint probes fail", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-betterstack-cutover_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        monitor_summary: { total: 3, passed: 3, failed: 0 },
+        endpoint_summary: { total: 3, passed: 2, failed: 1 },
+        monitor_checks: [
+          {
+            id: "public-site",
+            ok: true,
+            status: "up",
+            monitor_id: "monitor-public-site",
+            url: "https://manut.xyz",
+            expected_url: "https://manut.xyz",
+            url_matches: true,
+          },
+          {
+            id: "app-root",
+            ok: true,
+            status: "up",
+            monitor_id: "monitor-app-root",
+            url: "https://app.manut.xyz",
+            expected_url: "https://app.manut.xyz",
+            url_matches: true,
+          },
+          {
+            id: "api-instances",
+            ok: true,
+            status: "up",
+            monitor_id: "monitor-api-instances",
             url: "https://app.manut.xyz/api/instances/",
             expected_url: "https://app.manut.xyz/api/instances/",
             url_matches: true,
@@ -849,6 +912,7 @@ describe("cutover readiness evidence gate", () => {
             id: "public-site",
             ok: true,
             status: "up",
+            monitor_id: "monitor-public-site",
             url: "https://manut.xyz",
             expected_url: "https://manut.xyz",
             url_matches: true,
@@ -857,6 +921,7 @@ describe("cutover readiness evidence gate", () => {
             id: "app-root",
             ok: true,
             status: "up",
+            monitor_id: "monitor-app-root",
             url: "https://app.manut.xyz",
             expected_url: "https://app.manut.xyz",
             url_matches: true,
@@ -865,6 +930,7 @@ describe("cutover readiness evidence gate", () => {
             id: "api-instances",
             ok: true,
             status: "up",
+            monitor_id: "monitor-api-instances",
             url: "https://app.manut.xyz/api/instances/",
             expected_url: "https://app.manut.xyz/api/instances/",
             url_matches: true,
@@ -1172,6 +1238,7 @@ describe("cutover readiness evidence gate", () => {
             id: "public-site",
             ok: true,
             status: "up",
+            monitor_id: "monitor-public-site",
             url: "https://manut.xyz",
             url_matches: true,
             expected_url: "https://manut.xyz",
@@ -1180,6 +1247,7 @@ describe("cutover readiness evidence gate", () => {
             id: "app-root",
             ok: true,
             status: "up",
+            monitor_id: "monitor-app-root",
             url: "https://app.manut.xyz",
             url_matches: true,
             expected_url: "https://app.manut.xyz",
@@ -1188,6 +1256,7 @@ describe("cutover readiness evidence gate", () => {
             id: "api-instances",
             ok: true,
             status: "up",
+            monitor_id: "monitor-api-instances",
             url: "https://app.manut.xyz/api/instances/",
             url_matches: true,
             expected_url: "https://app.manut.xyz/api/instances/",

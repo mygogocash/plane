@@ -665,6 +665,10 @@ function validateBetterStackCutoverReport(report) {
     return { ok: false, message: "Better Stack monitor checks must target canonical Manut production URLs." };
   }
 
+  if (requiredChecks.some((check) => typeof check.monitor_id !== "string" || check.monitor_id.trim() === "")) {
+    return { ok: false, message: "Better Stack monitor checks must include Better Stack monitor ids." };
+  }
+
   if (!isRecord(report.endpoint_summary)) {
     return { ok: false, message: "Better Stack report must include endpoint_summary." };
   }
