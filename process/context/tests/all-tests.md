@@ -20,7 +20,7 @@ It does not replace feature-specific acceptance criteria in `process/features/*/
 | Workspace typecheck                | `pnpm check:types`                                                                                          |
 | Cloudflare Worker tests            | `pnpm --filter @manut/cloudflare test`                                                                      |
 | Cloudflare Worker typecheck        | `pnpm --filter @manut/cloudflare check`                                                                     |
-| Cloudflare cutover readiness       | `pnpm --filter @manut/cloudflare cutover:readiness -- --json`                                               |
+| Cloudflare cutover readiness       | `pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json`                                      |
 | i18n type generation and typecheck | `pnpm --filter @plane/i18n check:types`                                                                     |
 | i18n format check                  | `pnpm --filter @plane/i18n check:format`                                                                    |
 | Django API Docker suite            | `docker compose -f docker-compose-test.yml up --build --abort-on-container-exit --exit-code-from api-tests` |

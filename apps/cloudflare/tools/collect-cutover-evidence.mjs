@@ -1,9 +1,10 @@
 import { execFile } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import { validateEvidenceJson } from "./cutover-readiness.mjs";
 import { findRepoRoot, resolveRepoPath } from "./path-utils.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -39,6 +40,14 @@ Required environment for local evidence:
 
 Required environment for live Better Stack evidence:
   BETTERSTACK_API_TOKEN
+
+Optional existing canonical report environment:
+  D1_IMPORT_VALIDATION_REPORT
+  R2_MANIFEST_VALIDATION_REPORT
+  AUTHENTICATED_SMOKE_REPORT
+  BETTERSTACK_CUTOVER_REPORT
+  OPERATOR_CUTOVER_APPROVAL_REPORT
+  SEVEN_GREEN_DAYS_REPORT
 
 Exit codes:
   0  all evidence tasks passed, or --soft-fail was supplied
@@ -133,6 +142,8 @@ function buildTasks(reportsDir, options, env = process.env) {
       label: "D1 final import validation",
       phase: "phase-07",
       requiredEnv: ["D1_POSTGRES_COUNTS", "D1_D1_COUNTS", "D1_RELATIONSHIPS"],
+      existingReportEnv: "D1_IMPORT_VALIDATION_REPORT",
+      validationKind: "d1-import-validation",
       reportPath: reportPath(reportsDir, reportFiles.d1),
       command: () => [
         "tools/validate-d1-import.mjs",
@@ -150,6 +161,8 @@ function buildTasks(reportsDir, options, env = process.env) {
       label: "R2 upload manifest validation",
       phase: "phase-07",
       requiredEnv: ["R2_GCS_MANIFEST", "R2_R2_MANIFEST"],
+      existingReportEnv: "R2_MANIFEST_VALIDATION_REPORT",
+      validationKind: "r2-manifest-validation",
       reportPath: reportPath(reportsDir, reportFiles.r2),
       command: () => [
         "tools/compare-upload-manifests.mjs",
@@ -166,6 +179,8 @@ function buildTasks(reportsDir, options, env = process.env) {
       label: "Authenticated production smoke",
       phase: "phase-07",
       requiredEnv: ["AUTHENTICATED_SMOKE_INPUT"],
+      existingReportEnv: "AUTHENTICATED_SMOKE_REPORT",
+      validationKind: "authenticated-smoke",
       reportPath: reportPath(reportsDir, reportFiles.authenticatedSmoke),
       command: () => [
         "tools/authenticated-smoke-report.mjs",
@@ -181,6 +196,8 @@ function buildTasks(reportsDir, options, env = process.env) {
       label: "Better Stack cutover monitors green",
       phase: "phase-07",
       requiredEnv: ["BETTERSTACK_API_TOKEN"],
+      existingReportEnv: "BETTERSTACK_CUTOVER_REPORT",
+      validationKind: "betterstack-cutover",
       reportPath: reportPath(reportsDir, reportFiles.betterstack),
       skip: options.skipBetterstack ? "Skipped by --skip-betterstack." : null,
       command: () => [
@@ -196,6 +213,8 @@ function buildTasks(reportsDir, options, env = process.env) {
       label: "Explicit operator cutover approval",
       phase: "phase-07",
       requiredEnv: ["OPERATOR_APPROVAL_INPUT"],
+      existingReportEnv: "OPERATOR_CUTOVER_APPROVAL_REPORT",
+      validationKind: "operator-approval",
       reportPath: reportPath(reportsDir, reportFiles.operatorApproval),
       command: () => [
         "tools/operator-approval-report.mjs",
@@ -211,6 +230,8 @@ function buildTasks(reportsDir, options, env = process.env) {
       label: "Phase 8 seven green days evidence",
       phase: "phase-08",
       requiredEnv: ["SEVEN_GREEN_DAYS_INPUT"],
+      existingReportEnv: "SEVEN_GREEN_DAYS_REPORT",
+      validationKind: "seven-green-days",
       reportPath: reportPath(reportsDir, reportFiles.sevenGreenDays),
       command: () => [
         "tools/seven-green-days-report.mjs",
@@ -239,6 +260,70 @@ function parseJsonOutput(stdout) {
   }
 }
 
+async function importExistingReport(task, rawReportPath, options) {
+  const sourcePath = resolveRepoPath(rawReportPath, repoRoot);
+  const targetPath = path.resolve(task.reportPath);
+  const validation = await validateEvidenceJson(sourcePath, task.validationKind);
+
+  if (!validation.ok) {
+    return {
+      id: task.id,
+      label: task.label,
+      phase: task.phase,
+      status: "fail",
+      evidence: task.reportPath,
+      imported_from: sourcePath,
+      imported_from_env: task.existingReportEnv,
+      report_ok: false,
+      remediation: validation.message,
+    };
+  }
+
+  if (options.dryRun) {
+    return {
+      id: task.id,
+      label: task.label,
+      phase: task.phase,
+      status: "skipped",
+      reason: "Dry run: existing canonical report was validated but not copied.",
+      evidence: task.reportPath,
+      imported_from: sourcePath,
+      imported_from_env: task.existingReportEnv,
+      report_ok: true,
+    };
+  }
+
+  if (sourcePath === targetPath) {
+    return {
+      id: task.id,
+      label: task.label,
+      phase: task.phase,
+      status: "pass",
+      evidence: task.reportPath,
+      imported_from: sourcePath,
+      imported_from_env: task.existingReportEnv,
+      already_canonical: true,
+      report_ok: true,
+      remediation: null,
+    };
+  }
+
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  await copyFile(sourcePath, targetPath);
+
+  return {
+    id: task.id,
+    label: task.label,
+    phase: task.phase,
+    status: "pass",
+    evidence: task.reportPath,
+    imported_from: sourcePath,
+    imported_from_env: task.existingReportEnv,
+    report_ok: true,
+    remediation: null,
+  };
+}
+
 async function runTask(task, options, env = process.env) {
   if (task.skip) {
     return {
@@ -249,6 +334,25 @@ async function runTask(task, options, env = process.env) {
       reason: task.skip,
       evidence: task.reportPath,
     };
+  }
+
+  const existingReportPath = task.existingReportEnv ? env[task.existingReportEnv]?.trim() : "";
+  if (existingReportPath) {
+    try {
+      return await importExistingReport(task, existingReportPath, options);
+    } catch (error) {
+      return {
+        id: task.id,
+        label: task.label,
+        phase: task.phase,
+        status: "fail",
+        evidence: task.reportPath,
+        imported_from: resolveRepoPath(existingReportPath, repoRoot),
+        imported_from_env: task.existingReportEnv,
+        report_ok: null,
+        remediation: `Failed to import existing evidence report: ${error.message}`,
+      };
+    }
   }
 
   const missing = missingEnv(task.requiredEnv, env);

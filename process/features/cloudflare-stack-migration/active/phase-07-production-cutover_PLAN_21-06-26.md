@@ -52,7 +52,7 @@ Use the evidence bundle to generate the remaining canonical evidence reports
 when the required operator-captured inputs are available:
 
 ```bash
-pnpm --filter @manut/cloudflare cutover:evidence -- --json --dry-run
+pnpm --silent --filter @manut/cloudflare cutover:evidence -- --json --dry-run
 ```
 
 The bundle is non-destructive. It reports missing inputs as skipped and writes

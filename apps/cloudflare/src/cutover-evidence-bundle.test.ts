@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -76,6 +76,52 @@ function sevenGreenDaysInput() {
       evidence: `verified ${check.id}`,
       observed_at: "2026-06-28T00:00:00.000Z",
     })),
+  };
+}
+
+function betterStackReportPayload() {
+  return {
+    ok: true,
+    evidence_kind: "betterstack-cutover",
+    monitor_summary: { total: 3, passed: 3, failed: 0 },
+    endpoint_summary: { total: 3, passed: 3, failed: 0 },
+    monitor_checks: [
+      {
+        id: "public-site",
+        ok: true,
+        status: "up",
+        url: "https://manut.xyz",
+        expected_url: "https://manut.xyz",
+        url_matches: true,
+      },
+      {
+        id: "app-root",
+        ok: true,
+        status: "up",
+        url: "https://app.manut.xyz",
+        expected_url: "https://app.manut.xyz",
+        url_matches: true,
+      },
+      {
+        id: "api-instances",
+        ok: true,
+        status: "up",
+        url: "https://app.manut.xyz/api/instances/",
+        expected_url: "https://app.manut.xyz/api/instances/",
+        url_matches: true,
+      },
+    ],
+    endpoint_checks: [
+      { id: "public-site", ok: true, status: 200, keyword_found: true, url: "https://manut.xyz" },
+      { id: "app-root", ok: true, status: 200, keyword_found: true, url: "https://app.manut.xyz" },
+      {
+        id: "api-instances",
+        ok: true,
+        status: 200,
+        keyword_found: true,
+        url: "https://app.manut.xyz/api/instances/",
+      },
+    ],
   };
 }
 
@@ -202,5 +248,93 @@ describe("cutover evidence bundle", () => {
     expect(authReport.ok).toBe(true);
     expect(approvalReport.cutover_approved).toBe(true);
     expect(sevenDaysReport.green_days_verified).toBe(true);
+  });
+
+  it("imports an existing canonical Better Stack report without requiring the API token", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-evidence-bundle-"));
+    const reportsDir = path.join(root, "reports");
+    const existingReport = path.join(root, "existing-betterstack-report.json");
+
+    await writeFile(existingReport, JSON.stringify(betterStackReportPayload()), "utf8");
+
+    const report = runBundle(["--json", "--reports-dir", reportsDir, "--soft-fail"], {
+      BETTERSTACK_CUTOVER_REPORT: existingReport,
+    });
+    const task = report.tasks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+    const importedReport = JSON.parse(
+      await readFile(path.join(reportsDir, "phase-07-betterstack-cutover_21-06-26.json"), "utf8")
+    );
+
+    expect(task).toMatchObject({
+      status: "pass",
+      imported_from_env: "BETTERSTACK_CUTOVER_REPORT",
+      report_ok: true,
+    });
+    expect(importedReport).toMatchObject({
+      ok: true,
+      evidence_kind: "betterstack-cutover",
+    });
+    expect(report.summary).toMatchObject({
+      passed: 1,
+      skipped: 5,
+      failed: 0,
+    });
+  });
+
+  it("rejects imported reports that do not satisfy the expected evidence contract", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-evidence-bundle-"));
+    const reportsDir = path.join(root, "reports");
+    const existingReport = path.join(root, "wrong-kind-report.json");
+
+    await writeFile(
+      existingReport,
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "authenticated-smoke",
+      }),
+      "utf8"
+    );
+
+    const report = runBundle(["--json", "--reports-dir", reportsDir, "--soft-fail"], {
+      BETTERSTACK_CUTOVER_REPORT: existingReport,
+    });
+    const task = report.tasks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(task).toMatchObject({
+      status: "fail",
+      imported_from_env: "BETTERSTACK_CUTOVER_REPORT",
+      remediation: "Better Stack report must include monitor_summary.",
+    });
+    expect(report.summary).toMatchObject({
+      passed: 0,
+      skipped: 5,
+      failed: 1,
+    });
+  });
+
+  it("accepts an existing report that is already in the canonical evidence location", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-evidence-bundle-"));
+    const reportsDir = path.join(root, "reports");
+    const existingReport = path.join(reportsDir, "phase-07-betterstack-cutover_21-06-26.json");
+
+    await mkdir(reportsDir, { recursive: true });
+    await writeFile(existingReport, JSON.stringify(betterStackReportPayload()), "utf8");
+
+    const report = runBundle(["--json", "--reports-dir", reportsDir, "--soft-fail"], {
+      BETTERSTACK_CUTOVER_REPORT: existingReport,
+    });
+    const task = report.tasks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+    const canonicalReport = JSON.parse(await readFile(existingReport, "utf8"));
+
+    expect(task).toMatchObject({
+      status: "pass",
+      imported_from_env: "BETTERSTACK_CUTOVER_REPORT",
+      already_canonical: true,
+      report_ok: true,
+    });
+    expect(canonicalReport).toMatchObject({
+      ok: true,
+      evidence_kind: "betterstack-cutover",
+    });
   });
 });

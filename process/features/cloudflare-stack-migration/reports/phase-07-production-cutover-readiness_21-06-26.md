@@ -74,7 +74,7 @@ Latest local readiness audit at `2026-06-22T08:43:58Z`:
 Phase 7/8 evidence bundle command:
 
 ```bash
-pnpm --filter @manut/cloudflare cutover:evidence -- --json --dry-run
+pnpm --silent --filter @manut/cloudflare cutover:evidence -- --json --dry-run
 ```
 
 Use the same command without `--dry-run` after the required local evidence

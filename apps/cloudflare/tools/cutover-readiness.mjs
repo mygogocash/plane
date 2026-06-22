@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { validateAuthenticatedSmokeReport } from "./authenticated-smoke-report.mjs";
 import { D1_VALIDATION_RELATIONSHIPS, D1_VALIDATION_TABLES } from "./d1-import-validation-queries.mjs";
@@ -202,7 +203,7 @@ async function envFileCheck({ id, label, phase, root, envName, relativePath, rem
   };
 }
 
-async function validateEvidenceJson(filePath, validationKind = null) {
+export async function validateEvidenceJson(filePath, validationKind = null) {
   if (!filePath.endsWith(".json")) {
     if (validationKind) {
       return { ok: false, message: "Evidence file must be JSON for this gate." };
@@ -985,7 +986,9 @@ async function main() {
   process.exitCode = report.status === "ready" ? 0 : 1;
 }
 
-main().catch((error) => {
-  console.error(`Cutover readiness failed: ${error.message}`);
-  process.exitCode = 2;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`Cutover readiness failed: ${error.message}`);
+    process.exitCode = 2;
+  });
+}

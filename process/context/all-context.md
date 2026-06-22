@@ -71,7 +71,7 @@ Production cutover remains blocked until real evidence exists for:
 - Explicit operator cutover approval.
 - Seven green days before Phase 8 decommission.
 
-Use `pnpm --filter @manut/cloudflare cutover:readiness -- --json` to inspect the current gate state.
+Use `pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json` to inspect the current gate state.
 
 ## Update Triggers
 
