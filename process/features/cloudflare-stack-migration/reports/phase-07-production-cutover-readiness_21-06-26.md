@@ -236,6 +236,21 @@ pnpm --filter @manut/cloudflare d1:target-evidence -- \
 After the final import, use the generated counts and relationship files as
 `D1_D1_COUNTS` and `D1_RELATIONSHIPS` alongside the final Postgres count export
 as `D1_POSTGRES_COUNTS`.
+The final Postgres source count export can be canonicalized from psql JSON rows
+with:
+
+```bash
+pnpm --filter @manut/cloudflare d1:source-counts -- \
+  --input <postgres-count-query-output.json> \
+  --source cloud-sql:<source-instance-name> \
+  --out process/features/cloudflare-stack-migration/reports/phase-07-postgres-source-counts_21-06-26.json \
+  --json
+```
+
+Use the generated `phase-07-postgres-source-counts_21-06-26.json` as
+`D1_POSTGRES_COUNTS`. The source-count report requires coverage for the Phase 7
+required `workspaces` and `projects` tables and blocks if the required source
+scope is empty.
 Every D1 relationship check row must include the expected relationship
 provenance plus an explicit orphan count. For the required
 `projects.workspace_id` check, the row must include `source: "projects"` and

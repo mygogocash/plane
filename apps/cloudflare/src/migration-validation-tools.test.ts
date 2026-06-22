@@ -592,6 +592,141 @@ describe("migration validation tools", () => {
     expect(result.stderr).toContain("relationships[0] is missing orphan_count/orphanCount/count/rows");
   });
 
+  it("writes a canonical Postgres source count report from psql JSON rows", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-postgres-source-counts-"));
+    const inputPath = path.join(root, "psql-counts.json");
+    const outPath = path.join(root, "postgres-source-counts.json");
+
+    await writeFile(
+      inputPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: "1" },
+        { table_name: "projects", count: "2" },
+      ])
+    );
+
+    const result = runTool([
+      "tools/postgres-source-counts-report.mjs",
+      "--input",
+      inputPath,
+      "--source",
+      "cloud-sql:manut-pg18-prod",
+      "--generated-at",
+      "2026-06-22T12:00:00.000Z",
+      "--json",
+      "--out",
+      outPath,
+    ]);
+    const stdoutReport = JSON.parse(result.stdout);
+    const fileReport = JSON.parse(await readFile(outPath, "utf8"));
+
+    expect(result.exitCode).toBe(0);
+    expect(stdoutReport).toMatchObject({
+      ok: true,
+      evidence_kind: "postgres-source-counts",
+      generated_at: "2026-06-22T12:00:00.000Z",
+      source: "cloud-sql:manut-pg18-prod",
+      counts: {
+        projects: 2,
+        workspaces: 1,
+      },
+      summary: {
+        required_tables_present: 2,
+        required_scope_source_rows: 3,
+      },
+    });
+    expect(fileReport).toMatchObject({ ok: true });
+  });
+
+  it("rejects Postgres source count reports missing Phase 7 required tables", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-postgres-source-counts-"));
+    const inputPath = path.join(root, "psql-counts.json");
+
+    await writeFile(inputPath, JSON.stringify([{ table_name: "workspaces", count: 1 }]));
+
+    const result = runTool(["tools/postgres-source-counts-report.mjs", "--input", inputPath, "--json"]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      validation_errors: ["Postgres source counts are missing required table coverage: projects."],
+    });
+  });
+
+  it("rejects Postgres source count reports when required scope is empty", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-postgres-source-counts-"));
+    const inputPath = path.join(root, "psql-counts.json");
+
+    await writeFile(
+      inputPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 0 },
+        { table_name: "projects", count: 0 },
+      ])
+    );
+
+    const result = runTool(["tools/postgres-source-counts-report.mjs", "--input", inputPath, "--json"]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      summary: {
+        required_scope_source_rows: 0,
+      },
+    });
+    expect(report.validation_errors).toEqual(
+      expect.arrayContaining(["Postgres source counts require non-empty required table counts."])
+    );
+  });
+
+  it("rejects failed Postgres source SQL runner envelopes", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-postgres-source-counts-"));
+    const inputPath = path.join(root, "psql-counts.json");
+
+    await writeFile(
+      inputPath,
+      JSON.stringify({
+        success: false,
+        error: "source query failed",
+        rows: [
+          { table_name: "workspaces", count: 1 },
+          { table_name: "projects", count: 2 },
+        ],
+      })
+    );
+
+    const result = runTool(["tools/postgres-source-counts-report.mjs", "--input", inputPath, "--json"]);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("Postgres source count report failed: source SQL runner reported failure");
+  });
+
+  it("rejects failed Postgres source count artifacts before re-canonicalizing counts", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-postgres-source-counts-"));
+    const inputPath = path.join(root, "psql-counts.json");
+
+    await writeFile(
+      inputPath,
+      JSON.stringify({
+        ok: false,
+        validation_errors: ["operator marked source export invalid"],
+        counts: {
+          workspaces: 1,
+          projects: 2,
+        },
+      })
+    );
+
+    const result = runTool(["tools/postgres-source-counts-report.mjs", "--input", inputPath, "--json"]);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("Postgres source count report failed: source count input is marked ok=false");
+  });
+
   it("fails upload validation when strict checksum parity has no shared checksum", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-r2-validation-"));
     const sourcePath = path.join(root, "gcs-manifest.json");
