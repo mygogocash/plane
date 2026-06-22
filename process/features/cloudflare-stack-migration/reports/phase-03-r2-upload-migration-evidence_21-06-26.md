@@ -66,17 +66,29 @@ Synthetic manifest comparison result:
 
 ## Cutover Status
 
-Blocked. No GCS objects were copied, no R2 bucket state was changed, and no production
-upload routing was switched. The next operator action is to export real GCS/R2 manifests
-from a preview or sampled non-production migration and compare them with
-`uploads:validate`. The raw `uploads:compare` command is useful for exploratory
-size/key checks but is not strong enough for Phase 7 cutover evidence.
+Production object backfill completed on `2026-06-22T03:05:54Z`.
+The two objects from `plane-affine-495114-uploads` were downloaded locally,
+uploaded to `manut-uploads-prod`, read back from R2, and compared byte-for-byte
+against the GCS downloads. The canonical strict report is recorded at
+`process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json`
+with `sourceObjectCount: 2`, `targetObjectCount: 2`, `matchedObjectCount: 2`,
+and `mismatchedObjectCount: 0`.
+`wrangler r2 bucket info manut-uploads-prod --env production` still returned
+`object_count: 0` immediately after the backfill, so this evidence relies on
+successful R2 `object get` readbacks and checksum parity rather than the lagging
+bucket aggregate.
+
+Production upload routing has not been switched. Keep `R2_UPLOADS_READ_ENABLED`
+unset until the remaining Phase 7 gates pass and the operator approves cutover.
+The raw `uploads:compare` command remains useful for exploratory size/key
+checks, but it is not strong enough for Phase 7 cutover evidence.
 
 Follow-up parser hardening on `2026-06-22` made `uploads:validate` accept raw
 `gcloud storage objects list --format=json` checksum fields (`crc32c_hash`,
 `md5_hash`) and nested R2 checksum objects. This removes the manual manifest
-reshaping step, but the Phase 7 gate still requires a real GCS-to-R2 comparison
-report from the final migration target.
+reshaping step. Follow-up strict gate hardening on the same date made
+`uploads:validate` reject empty strict reports so an empty GCS/R2 pair cannot
+unblock cutover.
 
 ## Rollback
 

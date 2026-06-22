@@ -35,14 +35,14 @@ Expected current result:
 - `Cutover readiness: BLOCKED`
 - `Phase 7 cutover ready: no`
 - `Phase 8 decommission ready: no`
-- `Selected checks passed: 12/17`
+- `Selected checks passed: 13/17`
 
-Latest local readiness audit at `2026-06-22T02:55:26Z`:
+Latest local readiness audit at `2026-06-22T03:08:08Z`:
 
-- Phase 7 selected checks: `12/17` passed; blocked on D1 import validation,
-  R2 manifest validation, authenticated smoke, Better Stack cutover green, and
-  explicit operator approval.
-- Phase 8 selected checks: `13/19` passed; the same Phase 7 blockers remain,
+- Phase 7 selected checks: `13/17` passed; blocked on D1 import validation,
+  authenticated smoke, Better Stack cutover green, and explicit operator
+  approval.
+- Phase 8 selected checks: `14/19` passed; the same Phase 7 blockers remain,
   plus seven-green-days evidence cannot exist until after cutover.
 - The dry-run evidence bundle skipped all 6 remaining evidence tasks because
   the corresponding local input env vars were unset.
@@ -63,10 +63,13 @@ Latest local readiness audit at `2026-06-22T02:55:26Z`:
   coverage for both tables and the required relationship, and reject failed SQL
   runner envelopes even if they contain result rows. This is supporting evidence
   only; it does not replace the final D1 import validation report.
-- R2 manifest validation now rejects empty strict reports. Final R2 evidence
-  must prove at least one matched object with shared-checksum validation, equal
-  source/target/matched counts, zero mismatches, and no validation errors. This
-  keeps an empty GCS/R2 manifest pair from satisfying the Phase 7 upload gate.
+- R2 manifest validation is now recorded at
+  `process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json`.
+  The two production GCS upload objects were uploaded to `manut-uploads-prod`,
+  read back from R2, and compared through strict shared-checksum validation with
+  `matchedObjectCount: 2` and `mismatchedObjectCount: 0`. R2 upload parity is
+  no longer a Phase 7 blocker, but production upload routing remains unchanged
+  until the full cutover gate passes.
 
 Phase 7/8 evidence bundle command:
 
