@@ -29,6 +29,7 @@ export const REQUIRED_OPERATOR_APPROVAL_CHECKS = [
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/operator-approval-report.mjs --input <approval-evidence.json> [--json] [--out <report.json>]
+       node apps/cloudflare/tools/operator-approval-report.mjs --template [--json] [--out <input-template.json>]
 
 Builds canonical Phase 7 operator approval evidence. This tool is
 non-destructive and does not change DNS, routing, data, or provider resources.
@@ -46,6 +47,7 @@ Exit codes:
 function parseArgs(argv) {
   const options = {
     inputPath: null,
+    template: false,
     json: false,
     outPath: null,
   };
@@ -64,6 +66,11 @@ function parseArgs(argv) {
 
     if (arg === "--json") {
       options.json = true;
+      continue;
+    }
+
+    if (arg === "--template") {
+      options.template = true;
       continue;
     }
 
@@ -90,8 +97,12 @@ function parseArgs(argv) {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
-  if (!options.help && !options.inputPath) {
+  if (!options.help && !options.template && !options.inputPath) {
     throw new Error("--input is required");
+  }
+
+  if (options.template && options.inputPath) {
+    throw new Error("--template cannot be combined with --input");
   }
 
   return options;
@@ -259,6 +270,32 @@ export function validateOperatorApprovalReport(report) {
   return { ok: true };
 }
 
+export function buildOperatorApprovalInputTemplate({ generatedAt = new Date().toISOString() } = {}) {
+  return {
+    template_kind: "operator-approval-input",
+    schema_version: 1,
+    generated_at: generatedAt,
+    instructions:
+      "Fill this from an explicit operator approval event. Do not mark cutover approval true until the maintenance window, rollback checkpoint, DNS/routing approval, write freeze, and smoke plan are all confirmed.",
+    approved_by: "",
+    approved_at: "",
+    target_origin: "https://app.manut.xyz",
+    maintenance_window: {
+      start_at: "",
+      end_at: "",
+    },
+    checks: REQUIRED_OPERATOR_APPROVAL_CHECKS.map((check) => ({
+      id: check.id,
+      label: check.label,
+      ok: false,
+      evidence: "",
+      observed_at: "",
+      url: "",
+      note: "",
+    })),
+  };
+}
+
 function failedCheckMessage(check) {
   if (check.status === "missing") {
     return `Operator approval report is missing ${check.id}.`;
@@ -372,8 +409,9 @@ async function main() {
     return;
   }
 
-  const input = await loadInput(options.inputPath);
-  const report = buildOperatorApprovalReport(input);
+  const report = options.template
+    ? buildOperatorApprovalInputTemplate()
+    : buildOperatorApprovalReport(await loadInput(options.inputPath));
 
   if (options.outPath) {
     const outPath = resolveRepoPath(options.outPath);
@@ -387,7 +425,7 @@ async function main() {
     printHumanReport(report);
   }
 
-  process.exitCode = report.ok ? 0 : 1;
+  process.exitCode = options.template || report.ok ? 0 : 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -102,6 +102,11 @@ Latest local readiness audit at `2026-06-22T08:43:58Z`:
   It covers all 11 required authenticated checks and defaults every check to
   `ok: false`; it is an operator capture aid only and cannot pass the
   authenticated smoke readiness gate until filled with real production evidence.
+- Operator approval input template is now recorded at
+  `process/features/cloudflare-stack-migration/references/phase-07-operator-approval-input-template_22-06-26.json`.
+  It covers all 5 required approval checks and defaults every check to
+  `ok: false`; it is an approval capture aid only and cannot pass the operator
+  approval readiness gate until filled from an explicit approval event.
 
 Phase 7/8 evidence bundle command:
 
@@ -126,6 +131,24 @@ Required bundle inputs:
 - `BETTERSTACK_API_TOKEN`
 - `OPERATOR_APPROVAL_INPUT`
 - `SEVEN_GREEN_DAYS_INPUT`
+
+Operator approval input can be started from the checked-in template:
+
+```bash
+pnpm --filter @manut/cloudflare operator:approval-report -- \
+  --template \
+  --out process/features/cloudflare-stack-migration/references/phase-07-operator-approval-input-template_22-06-26.json
+```
+
+After explicit approval, fill `approved_by`, `approved_at`,
+`maintenance_window`, and every check's `ok`, `evidence`, and `observed_at`,
+then canonicalize it with:
+
+```bash
+pnpm --filter @manut/cloudflare operator:approval-report -- \
+  --input <filled-operator-approval-input.json> \
+  --out process/features/cloudflare-stack-migration/reports/phase-07-operator-cutover-approval_21-06-26.json
+```
 
 Authenticated smoke input can be started from the checked-in template:
 

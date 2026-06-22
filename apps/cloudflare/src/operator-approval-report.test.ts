@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   REQUIRED_OPERATOR_APPROVAL_CHECKS,
+  buildOperatorApprovalInputTemplate,
   buildOperatorApprovalReport,
   validateOperatorApprovalReport,
 } from "../tools/operator-approval-report.mjs";
@@ -33,6 +34,32 @@ function passingInput() {
 }
 
 describe("operator approval report", () => {
+  it("builds a non-passing operator approval input template for every required check", () => {
+    const template = buildOperatorApprovalInputTemplate({ generatedAt: "2026-06-22T00:00:00.000Z" });
+
+    expect(template).toMatchObject({
+      template_kind: "operator-approval-input",
+      schema_version: 1,
+      generated_at: "2026-06-22T00:00:00.000Z",
+      approved_by: "",
+      approved_at: "",
+      target_origin: "https://app.manut.xyz",
+      maintenance_window: {
+        start_at: "",
+        end_at: "",
+      },
+    });
+    expect(template.checks).toHaveLength(REQUIRED_OPERATOR_APPROVAL_CHECKS.length);
+    expect(template.checks.map((check) => check.id)).toEqual(
+      REQUIRED_OPERATOR_APPROVAL_CHECKS.map((check) => check.id)
+    );
+    expect(buildOperatorApprovalReport(template)).toMatchObject({
+      ok: false,
+      cutover_approved: false,
+      validation_error: "Operator approval check maintenance-window-announced is not passing.",
+    });
+  });
+
   it("passes only when every required cutover approval check has evidence", () => {
     const report = buildOperatorApprovalReport(passingInput());
 
@@ -128,5 +155,33 @@ describe("operator approval report", () => {
 
     expect(stdoutReport.ok).toBe(true);
     expect(fileReport.ok).toBe(true);
+  });
+
+  it("writes an operator approval input template from the CLI", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-operator-approval-template-"));
+    const relativeOutPath = `.tmp/${path.basename(root)}/operator-approval-template.json`;
+    const repoOutPath = path.join(repoRoot, relativeOutPath);
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    const stdout = execFileSync(
+      "node",
+      ["tools/operator-approval-report.mjs", "--template", "--json", "--out", relativeOutPath],
+      {
+        cwd: packageRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    const stdoutTemplate = JSON.parse(stdout);
+    const fileTemplate = JSON.parse(await readFile(repoOutPath, "utf8"));
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    expect(stdoutTemplate).toMatchObject({
+      template_kind: "operator-approval-input",
+      target_origin: "https://app.manut.xyz",
+    });
+    expect(fileTemplate.checks).toHaveLength(REQUIRED_OPERATOR_APPROVAL_CHECKS.length);
   });
 });

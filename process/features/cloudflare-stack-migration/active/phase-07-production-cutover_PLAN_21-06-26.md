@@ -85,6 +85,17 @@ The report must include `approved_by`, `approved_at`, a valid
 rollback checkpoint, DNS change approval, write freeze, and smoke-plan
 readiness. `CUTOVER_APPROVED=true` is only valid after that report exists.
 
+A non-passing operator approval input template is available at
+`process/features/cloudflare-stack-migration/references/phase-07-operator-approval-input-template_22-06-26.json`.
+Regenerate it with:
+
+```bash
+pnpm --filter @manut/cloudflare operator:approval-report -- --template --out <path>
+```
+
+Fill it only from an explicit operator approval event, then pass the filled file
+to `operator:approval-report`.
+
 `AUTHENTICATED_SMOKE_REPORT` must also be canonicalized with
 `auth:smoke-report` and include `actor`, `target_origin:
 https://app.manut.xyz`, every required authenticated workflow, and meaningful
