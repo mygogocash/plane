@@ -79,9 +79,14 @@ Latest local readiness audit at `2026-06-22T08:43:58Z`:
   local follow-up diagnostic at `2026-06-22T10:14:57Z` confirmed the live
   endpoint probe layer passes `3/3` (`manut.xyz`, `app.manut.xyz`, and
   `app.manut.xyz/api/instances/`) when the evidence collector uses
-  browser-compatible probe headers. The Better Stack monitor layer remains
-  blocked at `0/3` until the repository secret is configured and the workflow is
-  rerun.
+  browser-compatible probe headers. A later CI diagnostic showed GitHub-hosted
+  runners can still receive Cloudflare's `Just a moment...` challenge for
+  `manut.xyz`; the collector now records that primary challenge and verifies the
+  same landing content through the Pages origin fallback
+  `https://manut.pages.dev`. This fallback is only for CI probe stability. The
+  canonical public URL remains `https://manut.xyz`, and the Better Stack monitor
+  layer remains blocked at `0/3` until the repository secret is configured and
+  the workflow is rerun.
 
 Phase 7/8 evidence bundle command:
 
@@ -120,6 +125,10 @@ Direct endpoint probes in that report are required Phase 7 cutover evidence:
 `manut.xyz`, `app.manut.xyz`, and `app.manut.xyz/api/instances/` must return
 HTTP `200` with their expected keywords. Use `--soft-fail` only to capture a
 blocked report for diagnosis.
+When a GitHub-hosted runner receives Cloudflare's challenge page for
+`manut.xyz`, the report may use `BETTERSTACK_SITE_FALLBACK_URL`
+(`https://manut.pages.dev` by default) to verify landing content while retaining
+the canonical `manut.xyz` Better Stack monitor requirement.
 
 Current remediation for the Better Stack gate:
 

@@ -24,6 +24,13 @@ describe("Better Stack Monitoring workflow", () => {
     expect(workflow).toContain("process/features/cloudflare-stack-migration/**");
   });
 
+  it("declares the public site fallback used only for challenged CI probes", () => {
+    const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "betterstack-monitoring.yml"), "utf8");
+
+    expect(workflow).toContain("BETTERSTACK_SITE_FALLBACK_URL");
+    expect(workflow).toContain("https://manut.pages.dev");
+  });
+
   it("only treats dry-run as report-suppressing for manual dispatch", () => {
     const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "betterstack-monitoring.yml"), "utf8");
 

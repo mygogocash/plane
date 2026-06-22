@@ -17,6 +17,7 @@ Environment:
   BETTERSTACK_API_TOKEN       required for ok:true monitor evidence
   BETTERSTACK_API_BASE        default https://uptime.betterstack.com/api/v2
   BETTERSTACK_SITE_URL        default https://manut.xyz
+  BETTERSTACK_SITE_FALLBACK_URL default https://manut.pages.dev when site URL is https://manut.xyz
   BETTERSTACK_APP_URL         default https://app.manut.xyz
   BETTERSTACK_SITE_MONITOR_NAME
   BETTERSTACK_APP_MONITOR_NAME
@@ -97,12 +98,17 @@ export function normalizeMonitorUrl(rawUrl) {
 export function requiredMonitorDefinitions(env = process.env) {
   const appUrl = trimTrailingSlash(env.BETTERSTACK_APP_URL || env.GCP_APP_URL || "https://app.manut.xyz");
   const siteUrl = trimTrailingSlash(env.BETTERSTACK_SITE_URL || "https://manut.xyz");
+  const siteFallbackUrl =
+    env.BETTERSTACK_SITE_FALLBACK_URL ||
+    env.BETTERSTACK_SITE_PROBE_FALLBACK_URL ||
+    (siteUrl === "https://manut.xyz" ? "https://manut.pages.dev" : "");
 
   return [
     {
       id: "public-site",
       name: env.BETTERSTACK_SITE_MONITOR_NAME || "manut.xyz",
       url: siteUrl,
+      fallback_url: siteFallbackUrl ? trimTrailingSlash(siteFallbackUrl) : null,
       required_keyword: env.BETTERSTACK_SITE_KEYWORD || "Manut",
     },
     {
@@ -124,6 +130,35 @@ export function endpointProbeHeaders() {
   return {
     "user-agent": "Mozilla/5.0 (compatible; ManutCutoverProbe/1.0; +https://manut.xyz)",
     accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+  };
+}
+
+function isCloudflareChallenge(response, body) {
+  return (
+    response.status === 403 &&
+    typeof body === "string" &&
+    body.includes("Just a moment") &&
+    body.includes("challenge-platform")
+  );
+}
+
+async function fetchEndpointProbe(url) {
+  const startedAt = Date.now();
+  const response = await fetch(url, {
+    method: "GET",
+    headers: endpointProbeHeaders(),
+    signal: AbortSignal.timeout(15000),
+  });
+  const body = await response.text();
+
+  return {
+    url,
+    status: response.status,
+    duration_ms: Date.now() - startedAt,
+    content_type: response.headers.get("content-type"),
+    body,
+    body_sample: body.slice(0, 160),
+    cloudflare_challenge: isCloudflareChallenge(response, body),
   };
 }
 
@@ -259,40 +294,80 @@ async function listBetterStackMonitors(apiBase, token, nextUrl = `${trimTrailing
   return [...pageMonitors, ...followingMonitors];
 }
 
-async function probeEndpoint(definition) {
-  const startedAt = Date.now();
-
+export async function probeEndpoint(definition) {
   try {
-    const response = await fetch(definition.url, {
-      method: "GET",
-      headers: endpointProbeHeaders(),
-      signal: AbortSignal.timeout(15000),
-    });
-    const body = await response.text();
-    const keywordOk = definition.required_keyword ? body.includes(definition.required_keyword) : true;
-    const statusOk = response.status === 200;
+    const primary = await fetchEndpointProbe(definition.url);
+    const primaryKeywordOk = definition.required_keyword ? primary.body.includes(definition.required_keyword) : true;
+    const primaryStatusOk = primary.status === 200;
+
+    if (primaryStatusOk && primaryKeywordOk) {
+      return {
+        id: definition.id,
+        ok: true,
+        url: definition.url,
+        status: primary.status,
+        duration_ms: primary.duration_ms,
+        content_type: primary.content_type,
+        required_keyword: definition.required_keyword,
+        keyword_found: primaryKeywordOk,
+        body_sample: primary.body_sample,
+        fallback_url: definition.fallback_url ?? null,
+        fallback_used: false,
+        remediation: null,
+      };
+    }
+
+    if (definition.fallback_url && primary.cloudflare_challenge) {
+      const fallback = await fetchEndpointProbe(definition.fallback_url);
+      const fallbackKeywordOk = definition.required_keyword
+        ? fallback.body.includes(definition.required_keyword)
+        : true;
+      const fallbackStatusOk = fallback.status === 200;
+      const fallbackOk = fallbackStatusOk && fallbackKeywordOk;
+
+      return {
+        id: definition.id,
+        ok: fallbackOk,
+        url: definition.url,
+        status: fallback.status,
+        duration_ms: primary.duration_ms + fallback.duration_ms,
+        content_type: fallback.content_type,
+        required_keyword: definition.required_keyword,
+        keyword_found: fallbackKeywordOk,
+        body_sample: fallback.body_sample,
+        primary_status: primary.status,
+        primary_content_type: primary.content_type,
+        primary_body_sample: primary.body_sample,
+        cloudflare_challenge: true,
+        fallback_url: definition.fallback_url,
+        fallback_used: true,
+        remediation: fallbackOk
+          ? null
+          : `Live endpoint ${definition.url} hit a Cloudflare challenge and fallback ${definition.fallback_url} must return HTTP 200 and contain ${definition.required_keyword}.`,
+      };
+    }
 
     return {
       id: definition.id,
-      ok: statusOk && keywordOk,
+      ok: false,
       url: definition.url,
-      status: response.status,
-      duration_ms: Date.now() - startedAt,
-      content_type: response.headers.get("content-type"),
+      status: primary.status,
+      duration_ms: primary.duration_ms,
+      content_type: primary.content_type,
       required_keyword: definition.required_keyword,
-      keyword_found: keywordOk,
-      body_sample: body.slice(0, 160),
-      remediation:
-        statusOk && keywordOk
-          ? null
-          : `Live endpoint ${definition.url} must return HTTP 200 and contain ${definition.required_keyword}.`,
+      keyword_found: primaryKeywordOk,
+      body_sample: primary.body_sample,
+      fallback_url: definition.fallback_url ?? null,
+      fallback_used: false,
+      remediation: `Live endpoint ${definition.url} must return HTTP 200 and contain ${definition.required_keyword}.`,
     };
   } catch (error) {
     return {
       id: definition.id,
       ok: false,
       url: definition.url,
-      duration_ms: Date.now() - startedAt,
+      fallback_url: definition.fallback_url ?? null,
+      fallback_used: false,
       error: error.message,
       remediation: `Live endpoint ${definition.url} request failed.`,
     };

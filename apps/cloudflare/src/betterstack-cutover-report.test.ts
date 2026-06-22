@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildBlockedMonitorReport,
@@ -13,6 +13,7 @@ import {
   endpointProbeHeaders,
   findMatchingMonitor,
   normalizeMonitorUrl,
+  probeEndpoint,
   requiredMonitorDefinitions,
 } from "../tools/betterstack-cutover-report.mjs";
 
@@ -23,6 +24,7 @@ const reportCli = path.join(repoRoot, "apps", "cloudflare", "tools", "betterstac
 const env = {
   BETTERSTACK_APP_URL: "https://app.manut.xyz/",
   BETTERSTACK_SITE_URL: "https://manut.xyz/",
+  BETTERSTACK_SITE_FALLBACK_URL: "https://manut.pages.dev",
   BETTERSTACK_APP_MONITOR_NAME: "app.manut.xyz",
   BETTERSTACK_SITE_MONITOR_NAME: "manut.xyz",
   BETTERSTACK_API_MONITOR_NAME: "app.manut.xyz API instances",
@@ -57,6 +59,10 @@ function runReportCli(args: string[], outPath: string, envOverride: NodeJS.Proce
 }
 
 describe("Better Stack cutover report helpers", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("normalizes monitor URLs for trailing-slash matching", () => {
     expect(normalizeMonitorUrl("https://app.manut.xyz/")).toBe("https://app.manut.xyz");
     expect(normalizeMonitorUrl("https://app.manut.xyz/api/instances/")).toBe("https://app.manut.xyz/api/instances");
@@ -67,6 +73,7 @@ describe("Better Stack cutover report helpers", () => {
       expect.objectContaining({
         id: "public-site",
         name: "manut.xyz",
+        fallback_url: "https://manut.pages.dev",
         url: "https://manut.xyz",
       }),
       expect.objectContaining({
@@ -86,6 +93,61 @@ describe("Better Stack cutover report helpers", () => {
     expect(endpointProbeHeaders()).toMatchObject({
       "user-agent": expect.stringContaining("ManutCutoverProbe"),
       accept: expect.stringContaining("text/html"),
+    });
+  });
+
+  it("falls back to the Pages origin only when the public site probe sees a Cloudflare challenge", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          "<!DOCTYPE html><html><head><title>Just a moment...</title></head><body>challenge-platform</body></html>",
+          {
+            status: 403,
+            headers: {
+              "content-type": "text/html; charset=UTF-8",
+            },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response("<!DOCTYPE html><html><head><title>Manut</title></head><body>Manut</body></html>", {
+          status: 200,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+          },
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const check = await probeEndpoint({
+      id: "public-site",
+      url: "https://manut.xyz",
+      fallback_url: "https://manut.pages.dev",
+      required_keyword: "Manut",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://manut.xyz",
+      expect.objectContaining({ headers: endpointProbeHeaders() })
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://manut.pages.dev",
+      expect.objectContaining({ headers: endpointProbeHeaders() })
+    );
+    expect(check).toMatchObject({
+      id: "public-site",
+      ok: true,
+      url: "https://manut.xyz",
+      status: 200,
+      primary_status: 403,
+      fallback_url: "https://manut.pages.dev",
+      fallback_used: true,
+      keyword_found: true,
+      remediation: null,
     });
   });
 

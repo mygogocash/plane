@@ -29,6 +29,7 @@ env:
   BETTERSTACK_API_BASE: ${{ vars.BETTERSTACK_API_BASE || 'https://uptime.betterstack.com/api/v2' }}
   BETTERSTACK_APP_URL: ${{ vars.BETTERSTACK_APP_URL || vars.GCP_APP_URL || 'https://app.manut.xyz' }}
   BETTERSTACK_SITE_URL: ${{ vars.BETTERSTACK_SITE_URL || 'https://manut.xyz' }}
+  BETTERSTACK_SITE_FALLBACK_URL: ${{ vars.BETTERSTACK_SITE_FALLBACK_URL || 'https://manut.pages.dev' }}
   BETTERSTACK_CHECK_FREQUENCY: ${{ vars.BETTERSTACK_CHECK_FREQUENCY || '180' }}
   BETTERSTACK_REQUEST_TIMEOUT: ${{ vars.BETTERSTACK_REQUEST_TIMEOUT || '30' }}
   BETTERSTACK_APP_MONITOR_NAME: ${{ vars.BETTERSTACK_APP_MONITOR_NAME || 'app.manut.xyz' }}
