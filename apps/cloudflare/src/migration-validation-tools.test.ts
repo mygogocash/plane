@@ -28,6 +28,16 @@ function runTool(args: string[]) {
   }
 }
 
+function d1RelationshipCheck(overrides: Record<string, unknown> = {}) {
+  return {
+    name: "projects.workspace_id",
+    source: "projects",
+    target: "workspaces",
+    orphan_count: 0,
+    ...overrides,
+  };
+}
+
 describe("migration validation tools", () => {
   it("writes a canonical D1 import validation report when counts and relationships pass", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
@@ -44,7 +54,7 @@ describe("migration validation tools", () => {
         { table: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify({ checks: [{ name: "projects.workspace_id", orphanCount: 0 }] }));
+    await writeFile(relationshipsPath, JSON.stringify({ checks: [d1RelationshipCheck()] }));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -109,7 +119,7 @@ describe("migration validation tools", () => {
 
     await writeFile(sourcePath, JSON.stringify({ counts: {} }));
     await writeFile(targetPath, JSON.stringify([]));
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphanCount: 0 }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -154,7 +164,7 @@ describe("migration validation tools", () => {
         { table_name: "projects", count: 0 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -198,7 +208,7 @@ describe("migration validation tools", () => {
         { table: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphanCount: 0 }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -296,7 +306,7 @@ describe("migration validation tools", () => {
         { table_name: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -343,7 +353,7 @@ describe("migration validation tools", () => {
         { table_name: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -382,7 +392,7 @@ describe("migration validation tools", () => {
         { table_name: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -447,7 +457,7 @@ describe("migration validation tools", () => {
 
     await writeFile(sourcePath, JSON.stringify([{ table_name: "workspaces", count: 1 }]));
     await writeFile(targetPath, JSON.stringify([{ table_name: "workspaces", count: 1 }]));
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -505,6 +515,47 @@ describe("migration validation tools", () => {
     });
   });
 
+  it("rejects D1 relationship checks without expected source and target tables", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      validation_errors: [
+        "D1 import validation relationship projects.workspace_id must include source projects and target workspaces.",
+      ],
+    });
+  });
+
   it("rejects D1 relationship checks without an explicit orphan count", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
     const sourcePath = path.join(root, "postgres-counts.json");
@@ -525,7 +576,7 @@ describe("migration validation tools", () => {
         { table_name: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", ok: true }]));
+    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck({ ok: true, orphan_count: undefined })]));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",

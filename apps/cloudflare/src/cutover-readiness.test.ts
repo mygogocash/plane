@@ -27,6 +27,17 @@ const REQUIRED_SEVEN_GREEN_DAYS_IDS = [
   "rollback-retention",
 ];
 
+function d1RelationshipCheck(overrides: Record<string, unknown> = {}) {
+  return {
+    name: "projects.workspace_id",
+    source: "projects",
+    target: "workspaces",
+    ok: true,
+    orphan_count: 0,
+    ...overrides,
+  };
+}
+
 function runReadiness(root: string, env: NodeJS.ProcessEnv = {}) {
   try {
     const stdout = execFileSync("node", ["tools/cutover-readiness.mjs", "--json", "--root", root], {
@@ -398,7 +409,7 @@ describe("cutover readiness evidence gate", () => {
             { table: "projects", sourceCount: 2, targetCount: 2 },
           ],
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: false, orphan_count: 1 }],
+        relationship_checks: [d1RelationshipCheck({ ok: false, orphan_count: 1 })],
       })
     );
 
@@ -431,7 +442,7 @@ describe("cutover readiness evidence gate", () => {
           matchedTableCount: 0,
           mismatchedTableCount: 0,
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+        relationship_checks: [d1RelationshipCheck()],
       })
     );
 
@@ -471,7 +482,7 @@ describe("cutover readiness evidence gate", () => {
             { table: "projects", sourceCount: 0, targetCount: 0 },
           ],
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+        relationship_checks: [d1RelationshipCheck()],
       })
     );
 
@@ -511,7 +522,7 @@ describe("cutover readiness evidence gate", () => {
             { table: "projects", sourceCount: 2, targetCount: 2 },
           ],
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+        relationship_checks: [d1RelationshipCheck()],
       })
     );
 
@@ -545,7 +556,7 @@ describe("cutover readiness evidence gate", () => {
           mismatchedTableCount: 0,
           matches: [{ table: "workspaces", sourceCount: 1, targetCount: 1 }],
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+        relationship_checks: [d1RelationshipCheck()],
       })
     );
 
@@ -595,6 +606,46 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
+  it("rejects D1 reports when required relationship rows omit source and target tables", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "d1-import-validation",
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_matched: 2,
+          count_tables_mismatched: 0,
+          required_scope_source_rows: 3,
+          required_scope_target_rows: 3,
+          relationship_checks_failed: 0,
+        },
+        count_report: {
+          ok: true,
+          matchedTableCount: 2,
+          mismatchedTableCount: 0,
+          matches: [
+            { table: "workspaces", sourceCount: 1, targetCount: 1 },
+            { table: "projects", sourceCount: 2, targetCount: 2 },
+          ],
+        },
+        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import relationship projects.workspace_id must include source projects and target workspaces.",
+    });
+  });
+
   it("rejects D1 reports with validation errors even when ok is true", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
@@ -620,7 +671,7 @@ describe("cutover readiness evidence gate", () => {
             { table: "projects", sourceCount: 2, targetCount: 2 },
           ],
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+        relationship_checks: [d1RelationshipCheck()],
       })
     );
 
@@ -1240,7 +1291,7 @@ describe("cutover readiness evidence gate", () => {
             { table: "projects", sourceCount: 2, targetCount: 2 },
           ],
         },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphanCount: "0" }],
+        relationship_checks: [d1RelationshipCheck({ orphan_count: undefined, orphanCount: "0" })],
       })
     );
     await writeFile(

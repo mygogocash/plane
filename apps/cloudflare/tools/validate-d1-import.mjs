@@ -8,6 +8,9 @@ import { resolveRepoPath } from "./path-utils.mjs";
 
 const REQUIRED_COUNT_TABLES = D1_VALIDATION_TABLES.map((table) => table.table);
 const REQUIRED_RELATIONSHIPS = D1_VALIDATION_RELATIONSHIPS.map((relationship) => relationship.name);
+const REQUIRED_RELATIONSHIP_CONTRACTS = new Map(
+  D1_VALIDATION_RELATIONSHIPS.map((relationship) => [relationship.name, relationship])
+);
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/validate-d1-import.mjs <postgres-counts.json> <d1-counts.json> --relationships <checks.json> [--json] [--out <report.json>]
@@ -19,7 +22,7 @@ counts plus relationship checks. Exit codes:
   2  usage or input error
 
 Relationship JSON shapes:
-  [{"name":"projects.workspace_id","ok":true,"orphanCount":0}]
+  [{"name":"projects.workspace_id","source":"projects","target":"workspaces","ok":true,"orphanCount":0}]
   {"checks":[{"name":"projects.workspace_id","source":"projects","target":"workspaces","orphan_count":0}]}`;
 }
 
@@ -185,6 +188,23 @@ function findMissingRelationships(relationshipChecks) {
   return REQUIRED_RELATIONSHIPS.filter((relationship) => !observed.has(relationship));
 }
 
+function findRelationshipContractErrors(relationshipChecks) {
+  return relationshipChecks
+    .map((check) => {
+      const contract = REQUIRED_RELATIONSHIP_CONTRACTS.get(check.name);
+      if (!contract) {
+        return null;
+      }
+
+      if (check.source !== contract.source || check.target !== contract.target) {
+        return `D1 import validation relationship ${contract.name} must include source ${contract.source} and target ${contract.target}.`;
+      }
+
+      return null;
+    })
+    .filter((error) => typeof error === "string");
+}
+
 function requiredScopeTotals(sourceCounts, targetCounts) {
   return REQUIRED_COUNT_TABLES.reduce(
     (totals, table) => ({
@@ -199,6 +219,7 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
   const failedRelationshipChecks = relationshipChecks.filter((check) => !check.ok);
   const missingCountTables = findMissingCountTables(sourceCounts, targetCounts);
   const missingRelationships = findMissingRelationships(relationshipChecks);
+  const relationshipContractErrors = findRelationshipContractErrors(relationshipChecks);
   const scopeTotals = requiredScopeTotals(sourceCounts, targetCounts);
   const validationErrors = [];
 
@@ -221,6 +242,8 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
   if (missingRelationships.length > 0) {
     validationErrors.push(`D1 import validation is missing relationship coverage: ${missingRelationships.join(", ")}.`);
   }
+
+  validationErrors.push(...relationshipContractErrors);
 
   return {
     generated_at: new Date().toISOString(),

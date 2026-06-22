@@ -10,6 +10,9 @@ import { validateSevenGreenDaysReport } from "./seven-green-days-report.mjs";
 
 const REQUIRED_D1_COUNT_TABLES = D1_VALIDATION_TABLES.map((table) => table.table);
 const REQUIRED_D1_RELATIONSHIPS = D1_VALIDATION_RELATIONSHIPS.map((relationship) => relationship.name);
+const REQUIRED_D1_RELATIONSHIP_CONTRACTS = new Map(
+  D1_VALIDATION_RELATIONSHIPS.map((relationship) => [relationship.name, relationship])
+);
 
 const EXPECTED_EVIDENCE_KINDS = {
   "d1-import-validation": "d1-import-validation",
@@ -408,6 +411,23 @@ function validateD1ImportReport(report) {
     return {
       ok: false,
       message: `D1 import report must cover required relationships: missing ${missingRelationships.join(", ")}.`,
+    };
+  }
+
+  const relationshipWithInvalidContract = report.relationship_checks.find((check) => {
+    const name = check?.name ?? check?.relationship ?? check?.id;
+    const contract = REQUIRED_D1_RELATIONSHIP_CONTRACTS.get(name);
+    return contract && (check?.source !== contract.source || check?.target !== contract.target);
+  });
+  if (relationshipWithInvalidContract) {
+    const name =
+      relationshipWithInvalidContract.name ??
+      relationshipWithInvalidContract.relationship ??
+      relationshipWithInvalidContract.id;
+    const contract = REQUIRED_D1_RELATIONSHIP_CONTRACTS.get(name);
+    return {
+      ok: false,
+      message: `D1 import relationship ${contract.name} must include source ${contract.source} and target ${contract.target}.`,
     };
   }
 

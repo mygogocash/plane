@@ -119,6 +119,12 @@ file to `auth:smoke-report`.
 required monitor is `up` and has `url_matches: true` for the expected Manut
 production URL.
 
+`D1_IMPORT_VALIDATION_REPORT` must include canonical count-table coverage for
+`workspaces` and `projects`, and every required relationship row must include
+its expected provenance. The `projects.workspace_id` relationship row is not
+valid unless it includes `source: "projects"`, `target: "workspaces"`, and an
+explicit zero orphan count field such as `orphan_count: 0`.
+
 ## Rollback Strategy
 
 Rollback remains DNS/routing based until Phase 8:

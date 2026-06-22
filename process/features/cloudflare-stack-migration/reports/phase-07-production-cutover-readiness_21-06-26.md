@@ -188,9 +188,12 @@ pnpm --filter @manut/cloudflare d1:target-evidence -- \
 After the final import, use the generated counts and relationship files as
 `D1_D1_COUNTS` and `D1_RELATIONSHIPS` alongside the final Postgres count export
 as `D1_POSTGRES_COUNTS`.
-Every D1 relationship check row must include an explicit `orphan_count`,
-`orphanCount`, `count`, or `rows` value; missing orphan-count evidence is a
-validation input error, not an assumed zero.
+Every D1 relationship check row must include the expected relationship
+provenance plus an explicit orphan count. For the required
+`projects.workspace_id` check, the row must include `source: "projects"` and
+`target: "workspaces"` plus an explicit `orphan_count`, `orphanCount`, `count`,
+or `rows` value; missing source/target or orphan-count evidence is a validation
+input error, not an assumed zero.
 
 Better Stack cutover evidence command:
 
