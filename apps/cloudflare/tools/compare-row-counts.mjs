@@ -80,10 +80,12 @@ function unwrapResultRows(json, label) {
   }
 
   if (isRecord(json) && Array.isArray(json.rows)) {
+    throwIfRunnerFailed(json, label);
     return json.rows;
   }
 
   if (isRecord(json) && Array.isArray(json.data)) {
+    throwIfRunnerFailed(json, label);
     return json.data;
   }
 

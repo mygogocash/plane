@@ -358,6 +358,87 @@ describe("migration validation tools", () => {
     expect(result.stderr).toContain("source SQL runner reported failure");
   });
 
+  it("rejects failed SQL runner envelopes that expose rows instead of results", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify({
+        success: false,
+        error: "source count query failed",
+        rows: [
+          { table_name: "workspaces", count: 1 },
+          { table_name: "projects", count: 2 },
+        ],
+      })
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("source SQL runner reported failure");
+  });
+
+  it("rejects failed relationship runner envelopes that expose data instead of results", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(
+      relationshipsPath,
+      JSON.stringify({
+        success: false,
+        errors: ["relationship query failed"],
+        data: [{ name: "projects.workspace_id", orphan_count: 0 }],
+      })
+    );
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("relationships SQL runner reported failure");
+  });
+
   it("rejects D1 import validation when the expected Phase 7 table scope is incomplete", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
     const sourcePath = path.join(root, "postgres-counts.json");
