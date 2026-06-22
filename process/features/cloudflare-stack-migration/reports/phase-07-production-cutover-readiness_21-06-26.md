@@ -37,7 +37,7 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 12/17`
 
-Latest local readiness audit at `2026-06-22T02:40:49Z`:
+Latest local readiness audit at `2026-06-22T02:55:26Z`:
 
 - Phase 7 selected checks: `12/17` passed; blocked on D1 import validation,
   R2 manifest validation, authenticated smoke, Better Stack cutover green, and
@@ -101,16 +101,17 @@ pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/feat
 That report requires `BETTERSTACK_API_TOKEN` and expects all three Better Stack
 monitors to be `up`: `manut.xyz`, `app.manut.xyz`, and
 `app.manut.xyz API instances`.
-Direct endpoint probes in that report are supplemental unless
-`BETTERSTACK_REQUIRE_ENDPOINT_PROBES=true` is set. Keep the separate production
-smoke evidence as the source of truth for live HTTP behavior when GitHub-hosted
-runners are challenged by Cloudflare.
+Direct endpoint probes in that report are required Phase 7 cutover evidence:
+`manut.xyz`, `app.manut.xyz`, and `app.manut.xyz/api/instances/` must return
+HTTP `200` with their expected keywords. Use `--soft-fail` only to capture a
+blocked report for diagnosis.
 
-The committed report must include at least the three required monitor checks and
-all of them must be `up`. Readiness also validates high-risk evidence report
-shape for D1 import, R2 manifest parity, authenticated smoke, Better Stack
-monitor status, and Phase 8 seven-green-days evidence so generic `ok: true`
-stubs cannot unblock cutover.
+The committed report must include at least the three required monitor checks,
+all of them must be `up`, and all required endpoint probes must pass. Readiness
+also validates high-risk evidence report shape for D1 import, R2 manifest
+parity, authenticated smoke, Better Stack monitor and endpoint status, and
+Phase 8 seven-green-days evidence so generic `ok: true` stubs cannot unblock
+cutover.
 
 High-risk evidence validation is bound to the readiness gate, not to the report
 filename. Environment overrides with arbitrary file names still require the

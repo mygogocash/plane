@@ -107,6 +107,22 @@ describe("cutover evidence bundle", () => {
     );
   });
 
+  it("requires endpoint probes when collecting Better Stack cutover evidence", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-evidence-bundle-"));
+    const reportsDir = path.join(root, "reports");
+
+    const report = runBundle(["--json", "--dry-run", "--reports-dir", reportsDir], {
+      BETTERSTACK_API_TOKEN: "token",
+    });
+    const task = report.tasks.find((item: { id: string }) => item.id === "betterstack-cutover-green");
+
+    expect(task).toMatchObject({
+      status: "skipped",
+      reason: "Dry run: command was not executed.",
+    });
+    expect(task.command).toContain("--require-endpoint-probes");
+  });
+
   it("writes canonical evidence reports for supplied local inputs", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-evidence-bundle-"));
     const reportsDir = path.join(root, "reports");

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBlockedMonitorReport,
+  buildCutoverReport,
   buildMonitorReport,
   findMatchingMonitor,
   normalizeMonitorUrl,
@@ -26,7 +27,7 @@ const env = {
   BETTERSTACK_API_MONITOR_NAME: "app.manut.xyz API instances",
 };
 
-function runReportCli(args: string[], outPath: string) {
+function runReportCli(args: string[], outPath: string, envOverride: NodeJS.ProcessEnv = {}) {
   return new Promise<{ stdout: string; stderr: string; code: number | null }>((resolve) => {
     const child = spawn("node", [reportCli, ...args, "--out", outPath], {
       cwd: repoRoot,
@@ -35,6 +36,7 @@ function runReportCli(args: string[], outPath: string) {
         BETTERSTACK_API_TOKEN: "",
         BETTERSTACK_APP_URL: "http://127.0.0.1:9",
         BETTERSTACK_SITE_URL: "http://127.0.0.1:9",
+        ...envOverride,
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -256,5 +258,37 @@ describe("Better Stack cutover report helpers", () => {
         }),
       ])
     );
+  });
+
+  it("blocks cutover evidence when live endpoint probes fail even if monitors are up", () => {
+    const definitions = requiredMonitorDefinitions(env);
+    const monitorReport = buildMonitorReport(
+      definitions.map((definition) => ({
+        id: `monitor-${definition.id}`,
+        attributes: {
+          pronounceable_name: definition.name,
+          url: definition.url,
+          status: "up",
+        },
+      })),
+      definitions
+    );
+    const report = buildCutoverReport({
+      apiBase: "https://uptime.betterstack.com/api/v2",
+      betterStackApiError: null,
+      endpointChecks: [
+        { id: "public-site", ok: true },
+        { id: "app-root", ok: false, status: 503 },
+        { id: "api-instances", ok: true },
+      ],
+      monitorReport,
+    });
+
+    expect(report).toMatchObject({
+      ok: false,
+      endpoint_probes_required: true,
+      monitor_summary: { failed: 0 },
+      endpoint_summary: { failed: 1 },
+    });
   });
 });

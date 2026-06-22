@@ -186,6 +186,7 @@ function buildTasks(reportsDir, options, env = process.env) {
       command: () => [
         "tools/betterstack-cutover-report.mjs",
         "--json",
+        "--require-endpoint-probes",
         "--out",
         reportPath(reportsDir, reportFiles.betterstack),
       ],

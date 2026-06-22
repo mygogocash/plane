@@ -247,13 +247,14 @@ shape:
   orphans.
 - R2 manifest evidence must come from strict checksum validation, include
   `source_manifest` and `target_manifest`, require shared checksums, have zero
-  object mismatches, include an empty `mismatches` array, and have equal source,
-  target, and matched object counts.
+  object mismatches, include a non-zero `matchedObjectCount`, include an empty
+  `mismatches` array, and have equal source, target, and matched object counts.
 - Authenticated smoke evidence must include every required workflow check with
   passing evidence.
 - Better Stack cutover evidence must include the required `public-site`,
-  `app-root`, and `api-instances` monitor checks, and every monitor check must
-  be `up`.
+  `app-root`, and `api-instances` monitor checks, every monitor check must be
+  `up`, and every required live endpoint probe must return HTTP `200` with its
+  expected keyword.
 - Operator approval evidence must include `approved_by`, `approved_at`, a
   valid `maintenance_window`, and passing evidence checks for maintenance-window
   announcement, rollback checkpoint, DNS change approval, write freeze, and

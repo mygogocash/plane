@@ -9,8 +9,9 @@ function usage() {
 
 Captures Phase 7 Better Stack cutover evidence for manut.xyz, app.manut.xyz,
 and app.manut.xyz/api/instances/. The command also records live endpoint probes
-as supplemental evidence. Use --require-endpoint-probes only from a network that
-is allowed through Cloudflare bot protection.
+as required cutover evidence. The --require-endpoint-probes flag is accepted for
+explicit workflow readability; endpoint probes are always required by the Phase 7
+readiness gate.
 
 Environment:
   BETTERSTACK_API_TOKEN       required for ok:true monitor evidence
@@ -299,6 +300,26 @@ async function writeReport(outPath, report) {
   await writeFile(absoluteOutPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
+export function buildCutoverReport({ apiBase, betterStackApiError, endpointChecks, monitorReport }) {
+  const failedEndpointChecks = endpointChecks.filter((check) => !check.ok);
+
+  return {
+    generated_at: new Date().toISOString(),
+    ok: monitorReport.ok && failedEndpointChecks.length === 0,
+    api_base: apiBase,
+    betterstack_api_error: betterStackApiError,
+    endpoint_probes_required: true,
+    monitor_summary: monitorReport.summary,
+    endpoint_summary: {
+      total: endpointChecks.length,
+      passed: endpointChecks.length - failedEndpointChecks.length,
+      failed: failedEndpointChecks.length,
+    },
+    monitor_checks: monitorReport.checks,
+    endpoint_checks: endpointChecks,
+  };
+}
+
 function printHumanReport(report) {
   console.log(`Better Stack cutover report: ${report.ok ? "PASS" : "BLOCKED"}`);
   console.log(`Monitor checks: ${report.monitor_summary.passed}/${report.monitor_summary.total}`);
@@ -351,24 +372,12 @@ async function main() {
     }
   }
 
-  const failedEndpointChecks = endpointChecks.filter((check) => !check.ok);
-  const requireEndpointProbes =
-    options.requireEndpointProbes || process.env.BETTERSTACK_REQUIRE_ENDPOINT_PROBES === "true";
-  const report = {
-    generated_at: new Date().toISOString(),
-    ok: monitorReport.ok && (!requireEndpointProbes || failedEndpointChecks.length === 0),
-    api_base: apiBase,
-    betterstack_api_error: betterStackApiError,
-    endpoint_probes_required: requireEndpointProbes,
-    monitor_summary: monitorReport.summary,
-    endpoint_summary: {
-      total: endpointChecks.length,
-      passed: endpointChecks.length - failedEndpointChecks.length,
-      failed: failedEndpointChecks.length,
-    },
-    monitor_checks: monitorReport.checks,
-    endpoint_checks: endpointChecks,
-  };
+  const report = buildCutoverReport({
+    apiBase,
+    betterStackApiError,
+    endpointChecks,
+    monitorReport,
+  });
 
   if (options.outPath) {
     await writeReport(options.outPath, report);
