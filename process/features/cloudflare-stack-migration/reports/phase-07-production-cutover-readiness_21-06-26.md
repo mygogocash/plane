@@ -37,7 +37,7 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 12/17`
 
-Latest local readiness audit at `2026-06-22T01:27:48Z`:
+Latest local readiness audit at `2026-06-22T02:16:06Z`:
 
 - Phase 7 selected checks: `12/17` passed; blocked on D1 import validation,
   R2 manifest validation, authenticated smoke, Better Stack cutover green, and
@@ -54,6 +54,15 @@ Latest local readiness audit at `2026-06-22T01:27:48Z`:
   Postgres source candidates for operator review. This is supporting evidence
   only; it does not replace final D1 import validation or final R2 manifest
   parity evidence.
+- D1 validation query manifest is now recorded at
+  `process/features/cloudflare-stack-migration/reports/phase-07-d1-validation-query-manifest_22-06-26.json`.
+  It contains the current active `workspaces` / `projects` count SQL plus the
+  `projects.workspace_id -> workspaces.id` orphan-check SQL. The count SQL uses
+  `table_name` instead of the reserved `table` alias and was sanity-checked
+  against local SQLite. The D1 validator and readiness gate now require exact
+  coverage for both tables and the required relationship, and reject failed SQL
+  runner envelopes even if they contain result rows. This is supporting evidence
+  only; it does not replace the final D1 import validation report.
 
 Phase 7/8 evidence bundle command:
 

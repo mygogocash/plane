@@ -13,7 +13,7 @@ Compares table row counts from two JSON files. Exit codes:
 Accepted JSON shapes:
   {"issues": 12, "projects": 3}
   {"counts": {"issues": 12, "projects": 3}}
-  [{"table": "issues", "count": 12}, {"name": "projects", "rows": 3}]`;
+  [{"table_name": "issues", "count": 12}, {"name": "projects", "rows": 3}]`;
 }
 
 function parseArgs(argv) {
@@ -53,6 +53,43 @@ function coerceCount(value, tableName) {
   return numberValue;
 }
 
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function throwIfRunnerFailed(wrapper, label) {
+  const hasFailureStatus = "success" in wrapper && wrapper.success !== true;
+  const errors = wrapper.errors ?? wrapper.error;
+  const hasErrors = Array.isArray(errors) ? errors.length > 0 : Boolean(errors);
+
+  if (hasFailureStatus || hasErrors) {
+    const detail = hasErrors ? `: ${JSON.stringify(errors)}` : "";
+    throw new Error(`${label} SQL runner reported failure${detail}`);
+  }
+}
+
+function unwrapResultRows(json, label) {
+  if (Array.isArray(json) && json.length === 1 && isRecord(json[0]) && Array.isArray(json[0].results)) {
+    throwIfRunnerFailed(json[0], label);
+    return json[0].results;
+  }
+
+  if (isRecord(json) && Array.isArray(json.results)) {
+    throwIfRunnerFailed(json, label);
+    return json.results;
+  }
+
+  if (isRecord(json) && Array.isArray(json.rows)) {
+    return json.rows;
+  }
+
+  if (isRecord(json) && Array.isArray(json.data)) {
+    return json.data;
+  }
+
+  return json;
+}
+
 function setUniqueCount(counts, table, rawCount, label) {
   if (counts.has(table)) {
     throw new Error(`${label} contains duplicate table: ${table}`);
@@ -62,7 +99,8 @@ function setUniqueCount(counts, table, rawCount, label) {
 }
 
 export function normalizeCounts(json, label) {
-  const candidate = json && typeof json === "object" && !Array.isArray(json) && json.counts ? json.counts : json;
+  const unwrapped = unwrapResultRows(json, label);
+  const candidate = isRecord(unwrapped) && unwrapped.counts ? unwrapped.counts : unwrapped;
   const counts = new Map();
 
   if (Array.isArray(candidate)) {
@@ -70,10 +108,10 @@ export function normalizeCounts(json, label) {
       if (!row || typeof row !== "object" || Array.isArray(row)) {
         throw new Error(`${label}[${index}] must be an object`);
       }
-      const table = row.table ?? row.name ?? row.model ?? row.dbTable;
+      const table = row.table_name ?? row.tableName ?? row.table ?? row.name ?? row.model ?? row.dbTable;
       const rawCount = row.count ?? row.rows ?? row.row_count ?? row.rowCount;
       if (typeof table !== "string" || table.length === 0) {
-        throw new Error(`${label}[${index}] is missing a table/name/model/dbTable string`);
+        throw new Error(`${label}[${index}] is missing a table_name/table/name/model/dbTable string`);
       }
       setUniqueCount(counts, table, rawCount, label);
     }
@@ -136,6 +174,7 @@ export function compareCounts(sourceCounts, targetCounts) {
     ok: mismatches.length === 0,
     matchedTableCount: matches.length,
     mismatchedTableCount: mismatches.length,
+    matches,
     mismatches,
   };
 }

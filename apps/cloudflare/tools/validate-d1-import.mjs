@@ -3,7 +3,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { compareCounts, loadCounts } from "./compare-row-counts.mjs";
+import { D1_VALIDATION_RELATIONSHIPS, D1_VALIDATION_TABLES } from "./d1-import-validation-queries.mjs";
 import { resolveRepoPath } from "./path-utils.mjs";
+
+const REQUIRED_COUNT_TABLES = D1_VALIDATION_TABLES.map((table) => table.table);
+const REQUIRED_RELATIONSHIPS = D1_VALIDATION_RELATIONSHIPS.map((relationship) => relationship.name);
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/validate-d1-import.mjs <postgres-counts.json> <d1-counts.json> --relationships <checks.json> [--json] [--out <report.json>]
@@ -112,13 +116,51 @@ function normalizeRelationshipCheck(row, index) {
   };
 }
 
+function throwIfRunnerFailed(wrapper, label) {
+  const hasFailureStatus = "success" in wrapper && wrapper.success !== true;
+  const errors = wrapper.errors ?? wrapper.error;
+  const hasErrors = Array.isArray(errors) ? errors.length > 0 : Boolean(errors);
+
+  if (hasFailureStatus || hasErrors) {
+    const detail = hasErrors ? `: ${JSON.stringify(errors)}` : "";
+    throw new Error(`${label} SQL runner reported failure${detail}`);
+  }
+}
+
+function unwrapResultRows(json, label) {
+  if (Array.isArray(json) && json.length === 1 && isRecord(json[0]) && Array.isArray(json[0].results)) {
+    throwIfRunnerFailed(json[0], label);
+    return json[0].results;
+  }
+
+  if (isRecord(json) && Array.isArray(json.results)) {
+    throwIfRunnerFailed(json, label);
+    return json.results;
+  }
+
+  if (isRecord(json) && Array.isArray(json.rows)) {
+    return json.rows;
+  }
+
+  if (isRecord(json) && Array.isArray(json.data)) {
+    return json.data;
+  }
+
+  return json;
+}
+
 async function loadRelationshipChecks(filePath) {
   if (!filePath) {
     return [];
   }
 
   const json = JSON.parse(await readFile(filePath, "utf8"));
-  const rows = Array.isArray(json) ? json : isRecord(json) && Array.isArray(json.checks) ? json.checks : null;
+  const unwrapped = unwrapResultRows(json, "relationships");
+  const rows = Array.isArray(unwrapped)
+    ? unwrapped
+    : isRecord(unwrapped) && Array.isArray(unwrapped.checks)
+      ? unwrapped.checks
+      : null;
 
   if (!rows) {
     throw new Error("Relationship checks must be an array or {checks:[...]}");
@@ -127,8 +169,19 @@ async function loadRelationshipChecks(filePath) {
   return rows.map((row, index) => normalizeRelationshipCheck(row, index));
 }
 
-function buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks) {
+function findMissingCountTables(sourceCounts, targetCounts) {
+  return REQUIRED_COUNT_TABLES.filter((table) => !sourceCounts.has(table) || !targetCounts.has(table));
+}
+
+function findMissingRelationships(relationshipChecks) {
+  const observed = new Set(relationshipChecks.map((check) => check.name));
+  return REQUIRED_RELATIONSHIPS.filter((relationship) => !observed.has(relationship));
+}
+
+function buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks, sourceCounts, targetCounts) {
   const failedRelationshipChecks = relationshipChecks.filter((check) => !check.ok);
+  const missingCountTables = findMissingCountTables(sourceCounts, targetCounts);
+  const missingRelationships = findMissingRelationships(relationshipChecks);
   const validationErrors = [];
 
   if (countReport.matchedTableCount <= 0) {
@@ -139,8 +192,21 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
     validationErrors.push("D1 import validation requires at least one relationship check.");
   }
 
+  if (missingCountTables.length > 0) {
+    validationErrors.push(`D1 import validation is missing count table coverage: ${missingCountTables.join(", ")}.`);
+  }
+
+  if (missingRelationships.length > 0) {
+    validationErrors.push(`D1 import validation is missing relationship coverage: ${missingRelationships.join(", ")}.`);
+  }
+
   return {
     generated_at: new Date().toISOString(),
+    evidence_kind: "d1-import-validation",
+    required_scope: {
+      count_tables: REQUIRED_COUNT_TABLES,
+      relationships: REQUIRED_RELATIONSHIPS,
+    },
     ok: countReport.ok && failedRelationshipChecks.length === 0 && validationErrors.length === 0,
     source_counts: path.normalize(sourcePath),
     target_counts: path.normalize(targetPath),
@@ -190,7 +256,14 @@ async function main() {
   const targetCounts = await loadCounts(targetPath, "target");
   const countReport = compareCounts(sourceCounts, targetCounts);
   const relationshipChecks = await loadRelationshipChecks(relationshipsPath);
-  const report = buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks);
+  const report = buildValidationReport(
+    sourcePath,
+    targetPath,
+    countReport,
+    relationshipChecks,
+    sourceCounts,
+    targetCounts
+  );
 
   if (options.outPath) {
     await writeReport(options.outPath, report);

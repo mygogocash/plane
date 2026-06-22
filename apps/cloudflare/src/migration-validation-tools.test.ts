@@ -77,8 +77,14 @@ describe("migration validation tools", () => {
     const targetPath = path.join(root, "d1-counts.json");
     const outPath = path.join(root, "report.json");
 
-    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1 } }));
-    await writeFile(targetPath, JSON.stringify([{ table: "workspaces", count: 1 }]));
+    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1, projects: 2 } }));
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table: "workspaces", count: 1 },
+        { table: "projects", count: 2 },
+      ])
+    );
 
     const result = runTool(["tools/validate-d1-import.mjs", sourcePath, targetPath, "--json", "--out", outPath]);
     const stdoutReport = JSON.parse(result.stdout);
@@ -87,8 +93,10 @@ describe("migration validation tools", () => {
     expect(result.exitCode).toBe(1);
     expect(stdoutReport).toMatchObject({
       ok: false,
-      validation_errors: ["D1 import validation requires at least one relationship check."],
     });
+    expect(stdoutReport.validation_errors).toEqual(
+      expect.arrayContaining(["D1 import validation requires at least one relationship check."])
+    );
     expect(fileReport).toMatchObject({ ok: false });
   });
 
@@ -119,8 +127,10 @@ describe("migration validation tools", () => {
     expect(result.exitCode).toBe(1);
     expect(stdoutReport).toMatchObject({
       ok: false,
-      validation_errors: ["D1 import validation requires at least one matched count table."],
     });
+    expect(stdoutReport.validation_errors).toEqual(
+      expect.arrayContaining(["D1 import validation requires at least one matched count table."])
+    );
     expect(fileReport).toMatchObject({ ok: false });
   });
 
@@ -135,8 +145,14 @@ describe("migration validation tools", () => {
 
     await rm(path.dirname(repoOutPath), { recursive: true, force: true });
     await rm(path.dirname(packageOutPath), { recursive: true, force: true });
-    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1 } }));
-    await writeFile(targetPath, JSON.stringify([{ table: "workspaces", count: 1 }]));
+    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1, projects: 2 } }));
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table: "workspaces", count: 1 },
+        { table: "projects", count: 2 },
+      ])
+    );
     await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphanCount: 0 }]));
 
     const result = runTool([
@@ -156,6 +172,211 @@ describe("migration validation tools", () => {
 
     expect(result.exitCode).toBe(0);
     expect(fileReport).toMatchObject({ ok: true });
+  });
+
+  it("accepts wrapped D1 execute JSON for count and relationship validation", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify({
+        results: [
+          { table: "workspaces", count: 1 },
+          { table: "projects", count: 2 },
+        ],
+      })
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        {
+          success: true,
+          results: [
+            { table: "workspaces", count: 1 },
+            { table: "projects", count: 2 },
+          ],
+        },
+      ])
+    );
+    await writeFile(
+      relationshipsPath,
+      JSON.stringify([
+        {
+          success: true,
+          results: [{ name: "projects.workspace_id", source: "projects", target: "workspaces", orphan_count: 0 }],
+        },
+      ])
+    );
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(report).toMatchObject({
+      ok: true,
+      summary: {
+        count_tables_matched: 2,
+        relationship_checks_total: 1,
+      },
+    });
+  });
+
+  it("accepts generated table_name count rows for D1 import validation", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(report).toMatchObject({
+      ok: true,
+      summary: {
+        count_tables_matched: 2,
+      },
+    });
+  });
+
+  it("rejects failed SQL runner envelopes even when they include result rows", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        {
+          success: false,
+          errors: ["source count query failed"],
+          results: [
+            { table_name: "workspaces", count: 1 },
+            { table_name: "projects", count: 2 },
+          ],
+        },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("source SQL runner reported failure");
+  });
+
+  it("rejects D1 import validation when the expected Phase 7 table scope is incomplete", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(sourcePath, JSON.stringify([{ table_name: "workspaces", count: 1 }]));
+    await writeFile(targetPath, JSON.stringify([{ table_name: "workspaces", count: 1 }]));
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      validation_errors: ["D1 import validation is missing count table coverage: projects."],
+    });
+  });
+
+  it("rejects D1 import validation when the expected Phase 7 relationship scope is incomplete", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourcePath = path.join(root, "postgres-counts.json");
+    const targetPath = path.join(root, "d1-counts.json");
+    const relationshipsPath = path.join(root, "relationships.json");
+
+    await writeFile(
+      sourcePath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(
+      targetPath,
+      JSON.stringify([
+        { table_name: "workspaces", count: 1 },
+        { table_name: "projects", count: 2 },
+      ])
+    );
+    await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.owner_id", orphan_count: 0 }]));
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourcePath,
+      targetPath,
+      "--relationships",
+      relationshipsPath,
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      validation_errors: ["D1 import validation is missing relationship coverage: projects.workspace_id."],
+    });
   });
 
   it("fails upload validation when strict checksum parity has no shared checksum", async () => {

@@ -240,9 +240,11 @@ for env-provided report paths. High-risk cutover gates also validate the report
 shape:
 
 - D1 import evidence must include `summary`, `source_counts`,
-  `target_counts`, passing `count_report`, at least one `relationship_checks`
-  entry, zero count-table mismatches, zero failed relationship checks, and every
-  relationship row must pass with zero orphans.
+  `target_counts`, passing `count_report`, exact coverage for required
+  `workspaces` and `projects` count tables, exact coverage for the required
+  `projects.workspace_id` relationship check, zero count-table mismatches, zero
+  failed relationship checks, and every relationship row must pass with zero
+  orphans.
 - R2 manifest evidence must come from strict checksum validation, include
   `source_manifest` and `target_manifest`, require shared checksums, have zero
   object mismatches, include an empty `mismatches` array, and have equal source,
@@ -429,23 +431,45 @@ always report `cutover_ready: false`.
 
 Before any production API route can use this D1 implementation:
 
-1. Export Cloud SQL row counts for the selected tables.
-2. Import the same rows into the matching D1 tables.
-3. Compare counts:
+1. Generate the current validation query manifest:
+
+```bash
+pnpm --filter @manut/cloudflare d1:validation-queries -- --json --out process/features/cloudflare-stack-migration/reports/phase-07-d1-validation-query-manifest_22-06-26.json
+```
+
+The current checked-in manifest is
+`process/features/cloudflare-stack-migration/reports/phase-07-d1-validation-query-manifest_22-06-26.json`.
+It covers the active D1 shadow-read scope: active `workspaces`, active
+`projects`, and `projects.workspace_id -> workspaces.id` orphan checks.
+
+2. Export Cloud SQL row counts for the selected tables using the manifest's
+   `postgres_count_sql`.
+3. Import the same rows into the matching D1 tables.
+4. Export D1 row counts and D1 relationship rows using the manifest's
+   `d1_count_sql` and `d1_relationship_sql`.
+   The count query emits `table_name` and `count` columns to avoid SQL keyword
+   alias issues in D1/SQLite.
+5. Compare counts:
 
 ```bash
 pnpm --filter @manut/cloudflare d1:validate-import -- postgres-counts.json d1-counts.json --relationships relationship-checks.json --out process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json
 ```
 
-4. Validate relationships such as `projects.workspace_id -> workspaces.id`.
-5. Add contract tests comparing GKE and Worker responses for representative
+`d1:validate-import` accepts plain JSON arrays and common wrapped SQL runner
+output, including Wrangler D1 `[{ "success": true, "results": [...] }]`
+output. Wrapped SQL runner output is rejected if it contains `success: false`,
+`error`, or non-empty `errors`.
+
+6. Validate relationships such as `projects.workspace_id -> workspaces.id`.
+7. Add contract tests comparing GKE and Worker responses for representative
    workspaces/projects.
-6. Add auth and membership enforcement for any user-facing route.
+8. Add auth and membership enforcement for any user-facing route.
 
 The final `phase-07-d1-import-validation_21-06-26.json` report will be rejected
 by readiness unless it has zero count mismatches, zero failed relationship
-checks, `source_counts`, `target_counts`, passing `count_report`, and at least
-one relationship check where every row passes with zero orphans.
+checks, `source_counts`, `target_counts`, passing `count_report`, exact
+`workspaces` and `projects` count coverage, and exact `projects.workspace_id`
+relationship coverage where every row passes with zero orphans.
 
 Relationship check files can use:
 

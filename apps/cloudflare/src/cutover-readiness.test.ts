@@ -307,14 +307,18 @@ describe("cutover readiness evidence gate", () => {
         source_counts: "postgres-counts.json",
         target_counts: "d1-counts.json",
         summary: {
-          count_tables_matched: 1,
+          count_tables_matched: 2,
           count_tables_mismatched: 0,
           relationship_checks_failed: 0,
         },
         count_report: {
           ok: true,
-          matchedTableCount: 1,
+          matchedTableCount: 2,
           mismatchedTableCount: 0,
+          matches: [
+            { table: "workspaces", sourceCount: 1, targetCount: 1 },
+            { table: "projects", sourceCount: 2, targetCount: 2 },
+          ],
         },
         relationship_checks: [{ name: "projects.workspace_id", ok: false, orphan_count: 1 }],
       })
@@ -362,7 +366,7 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
-  it("rejects D1 reports with validation errors even when ok is true", async () => {
+  it("rejects D1 reports missing required Phase 7 table coverage", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
     await mkdir(reportDir, { recursive: true });
@@ -377,11 +381,86 @@ describe("cutover readiness evidence gate", () => {
           count_tables_mismatched: 0,
           relationship_checks_failed: 0,
         },
-        validation_errors: ["operator overrode missing relationship checks"],
         count_report: {
           ok: true,
           matchedTableCount: 1,
           mismatchedTableCount: 0,
+          matches: [{ table: "workspaces", sourceCount: 1, targetCount: 1 }],
+        },
+        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import report must cover required tables: missing projects.",
+    });
+  });
+
+  it("rejects D1 reports missing required Phase 7 relationship coverage", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_matched: 2,
+          count_tables_mismatched: 0,
+          relationship_checks_failed: 0,
+        },
+        count_report: {
+          ok: true,
+          matchedTableCount: 2,
+          mismatchedTableCount: 0,
+          matches: [
+            { table: "workspaces", sourceCount: 1, targetCount: 1 },
+            { table: "projects", sourceCount: 2, targetCount: 2 },
+          ],
+        },
+        relationship_checks: [{ name: "projects.owner_id", ok: true, orphan_count: 0 }],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "d1-import-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "D1 import report must cover required relationships: missing projects.workspace_id.",
+    });
+  });
+
+  it("rejects D1 reports with validation errors even when ok is true", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        source_counts: "postgres-counts.json",
+        target_counts: "d1-counts.json",
+        summary: {
+          count_tables_matched: 2,
+          count_tables_mismatched: 0,
+          relationship_checks_failed: 0,
+        },
+        validation_errors: ["operator overrode missing relationship checks"],
+        count_report: {
+          ok: true,
+          matchedTableCount: 2,
+          mismatchedTableCount: 0,
+          matches: [
+            { table: "workspaces", sourceCount: 1, targetCount: 1 },
+            { table: "projects", sourceCount: 2, targetCount: 2 },
+          ],
         },
         relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
       })
@@ -727,14 +806,18 @@ describe("cutover readiness evidence gate", () => {
         source_counts: "postgres-counts.json",
         target_counts: "d1-counts.json",
         summary: {
-          count_tables_matched: 1,
+          count_tables_matched: 2,
           count_tables_mismatched: 0,
           relationship_checks_failed: 0,
         },
         count_report: {
           ok: true,
-          matchedTableCount: 1,
+          matchedTableCount: 2,
           mismatchedTableCount: 0,
+          matches: [
+            { table: "workspaces", sourceCount: 1, targetCount: 1 },
+            { table: "projects", sourceCount: 2, targetCount: 2 },
+          ],
         },
         relationship_checks: [{ name: "projects.workspace_id", ok: true, orphanCount: 0 }],
       })

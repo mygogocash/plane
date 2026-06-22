@@ -3,8 +3,12 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { validateAuthenticatedSmokeReport } from "./authenticated-smoke-report.mjs";
+import { D1_VALIDATION_RELATIONSHIPS, D1_VALIDATION_TABLES } from "./d1-import-validation-queries.mjs";
 import { validateOperatorApprovalReport } from "./operator-approval-report.mjs";
 import { validateSevenGreenDaysReport } from "./seven-green-days-report.mjs";
+
+const REQUIRED_D1_COUNT_TABLES = D1_VALIDATION_TABLES.map((table) => table.table);
+const REQUIRED_D1_RELATIONSHIPS = D1_VALIDATION_RELATIONSHIPS.map((relationship) => relationship.name);
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/cutover-readiness.mjs [--json] [--root <repo-root>] [--phase phase-07|phase-08|all]
@@ -310,12 +314,40 @@ function validateD1ImportReport(report) {
     return { ok: false, message: "D1 import count_report must pass." };
   }
 
+  const matchedTables = new Set(
+    Array.isArray(report.count_report.matches)
+      ? report.count_report.matches
+          .map((match) => match?.table_name ?? match?.tableName ?? match?.table ?? match?.name)
+          .filter((table) => typeof table === "string" && table.length > 0)
+      : []
+  );
+  const missingTables = REQUIRED_D1_COUNT_TABLES.filter((table) => !matchedTables.has(table));
+  if (missingTables.length > 0) {
+    return {
+      ok: false,
+      message: `D1 import report must cover required tables: missing ${missingTables.join(", ")}.`,
+    };
+  }
+
   if (Array.isArray(report.validation_errors) && report.validation_errors.length > 0) {
     return { ok: false, message: "D1 import report must not include validation_errors." };
   }
 
   if (!Array.isArray(report.relationship_checks) || report.relationship_checks.length === 0) {
     return { ok: false, message: "D1 import report must include relationship_checks." };
+  }
+
+  const relationshipNames = new Set(
+    report.relationship_checks
+      .map((check) => check?.name ?? check?.relationship ?? check?.id)
+      .filter((name) => typeof name === "string" && name.length > 0)
+  );
+  const missingRelationships = REQUIRED_D1_RELATIONSHIPS.filter((relationship) => !relationshipNames.has(relationship));
+  if (missingRelationships.length > 0) {
+    return {
+      ok: false,
+      message: `D1 import report must cover required relationships: missing ${missingRelationships.join(", ")}.`,
+    };
   }
 
   const failedRelationship = report.relationship_checks.find((check) => {

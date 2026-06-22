@@ -119,8 +119,8 @@ describe("cutover evidence bundle", () => {
     const approvalInput = path.join(root, "operator-approval-input.json");
     const sevenDaysInput = path.join(root, "seven-green-days-input.json");
 
-    await writeFile(sourceCounts, JSON.stringify({ workspaces: 1 }), "utf8");
-    await writeFile(d1Counts, JSON.stringify({ workspaces: 1 }), "utf8");
+    await writeFile(sourceCounts, JSON.stringify({ workspaces: 1, projects: 2 }), "utf8");
+    await writeFile(d1Counts, JSON.stringify({ workspaces: 1, projects: 2 }), "utf8");
     await writeFile(
       relationships,
       JSON.stringify({
