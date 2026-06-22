@@ -1,6 +1,19 @@
 name: Better Stack Monitoring
 
 on:
+  push:
+    branches:
+      - "preview"
+    paths:
+      - ".github/ops/betterstack/**"
+      - ".github/workflows/betterstack-monitoring.yml"
+      - "apps/cloudflare/tools/betterstack-cutover-report.mjs"
+      - "apps/cloudflare/tools/collect-cutover-evidence.mjs"
+      - "apps/cloudflare/tools/cutover-readiness.mjs"
+      - "apps/cloudflare/src/betterstack-*.test.ts"
+      - "apps/cloudflare/src/cutover-evidence-bundle.test.ts"
+      - "apps/cloudflare/src/cutover-readiness.test.ts"
+      - "process/features/cloudflare-stack-migration/**"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -44,13 +57,13 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}" = "true" ]; then
             args+=(--dry-run)
           fi
           ./.github/ops/betterstack/sync-manut-monitors.sh "${args[@]}"
 
       - name: Capture Better Stack cutover report
-        if: ${{ inputs.dry_run == false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run == false }}
         continue-on-error: true
         run: |
           node apps/cloudflare/tools/betterstack-cutover-report.mjs \
@@ -59,11 +72,11 @@ jobs:
             --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
 
       - name: Summarize Better Stack cutover report
-        if: ${{ always() && inputs.dry_run == false }}
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.dry_run == false) }}
         run: ./.github/ops/betterstack/summarize-cutover-report.sh "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
 
       - name: Upload Better Stack cutover report
-        if: ${{ always() && inputs.dry_run == false }}
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.dry_run == false) }}
         uses: actions/upload-artifact@v4
         with:
           name: phase-07-betterstack-cutover
