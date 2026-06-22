@@ -37,6 +37,16 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 12/17`
 
+Latest local readiness audit at `2026-06-22T00:49:36Z`:
+
+- Phase 7 selected checks: `12/17` passed; blocked on D1 import validation,
+  R2 manifest validation, authenticated smoke, Better Stack cutover green, and
+  explicit operator approval.
+- Phase 8 selected checks: `13/19` passed; the same Phase 7 blockers remain,
+  plus seven-green-days evidence cannot exist until after cutover.
+- The dry-run evidence bundle skipped all 6 remaining evidence tasks because
+  the corresponding local input env vars were unset.
+
 Phase 7/8 evidence bundle command:
 
 ```bash
@@ -158,6 +168,8 @@ Smoke result:
 - No authenticated app smoke report is recorded.
 - No Better Stack cutover-green report is recorded.
 - No explicit `CUTOVER_APPROVED=true` operator approval is recorded.
+- No Phase 8 seven-green-days report can be recorded until Phase 7 cutover has
+  completed and the full stability window has elapsed.
 
 ## Operator Decision
 

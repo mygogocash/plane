@@ -1,6 +1,6 @@
 # Phase 7 - Production Cutover
 
-**Status:** BLOCKED pending preview deploy, final D1/R2 validation, authenticated smoke, Better Stack green, and explicit operator approval
+**Status:** BLOCKED pending final D1/R2 validation, authenticated smoke, Better Stack green, and explicit operator approval
 
 ## Objective
 
@@ -143,9 +143,10 @@ Rollback remains DNS/routing based until Phase 8:
 
 ## Current Blockers
 
-- No provider-backed production Cloudflare deploy evidence is recorded.
 - No final D1 import validation report exists.
 - No final R2 manifest validation report exists.
 - No authenticated smoke report exists.
-- No live shadow validation report exists.
+- No Better Stack cutover-green report exists.
 - No explicit cutover approval is recorded.
+- `app.manut.xyz` still routes to the GKE/GCP app runtime until all hard gates
+  pass.

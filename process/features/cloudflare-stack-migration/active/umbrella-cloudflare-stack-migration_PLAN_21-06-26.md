@@ -2,7 +2,7 @@
 
 **Date:** 21-06-26  
 **Complexity:** Complex phase program  
-**Status:** Phases 0-6 code guardrails in place; Phase 7/8 blocked by production evidence gates
+**Status:** Phases 0-6 code guardrails in place; Phase 7 production Worker deploy/smoke/live-shadow evidence recorded; Phase 7/8 still blocked by final cutover evidence gates
 
 ## Program Goal Charter
 
@@ -60,25 +60,26 @@ Status meanings:
 
 ## Current Implementation Boundary
 
-The current implementation only adds:
+The current implementation adds:
 
 - durable phase-program docs;
 - a parallel Cloudflare Worker package;
 - D1/R2/Queue/Durable Object binding scaffolding;
-- non-destructive baseline, CI validation, and cutover readiness checks.
+- non-destructive baseline, CI validation, and cutover readiness checks;
+- deployed preview and production Workers on `workers.dev` with smoke evidence;
+- live shadow validation against the production Worker diagnostic Durable
+  Object routes.
 
 It does not:
 
 - move `app.manut.xyz`;
-- deploy a production Worker;
 - migrate production data;
 - disable GKE/GCP CI.
 
 Phase 7 must not change production routing until
 `pnpm --filter @manut/cloudflare cutover:readiness` reports ready with external
-evidence for Cloudflare preview/prod deploy, D1 import validation, R2 manifest
-validation, live shadow tests, authenticated smoke, Better Stack green, and
-explicit operator approval.
+evidence for final D1 import validation, R2 manifest validation,
+authenticated smoke, Better Stack green, and explicit operator approval.
 
 ## Touchpoints
 

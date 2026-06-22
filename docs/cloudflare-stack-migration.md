@@ -66,6 +66,7 @@ pnpm --filter @manut/cloudflare auth:smoke-report -- --input <manual-auth-smoke.
 pnpm --filter @manut/cloudflare betterstack:cutover-report -- --out process/features/cloudflare-stack-migration/reports/phase-07-betterstack-cutover_21-06-26.json
 pnpm --filter @manut/cloudflare operator:approval-report -- --input <operator-approval-evidence.json> --out process/features/cloudflare-stack-migration/reports/phase-07-operator-cutover-approval_21-06-26.json
 pnpm --filter @manut/cloudflare seven-green-days:report -- --input <phase8-stability-evidence.json> --out process/features/cloudflare-stack-migration/reports/phase-08-seven-green-days_21-06-26.json
+pnpm --filter @manut/cloudflare cutover:evidence -- --json --dry-run
 pnpm --filter @manut/cloudflare cutover:readiness
 pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app-preview.bettergogocash.workers.dev
 ```
@@ -133,6 +134,8 @@ Current Cloudflare provider state:
   `process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json`.
 - Production smoke evidence is stored at
   `process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json`.
+- Production live shadow evidence is stored at
+  `process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json`.
 - `app.manut.xyz` DNS has not been changed and still uses the current GKE/GCP
   production stack.
 
