@@ -37,7 +37,7 @@ Expected current result:
 - `Phase 8 decommission ready: no`
 - `Selected checks passed: 12/17`
 
-Latest local readiness audit at `2026-06-22T02:16:06Z`:
+Latest local readiness audit at `2026-06-22T02:40:49Z`:
 
 - Phase 7 selected checks: `12/17` passed; blocked on D1 import validation,
   R2 manifest validation, authenticated smoke, Better Stack cutover green, and
@@ -63,6 +63,10 @@ Latest local readiness audit at `2026-06-22T02:16:06Z`:
   coverage for both tables and the required relationship, and reject failed SQL
   runner envelopes even if they contain result rows. This is supporting evidence
   only; it does not replace the final D1 import validation report.
+- R2 manifest validation now rejects empty strict reports. Final R2 evidence
+  must prove at least one matched object with shared-checksum validation, equal
+  source/target/matched counts, zero mismatches, and no validation errors. This
+  keeps an empty GCS/R2 manifest pair from satisfying the Phase 7 upload gate.
 
 Phase 7/8 evidence bundle command:
 

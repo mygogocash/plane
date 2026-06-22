@@ -415,6 +415,30 @@ describe("migration validation tools", () => {
     });
   });
 
+  it("fails strict upload validation when both manifests are empty", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-r2-validation-"));
+    const sourcePath = path.join(root, "gcs-manifest.json");
+    const targetPath = path.join(root, "r2-manifest.json");
+
+    await writeFile(sourcePath, JSON.stringify([]));
+    await writeFile(targetPath, JSON.stringify([]));
+
+    const result = runTool([
+      "tools/compare-upload-manifests.mjs",
+      sourcePath,
+      targetPath,
+      "--require-checksum",
+      "--json",
+    ]);
+    const report = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      validation_errors: ["Strict upload manifest validation requires at least one matched object."],
+    });
+  });
+
   it("prints canonical upload validation JSON with manifest paths", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-r2-validation-"));
     const sourcePath = path.join(root, "gcs-manifest.json");

@@ -404,14 +404,15 @@ accepts nested checksum objects such as `{ "checksums": { "sha256": "..." } }`,
 so raw `gcloud storage objects list --format=json` output can be used as the
 GCS-side manifest without hand editing.
 
-`uploads:validate` requires at least one shared checksum field per object. Use
-plain `uploads:compare` only for exploratory size/key checks; it is not strong
-enough to satisfy Phase 7 cutover evidence.
+`uploads:validate` requires at least one shared checksum field per object and
+at least one matched object. Use plain `uploads:compare` only for exploratory
+size/key checks; it is not strong enough to satisfy Phase 7 cutover evidence.
 
 The final `phase-07-r2-manifest-validation_21-06-26.json` report will be
 rejected by readiness unless it has `checksumPolicy.requireSharedChecksum: true`,
-`mismatchedObjectCount: 0`, `source_manifest`, `target_manifest`, and equal
-source, target, and matched object counts, plus an empty `mismatches` array.
+`mismatchedObjectCount: 0`, `source_manifest`, `target_manifest`, a non-zero
+`matchedObjectCount`, and equal source, target, and matched object counts, plus
+an empty `mismatches` array and no `validation_errors`.
 
 The R2 bucket must deny anonymous listing for bare `/uploads` and allow object
 reads only through the Worker route. CORS for `manut-uploads-prod` should allow

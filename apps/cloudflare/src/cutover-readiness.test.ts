@@ -517,6 +517,34 @@ describe("cutover readiness evidence gate", () => {
     });
   });
 
+  it("rejects R2 validation reports with zero matched objects", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    await writeFile(
+      path.join(reportDir, "phase-07-r2-manifest-validation_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        source_manifest: "gcs-manifest.json",
+        target_manifest: "r2-manifest.json",
+        checksumPolicy: { requireSharedChecksum: true },
+        sourceObjectCount: 0,
+        targetObjectCount: 0,
+        matchedObjectCount: 0,
+        mismatchedObjectCount: 0,
+        mismatches: [],
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "r2-manifest-validation");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: "R2 manifest report must include at least one matched object.",
+    });
+  });
+
   it("rejects Better Stack reports unless every required monitor is up", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
     const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");

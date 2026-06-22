@@ -230,6 +230,7 @@ function compareChecksums(source, target, options = {}) {
 export function compareManifests(sourceObjects, targetObjects, options = {}) {
   const keys = [...new Set([...sourceObjects.keys(), ...targetObjects.keys()])].toSorted();
   const mismatches = [];
+  const validationErrors = [];
   let matchedObjectCount = 0;
 
   for (const key of keys) {
@@ -261,8 +262,12 @@ export function compareManifests(sourceObjects, targetObjects, options = {}) {
     matchedObjectCount += 1;
   }
 
+  if (options.requireChecksum && matchedObjectCount <= 0) {
+    validationErrors.push("Strict upload manifest validation requires at least one matched object.");
+  }
+
   return {
-    ok: mismatches.length === 0,
+    ok: mismatches.length === 0 && validationErrors.length === 0,
     checksumPolicy: {
       requireSharedChecksum: Boolean(options.requireChecksum),
     },
@@ -270,6 +275,7 @@ export function compareManifests(sourceObjects, targetObjects, options = {}) {
     targetObjectCount: targetObjects.size,
     matchedObjectCount,
     mismatchedObjectCount: mismatches.length,
+    validation_errors: validationErrors,
     mismatches,
   };
 }

@@ -382,6 +382,10 @@ function validateR2ManifestReport(report) {
     return { ok: false, message: "R2 manifest report must include matchedObjectCount." };
   }
 
+  if (report.matchedObjectCount <= 0) {
+    return { ok: false, message: "R2 manifest report must include at least one matched object." };
+  }
+
   if (report.sourceObjectCount !== report.targetObjectCount || report.sourceObjectCount !== report.matchedObjectCount) {
     return { ok: false, message: "R2 manifest report source, target, and matched object counts must match." };
   }
@@ -392,6 +396,10 @@ function validateR2ManifestReport(report) {
 
   if (!Array.isArray(report.mismatches) || report.mismatches.length !== 0) {
     return { ok: false, message: "R2 manifest report must include an empty mismatches array." };
+  }
+
+  if (Array.isArray(report.validation_errors) && report.validation_errors.length > 0) {
+    return { ok: false, message: "R2 manifest report must not include validation_errors." };
   }
 
   return { ok: true };
