@@ -97,6 +97,11 @@ Latest local readiness audit at `2026-06-22T08:43:58Z`:
   canonical public URL remains `https://manut.xyz`, and the Better Stack monitor
   layer remains blocked at `0/3` until the repository secret is configured and
   the workflow is rerun.
+- Authenticated smoke input template is now recorded at
+  `process/features/cloudflare-stack-migration/references/phase-07-authenticated-smoke-input-template_22-06-26.json`.
+  It covers all 11 required authenticated checks and defaults every check to
+  `ok: false`; it is an operator capture aid only and cannot pass the
+  authenticated smoke readiness gate until filled with real production evidence.
 
 Phase 7/8 evidence bundle command:
 
@@ -121,6 +126,24 @@ Required bundle inputs:
 - `BETTERSTACK_API_TOKEN`
 - `OPERATOR_APPROVAL_INPUT`
 - `SEVEN_GREEN_DAYS_INPUT`
+
+Authenticated smoke input can be started from the checked-in template:
+
+```bash
+pnpm --filter @manut/cloudflare auth:smoke-report -- \
+  --template \
+  --out process/features/cloudflare-stack-migration/references/phase-07-authenticated-smoke-input-template_22-06-26.json
+```
+
+After a real authenticated smoke run, fill `actor`,
+`cloudflare_route_verified`, route evidence, and every check's `ok`, `evidence`,
+and `observed_at`, then canonicalize it with:
+
+```bash
+pnpm --filter @manut/cloudflare auth:smoke-report -- \
+  --input <filled-authenticated-smoke-input.json> \
+  --out process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json
+```
 
 D1 target-side input files can now be refreshed from remote Cloudflare D1 with:
 

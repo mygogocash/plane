@@ -53,6 +53,7 @@ export const REQUIRED_AUTHENTICATED_SMOKE_CHECKS = [
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/authenticated-smoke-report.mjs --input <manual-evidence.json> [--json] [--out <report.json>]
+       node apps/cloudflare/tools/authenticated-smoke-report.mjs --template [--json] [--out <input-template.json>]
 
 Builds canonical Phase 7 authenticated smoke evidence from a manually captured
 checklist. This tool does not log in for you; it validates that each required
@@ -71,6 +72,7 @@ Exit codes:
 function parseArgs(argv) {
   const options = {
     inputPath: null,
+    template: false,
     json: false,
     outPath: null,
   };
@@ -89,6 +91,11 @@ function parseArgs(argv) {
 
     if (arg === "--json") {
       options.json = true;
+      continue;
+    }
+
+    if (arg === "--template") {
+      options.template = true;
       continue;
     }
 
@@ -115,8 +122,12 @@ function parseArgs(argv) {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
-  if (!options.help && !options.inputPath) {
+  if (!options.help && !options.template && !options.inputPath) {
     throw new Error("--input is required");
+  }
+
+  if (options.template && options.inputPath) {
+    throw new Error("--template cannot be combined with --input");
   }
 
   return options;
@@ -259,6 +270,33 @@ export function validateAuthenticatedSmokeReport(report) {
   return { ok: true };
 }
 
+export function buildAuthenticatedSmokeInputTemplate({ generatedAt = new Date().toISOString() } = {}) {
+  return {
+    template_kind: "authenticated-smoke-input",
+    schema_version: 1,
+    generated_at: generatedAt,
+    instructions:
+      "Fill every ok/evidence/observed_at field from a real authenticated production smoke run, then pass this file to auth:smoke-report. Do not mark checks passing from assumptions or public health probes.",
+    actor: "",
+    target_origin: "https://app.manut.xyz",
+    cloudflare_route_verified: false,
+    cloudflare_route_evidence: {
+      edge_header: "",
+      worker_url: "",
+      dns_or_route_evidence: "",
+    },
+    checks: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((check) => ({
+      id: check.id,
+      label: check.label,
+      ok: false,
+      evidence: "",
+      observed_at: "",
+      url: "",
+      note: "",
+    })),
+  };
+}
+
 function failedCheckMessage(check) {
   if (check.status === "missing") {
     return `Authenticated smoke report is missing ${check.id}.`;
@@ -371,8 +409,9 @@ async function main() {
     return;
   }
 
-  const input = await loadInput(options.inputPath);
-  const report = buildAuthenticatedSmokeReport(input);
+  const report = options.template
+    ? buildAuthenticatedSmokeInputTemplate()
+    : buildAuthenticatedSmokeReport(await loadInput(options.inputPath));
 
   if (options.outPath) {
     const outPath = resolveRepoPath(options.outPath);
@@ -386,7 +425,7 @@ async function main() {
     printHumanReport(report);
   }
 
-  process.exitCode = report.ok ? 0 : 1;
+  process.exitCode = options.template || report.ok ? 0 : 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

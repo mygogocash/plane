@@ -91,6 +91,17 @@ https://app.manut.xyz`, every required authenticated workflow, and meaningful
 evidence for each check. Blank strings or empty evidence objects are not valid
 Phase 7 smoke evidence.
 
+A non-passing operator input template is available at
+`process/features/cloudflare-stack-migration/references/phase-07-authenticated-smoke-input-template_22-06-26.json`.
+Regenerate it with:
+
+```bash
+pnpm --filter @manut/cloudflare auth:smoke-report -- --template --out <path>
+```
+
+Fill it from a real authenticated production smoke run, then pass the filled
+file to `auth:smoke-report`.
+
 `BETTERSTACK_CUTOVER_REPORT` must be generated with
 `betterstack:cutover-report` or an equivalent canonical shape where every
 required monitor is `up` and has `url_matches: true` for the expected Manut

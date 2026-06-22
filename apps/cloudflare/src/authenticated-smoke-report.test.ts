@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   REQUIRED_AUTHENTICATED_SMOKE_CHECKS,
   buildAuthenticatedSmokeReport,
+  buildAuthenticatedSmokeInputTemplate,
   validateAuthenticatedSmokeReport,
 } from "../tools/authenticated-smoke-report.mjs";
 
@@ -33,6 +34,27 @@ function passingInput() {
 }
 
 describe("authenticated smoke report", () => {
+  it("builds a non-passing operator input template for every required workflow", () => {
+    const template = buildAuthenticatedSmokeInputTemplate({ generatedAt: "2026-06-22T00:00:00.000Z" });
+
+    expect(template).toMatchObject({
+      template_kind: "authenticated-smoke-input",
+      schema_version: 1,
+      generated_at: "2026-06-22T00:00:00.000Z",
+      actor: "",
+      target_origin: "https://app.manut.xyz",
+      cloudflare_route_verified: false,
+    });
+    expect(template.checks).toHaveLength(REQUIRED_AUTHENTICATED_SMOKE_CHECKS.length);
+    expect(template.checks.map((check) => check.id)).toEqual(
+      REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((check) => check.id)
+    );
+    expect(buildAuthenticatedSmokeReport(template)).toMatchObject({
+      ok: false,
+      validation_error: "Authenticated smoke check login is not passing.",
+    });
+  });
+
   it("passes only when every required authenticated workflow has evidence", () => {
     const report = buildAuthenticatedSmokeReport(passingInput());
 
@@ -195,5 +217,33 @@ describe("authenticated smoke report", () => {
 
     expect(stdoutReport.ok).toBe(true);
     expect(fileReport.ok).toBe(true);
+  });
+
+  it("writes an authenticated smoke input template from the CLI", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-auth-smoke-template-"));
+    const relativeOutPath = `.tmp/${path.basename(root)}/auth-smoke-template.json`;
+    const repoOutPath = path.join(repoRoot, relativeOutPath);
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    const stdout = execFileSync(
+      "node",
+      ["tools/authenticated-smoke-report.mjs", "--template", "--json", "--out", relativeOutPath],
+      {
+        cwd: packageRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    const stdoutTemplate = JSON.parse(stdout);
+    const fileTemplate = JSON.parse(await readFile(repoOutPath, "utf8"));
+
+    await rm(path.dirname(repoOutPath), { recursive: true, force: true });
+
+    expect(stdoutTemplate).toMatchObject({
+      template_kind: "authenticated-smoke-input",
+      target_origin: "https://app.manut.xyz",
+    });
+    expect(fileTemplate.checks).toHaveLength(REQUIRED_AUTHENTICATED_SMOKE_CHECKS.length);
   });
 });
