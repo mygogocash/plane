@@ -63,6 +63,16 @@ Latest local readiness audit at `2026-06-22T08:43:58Z`:
   coverage for both tables and the required relationship, and reject failed SQL
   runner envelopes even if they contain result rows. This is supporting evidence
   only; it does not replace the final D1 import validation report.
+- D1 target snapshot evidence is now recorded at
+  `process/features/cloudflare-stack-migration/reports/phase-07-d1-target-snapshot_22-06-26.json`
+  with generated target input files
+  `phase-07-d1-target-counts_22-06-26.json` and
+  `phase-07-d1-target-relationships_22-06-26.json`. The remote `manut-prod`
+  D1 schema is reachable and covers the required `workspaces`, `projects`, and
+  `projects.workspace_id` relationship checks, but the required target row
+  total is currently `0`. This confirms the D1 import validation gate remains
+  blocked until a real Postgres delta is imported into D1 and source counts are
+  compared against a non-empty target.
 - R2 manifest validation is now recorded at
   `process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json`.
   The two production GCS upload objects were uploaded to `manut-uploads-prod`,
@@ -111,6 +121,20 @@ Required bundle inputs:
 - `BETTERSTACK_API_TOKEN`
 - `OPERATOR_APPROVAL_INPUT`
 - `SEVEN_GREEN_DAYS_INPUT`
+
+D1 target-side input files can now be refreshed from remote Cloudflare D1 with:
+
+```bash
+pnpm --filter @manut/cloudflare d1:target-evidence -- \
+  --database manut-prod \
+  --counts-out process/features/cloudflare-stack-migration/reports/phase-07-d1-target-counts_22-06-26.json \
+  --relationships-out process/features/cloudflare-stack-migration/reports/phase-07-d1-target-relationships_22-06-26.json \
+  --out process/features/cloudflare-stack-migration/reports/phase-07-d1-target-snapshot_22-06-26.json
+```
+
+After the final import, use the generated counts and relationship files as
+`D1_D1_COUNTS` and `D1_RELATIONSHIPS` alongside the final Postgres count export
+as `D1_POSTGRES_COUNTS`.
 
 Better Stack cutover evidence command:
 
