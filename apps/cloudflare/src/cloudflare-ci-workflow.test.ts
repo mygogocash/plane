@@ -21,4 +21,12 @@ describe("Cloudflare CI/CD workflow", () => {
     expect(workflow).toContain("cloudflare-${{ inputs.deploy_target }}-live-shadow.json");
     expect(workflow).toContain("name: cloudflare-${{ inputs.deploy_target }}-evidence");
   });
+
+  it("uses canonical D1 relationship provenance in the synthetic validation fixture", () => {
+    const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "cloudflare-ci-cd.yml"), "utf8");
+
+    expect(workflow).toContain(
+      '{"checks":[{"name":"projects.workspace_id","source":"projects","target":"workspaces","orphanCount":0}]}'
+    );
+  });
 });

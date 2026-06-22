@@ -102,7 +102,7 @@ jobs:
           [{"table":"workspaces","count":1},{"table":"projects","rows":"2"}]
           JSON
           cat > "$tmp_dir/relationships.json" <<'JSON'
-          {"checks":[{"name":"projects.workspace_id","orphanCount":0}]}
+          {"checks":[{"name":"projects.workspace_id","source":"projects","target":"workspaces","orphanCount":0}]}
           JSON
           pnpm --filter @manut/cloudflare d1:validate-import -- "$tmp_dir/postgres-counts.json" "$tmp_dir/d1-counts.json" --relationships "$tmp_dir/relationships.json" --json --out "$tmp_dir/d1-import-validation.json"
 
