@@ -1,10 +1,16 @@
-import type { Metadata } from 'next';
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
 
-import { siteConfig } from '@/lib/site';
+import type { Metadata } from "next";
+
+import { siteConfig } from "@/lib/site";
 
 /** Primary landing metadata, tuned for clear search and answer snippets. */
 export const homeDescription =
-  'Manut is a GoGoCash-hosted work-management app for projects, work items, cycles, modules, intake, views, pages, attachments, and AI-assisted workflows.';
+  "Manut is a GoGoCash-hosted work-management app for projects, work items, cycles, modules, intake, views, pages, attachments, and AI-assisted workflows.";
 
 export function buildRootMetadata(): Metadata {
   return {
@@ -19,13 +25,13 @@ export function buildRootMetadata(): Metadata {
     authors: [{ name: siteConfig.organization.legalName, url: siteConfig.url }],
     creator: siteConfig.organization.legalName,
     publisher: siteConfig.organization.legalName,
-    category: 'technology',
+    category: "technology",
     alternates: {
       canonical: siteConfig.url,
-      languages: { 'en-US': siteConfig.url },
+      languages: { "en-US": siteConfig.url },
     },
     openGraph: {
-      type: 'website',
+      type: "website",
       siteName: siteConfig.name,
       title: `${siteConfig.name} - ${siteConfig.tagline}`,
       description: homeDescription,
@@ -33,7 +39,7 @@ export function buildRootMetadata(): Metadata {
       locale: siteConfig.locale,
       images: [
         {
-          url: '/opengraph-image',
+          url: "/opengraph-image",
           width: 1200,
           height: 630,
           alt: siteConfig.ogImageAlt,
@@ -41,10 +47,10 @@ export function buildRootMetadata(): Metadata {
       ],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: `${siteConfig.name} - ${siteConfig.tagline}`,
       description: homeDescription,
-      images: ['/opengraph-image'],
+      images: ["/opengraph-image"],
     },
     robots: {
       index: true,
@@ -52,19 +58,19 @@ export function buildRootMetadata(): Metadata {
       googleBot: {
         index: true,
         follow: true,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-        'max-video-preview': -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
       },
     },
     icons: {
-      icon: '/icon.png',
-      apple: '/apple-icon.png',
+      icon: "/icon.png",
+      apple: "/apple-icon.png",
     },
-    manifest: '/manifest.webmanifest',
+    manifest: "/manifest.webmanifest",
     formatDetection: { email: false, address: false, telephone: false },
     other: {
-      'apple-mobile-web-app-title': siteConfig.name,
+      "apple-mobile-web-app-title": siteConfig.name,
     },
   };
 }

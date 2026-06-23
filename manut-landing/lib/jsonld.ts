@@ -1,59 +1,65 @@
-import { faqs, quickAnswers, siteConfig, stats } from '@/lib/site';
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { faqs, quickAnswers, siteConfig, stats } from "@/lib/site";
 
 interface Schema {
-  '@context': 'https://schema.org';
-  '@type': string;
+  "@context": "https://schema.org";
+  "@type": string;
   [key: string]: unknown;
 }
 
 function organizationSchema(): Schema {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
+    "@context": "https://schema.org",
+    "@type": "Organization",
     name: siteConfig.name,
     legalName: siteConfig.organization.legalName,
     url: siteConfig.url,
     logo: `${siteConfig.url}/icon.png`,
     sameAs: [siteConfig.github],
     contactPoint: {
-      '@type': 'ContactPoint',
-      contactType: 'customer support',
+      "@type": "ContactPoint",
+      contactType: "customer support",
       email: siteConfig.email,
-      availableLanguage: ['en'],
+      availableLanguage: ["en"],
     },
   };
 }
 
 function websiteSchema(): Schema {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    '@id': `${siteConfig.url}/#website`,
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteConfig.url}/#website`,
     name: siteConfig.name,
     url: siteConfig.url,
     description: siteConfig.description,
-    inLanguage: 'en-US',
-    publisher: { '@type': 'Organization', name: siteConfig.name },
+    inLanguage: "en-US",
+    publisher: { "@type": "Organization", name: siteConfig.name },
     potentialAction: {
-      '@type': 'ViewAction',
+      "@type": "ViewAction",
       target: siteConfig.appUrl,
-      name: 'Open the Manut production app',
+      name: "Open the Manut production app",
     },
   };
 }
 
 function webPageSchema(): Schema {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    '@id': `${siteConfig.url}/#webpage`,
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${siteConfig.url}/#webpage`,
     url: siteConfig.url,
     name: `${siteConfig.name} - ${siteConfig.tagline}`,
     description: siteConfig.description,
-    isPartOf: { '@id': `${siteConfig.url}/#website` },
-    about: { '@type': 'SoftwareApplication', name: siteConfig.name },
+    isPartOf: { "@id": `${siteConfig.url}/#website` },
+    about: { "@type": "SoftwareApplication", name: siteConfig.name },
     primaryImageOfPage: {
-      '@type': 'ImageObject',
+      "@type": "ImageObject",
       url: `${siteConfig.url}/opengraph-image`,
     },
   };
@@ -61,31 +67,31 @@ function webPageSchema(): Schema {
 
 function softwareApplicationSchema(): Schema {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
     name: siteConfig.name,
-    operatingSystem: 'Web',
-    applicationCategory: 'BusinessApplication',
-    applicationSubCategory: 'WorkManagementApplication',
+    operatingSystem: "Web",
+    applicationCategory: "BusinessApplication",
+    applicationSubCategory: "WorkManagementApplication",
     description: siteConfig.description,
     url: siteConfig.url,
     softwareVersion: stats.release,
     creator: {
-      '@type': 'Organization',
+      "@type": "Organization",
       name: siteConfig.organization.legalName,
       url: siteConfig.url,
     },
     codeRepository: siteConfig.github,
     featureList: [
-      'Projects',
-      'Work items',
-      'Cycles',
-      'Modules',
-      'Intake',
-      'Saved views',
-      'Pages',
-      'Attachments',
-      'AI-assisted workflows',
+      "Projects",
+      "Work items",
+      "Cycles",
+      "Modules",
+      "Intake",
+      "Saved views",
+      "Pages",
+      "Attachments",
+      "AI-assisted workflows",
     ],
   };
 }
@@ -94,16 +100,16 @@ function faqEntities() {
   const seen = new Set<string>();
   const items = [...quickAnswers, ...faqs];
   return items
-    .filter(f => {
+    .filter((f) => {
       if (seen.has(f.question)) return false;
       seen.add(f.question);
       return true;
     })
-    .map(f => ({
-      '@type': 'Question',
+    .map((f) => ({
+      "@type": "Question",
       name: f.question,
       acceptedAnswer: {
-        '@type': 'Answer',
+        "@type": "Answer",
         text: f.answer,
       },
     }));
@@ -111,18 +117,12 @@ function faqEntities() {
 
 function faqSchema(): Schema {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
     mainEntity: faqEntities(),
   };
 }
 
 export function allSchemas(): ReadonlyArray<Schema> {
-  return [
-    organizationSchema(),
-    websiteSchema(),
-    webPageSchema(),
-    softwareApplicationSchema(),
-    faqSchema(),
-  ];
+  return [organizationSchema(), websiteSchema(), webPageSchema(), softwareApplicationSchema(), faqSchema()];
 }

@@ -1,11 +1,17 @@
-import Image from 'next/image';
-import Link from 'next/link';
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
 
-import { footerNav, siteConfig } from '@/lib/site';
+import Image from "next/image";
+import Link from "next/link";
+
+import { footerNav, siteConfig } from "@/lib/site";
 
 export function SiteFooter() {
   return (
-    <footer className="safe-bottom border-t border-border bg-card py-12 sm:py-16">
+    <footer className="safe-bottom border-border bg-card border-t py-12 sm:py-16">
       <div className="container-prose">
         <div className="grid gap-10 sm:gap-12 md:grid-cols-[260px_1fr] md:gap-20">
           <div>
@@ -24,9 +30,9 @@ export function SiteFooter() {
               />
               {siteConfig.name}
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Work management for projects, work items, cycles, modules,
-              intake, views, pages, attachments, and AI-assisted workflows.
+            <p className="text-sm text-muted-foreground mt-4 max-w-xs leading-relaxed">
+              Work management for projects, work items, cycles, modules, intake, views, pages, attachments, and
+              AI-assisted workflows.
             </p>
           </div>
 
@@ -35,14 +41,12 @@ export function SiteFooter() {
               <div key={heading}>
                 <div className="kicker mb-4">{heading}</div>
                 <ul className="space-y-2.5">
-                  {items.map(item => (
+                  {items.map((item) => (
                     <li key={item.label}>
                       <Link
                         href={item.href}
-                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                        {...(item.href.startsWith('http')
-                          ? { target: '_blank', rel: 'noopener noreferrer' }
-                          : {})}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        {...(item.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                       >
                         {item.label}
                       </Link>
@@ -54,37 +58,31 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start gap-4 border-t border-border pt-6 sm:mt-14 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:pt-7">
-          <p className="text-xs text-pretty text-muted-foreground">
-            © {new Date().getFullYear()} {siteConfig.name} · GoGoCash · Source:{' '}
+        <div className="border-border mt-10 flex flex-col items-start gap-4 border-t pt-6 sm:mt-14 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:pt-7">
+          <p className="text-xs text-muted-foreground text-pretty">
+            © {new Date().getFullYear()} {siteConfig.name} · GoGoCash · Source:{" "}
             <Link
               href={siteConfig.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline underline-offset-4 hover:text-foreground"
+              className="hover:text-foreground underline underline-offset-4"
             >
               GitHub
             </Link>
           </p>
-          <div className="flex gap-5 text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground flex gap-5">
             <Link
               href={siteConfig.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-foreground"
+              className="hover:text-foreground transition-colors"
             >
               GitHub
             </Link>
-            <Link
-              href={siteConfig.appUrl}
-              className="transition-colors hover:text-foreground"
-            >
+            <Link href={siteConfig.appUrl} className="hover:text-foreground transition-colors">
               App
             </Link>
-            <Link
-              href={siteConfig.accessRequestHref}
-              className="transition-colors hover:text-foreground"
-            >
+            <Link href={siteConfig.accessRequestHref} className="hover:text-foreground transition-colors">
               Request access
             </Link>
           </div>

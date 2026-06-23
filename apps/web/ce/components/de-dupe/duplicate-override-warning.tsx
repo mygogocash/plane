@@ -1,3 +1,7 @@
+// Copyright (c) 2023-present Plane Software, Inc. and contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+// See the LICENSE file for details.
+
 /* SPDX-FileCopyrightText: 2023-present 650 Industries, Inc. <https://650.io/> */
 /* SPDX-License-Identifier: AGPL-3.0-only */
 

@@ -1,16 +1,22 @@
-import type { MetadataRoute } from 'next';
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
 
-import { siteConfig } from '@/lib/site';
+import type { MetadataRoute } from "next";
 
-export const dynamic = 'force-static';
+import { siteConfig } from "@/lib/site";
+
+export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['/api/'],
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/api/"],
       },
     ],
     sitemap: `${siteConfig.url}/sitemap.xml`,
