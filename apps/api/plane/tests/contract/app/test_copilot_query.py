@@ -117,6 +117,42 @@ class TestCopilotQueryEndpoint:
         assert any(item["entity_id"] == str(status_update.id) for item in llm_payload["evidence"])
 
     @pytest.mark.django_db
+    def test_project_scope_returns_answer_summary_evidence_from_readable_project(
+        self, session_client, workspace, project, status_update
+    ):
+        with (
+            _configured_llm(),
+            patch(
+                "plane.app.views.copilot.call_copilot_llm",
+                return_value={
+                    "answer": "Project delivery is at risk because beta access is blocked.",
+                    "summary": "Project risk is tied to beta access.",
+                    "actions": [],
+                },
+            ) as mocked_llm,
+        ):
+            response = session_client.post(
+                _copilot_query_url(workspace.slug),
+                {
+                    "scope": "project",
+                    "object_id": str(project.id),
+                    "question": "Summarize project delivery risk.",
+                },
+                format="json",
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["answer"] == "Project delivery is at risk because beta access is blocked."
+        evidence_types = {item["entity_type"] for item in response.data["evidence"]}
+        assert {"project", "status_update"}.issubset(evidence_types)
+        assert any(item["entity_id"] == str(status_update.id) for item in response.data["evidence"])
+
+        llm_payload = mocked_llm.call_args.kwargs
+        assert llm_payload["context"]["scope"] == "project"
+        assert llm_payload["context"]["object_id"] == str(project.id)
+        assert any(item["entity_id"] == str(status_update.id) for item in llm_payload["evidence"])
+
+    @pytest.mark.django_db
     def test_evidence_excludes_unreadable_objects(
         self, session_client, workspace, project, epic, epic_type, create_user
     ):

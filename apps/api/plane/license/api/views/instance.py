@@ -127,11 +127,11 @@ class InstanceEndpoint(BaseAPIView):
                 },
                 {
                     "key": "LLM_PROVIDER",
-                    "default": os.environ.get("LLM_PROVIDER", "vertexai"),
+                    "default": os.environ.get("LLM_PROVIDER", "cloudflare"),
                 },
                 {
                     "key": "LLM_MODEL",
-                    "default": os.environ.get("LLM_MODEL", "gemini-2.5-flash"),
+                    "default": os.environ.get("LLM_MODEL", "@cf/zai-org/glm-5.2"),
                 },
             ]
         )

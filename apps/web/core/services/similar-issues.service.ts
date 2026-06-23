@@ -4,12 +4,32 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
 import { API_BASE_URL } from "@plane/constants";
-// types
-import type { TSimilarIssue, TSimilarIssuesResponse } from "@/types/similar-issue";
-// services
+import type {
+  TDuplicateCheckCandidate,
+  TDuplicateCheckPayload,
+  TDuplicateIssueCheckResult,
+  TDuplicateCheckResponse,
+  TSimilarIssue,
+} from "@/types/similar-issue";
+
 import { APIService } from "@/services/api.service";
+
+type TSimilarIssuesResponse = {
+  results?: TSimilarIssue[];
+};
+
+export const duplicateCandidateToSimilarIssue = (
+  candidate: TDuplicateCheckCandidate,
+  threshold?: number
+): TSimilarIssue => ({
+  id: candidate.issue_id,
+  name: candidate.name,
+  confidence: candidate.score,
+  matched_on: candidate.matched_on,
+  is_high_confidence: typeof threshold === "number" ? candidate.score >= threshold : false,
+  duplicate_threshold: threshold,
+});
 
 export class SimilarIssuesService extends APIService {
   constructor() {
@@ -27,5 +47,41 @@ export class SimilarIssuesService extends APIService {
       .catch((err) => {
         throw err?.response?.data;
       });
+  }
+
+  async checkDuplicates(
+    workspaceSlug: string,
+    projectId: string,
+    payload: TDuplicateCheckPayload
+  ): Promise<TDuplicateCheckResponse> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/duplicate-check/`, payload)
+      .then((res) => res.data as TDuplicateCheckResponse)
+      .catch((err) => {
+        throw err?.response?.data;
+      });
+  }
+
+  async checkDuplicateIssues(
+    workspaceSlug: string,
+    projectId: string,
+    payload: TDuplicateCheckPayload
+  ): Promise<TDuplicateIssueCheckResult> {
+    const data = await this.checkDuplicates(workspaceSlug, projectId, payload);
+
+    return {
+      issues: data.candidates.map((candidate) => duplicateCandidateToSimilarIssue(candidate, data.threshold)),
+      high_confidence: data.high_confidence,
+      threshold: data.threshold,
+      retrieval: data.retrieval,
+    };
+  }
+
+  async listDuplicates(
+    workspaceSlug: string,
+    projectId: string,
+    payload: TDuplicateCheckPayload
+  ): Promise<TSimilarIssue[]> {
+    const data = await this.checkDuplicateIssues(workspaceSlug, projectId, payload);
+    return data.issues;
   }
 }

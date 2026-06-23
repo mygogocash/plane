@@ -269,6 +269,45 @@ class IssueBlocker(ProjectBaseModel):
         return f"{self.block.name} {self.blocked_by.name}"
 
 
+class IssueEmbedding(ProjectBaseModel):
+    issue = models.ForeignKey(
+        "db.Issue",
+        on_delete=models.CASCADE,
+        related_name="embeddings",
+    )
+    content_hash = models.CharField(max_length=64, db_index=True)
+    model_name = models.CharField(max_length=120)
+    provider = models.CharField(max_length=60, blank=True, default="")
+    embedding = models.JSONField(default=list)
+    status = models.CharField(
+        max_length=20,
+        choices=(
+            ("ready", "Ready"),
+            ("skipped", "Skipped"),
+            ("failed", "Failed"),
+        ),
+        default="ready",
+    )
+    error_message = models.TextField(blank=True, default="")
+    embedded_at = models.DateTimeField(null=True)
+
+    class Meta:
+        verbose_name = "Issue Embedding"
+        verbose_name_plural = "Issue Embeddings"
+        db_table = "issue_embeddings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "project", "issue", "model_name"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="issue_embedding_unique_active_model",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["workspace", "project", "model_name"], name="issue_embed_workspa_121e46_idx"),
+            models.Index(fields=["issue", "content_hash"], name="issue_embed_issue_i_986c59_idx"),
+        ]
+
+
 class IssueRelationChoices(models.TextChoices):
     DUPLICATE = "duplicate", "Duplicate"
     RELATES_TO = "relates_to", "Relates To"

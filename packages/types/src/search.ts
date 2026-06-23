@@ -63,6 +63,7 @@ export type TPageSearchResponse = {
   logo_props: TPage["logo_props"];
   projects__id: TPage["project_ids"];
   workspace__slug: IWorkspace["slug"];
+  snippet?: string;
 };
 
 export type TSearchResponse = {

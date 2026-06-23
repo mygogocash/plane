@@ -19,7 +19,7 @@ from django.db.models import (
 )
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
-from django.db.models.functions import Coalesce, Concat
+from django.db.models.functions import Coalesce, Concat, Substr
 from django.utils import timezone
 
 # Third party imports
@@ -40,6 +40,8 @@ from plane.db.models import (
     ProjectPage,
     WorkspaceMember,
 )
+
+PAGE_SEARCH_SNIPPET_MAX_LEN = 200
 
 
 class GlobalSearchEndpoint(BaseAPIView):
@@ -161,7 +163,7 @@ class GlobalSearchEndpoint(BaseAPIView):
         )
 
     def filter_pages(self, query, slug, project_id, workspace_search):
-        fields = ["name"]
+        fields = ["name", "description_stripped"]
         q = Q()
         if query:
             for field in fields:
@@ -191,6 +193,13 @@ class GlobalSearchEndpoint(BaseAPIView):
                     Value([], output_field=ArrayField(CharField())),
                 )
             )
+            .annotate(
+                snippet=Substr(
+                    Coalesce("description_stripped", Value("", output_field=CharField())),
+                    1,
+                    PAGE_SEARCH_SNIPPET_MAX_LEN,
+                )
+            )
         )
 
         if workspace_search == "false" and project_id:
@@ -203,7 +212,7 @@ class GlobalSearchEndpoint(BaseAPIView):
         return (
             pages.order_by("-created_at")
             .distinct()
-            .values("name", "id", "project_ids", "project_identifiers", "workspace__slug")
+            .values("name", "id", "project_ids", "project_identifiers", "workspace__slug", "snippet")
         )
 
     def filter_views(self, query, slug, project_id, workspace_search):
@@ -418,7 +427,7 @@ class SearchEndpoint(BaseAPIView):
                     response_data["issue"] = list(issues)
 
                 elif query_type == "cycle":
-                    fields = ["name"]
+                    fields = ["name", "description_stripped"]
                     q = Q()
 
                     if query:
@@ -495,7 +504,7 @@ class SearchEndpoint(BaseAPIView):
                     response_data["module"] = list(modules)
 
                 elif query_type == "page":
-                    fields = ["name"]
+                    fields = ["name", "description_stripped"]
                     q = Q()
 
                     if query:
@@ -513,12 +522,20 @@ class SearchEndpoint(BaseAPIView):
                         )
                         .order_by("-created_at")
                         .distinct()
+                        .annotate(
+                            snippet=Substr(
+                                Coalesce("description_stripped", Value("", output_field=CharField())),
+                                1,
+                                PAGE_SEARCH_SNIPPET_MAX_LEN,
+                            )
+                        )
                         .values(
                             "name",
                             "id",
                             "logo_props",
                             "projects__id",
                             "workspace__slug",
+                            "snippet",
                         )[:count]
                     )
                     response_data["page"] = list(pages)
@@ -697,7 +714,7 @@ class SearchEndpoint(BaseAPIView):
                     response_data["module"] = list(modules)
 
                 elif query_type == "page":
-                    fields = ["name"]
+                    fields = ["name", "description_stripped"]
                     q = Q()
 
                     if query:
@@ -715,12 +732,20 @@ class SearchEndpoint(BaseAPIView):
                         )
                         .order_by("-created_at")
                         .distinct()
+                        .annotate(
+                            snippet=Substr(
+                                Coalesce("description_stripped", Value("", output_field=CharField())),
+                                1,
+                                PAGE_SEARCH_SNIPPET_MAX_LEN,
+                            )
+                        )
                         .values(
                             "name",
                             "id",
                             "logo_props",
                             "projects__id",
                             "workspace__slug",
+                            "snippet",
                         )[:count]
                     )
                     response_data["page"] = list(pages)

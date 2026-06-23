@@ -7,6 +7,7 @@
 // editor
 import type { TExtensions } from "@plane/editor";
 import type { EPageStoreType } from "@/plane-web/hooks/store";
+import { isSelfHostedFeatureEnabled } from "../lib/self-host-entitlements";
 
 export type TEditorFlaggingHookReturnType = {
   document: {
@@ -29,20 +30,27 @@ export type TEditorFlaggingHookProps = {
   storeType?: EPageStoreType;
 };
 
+const getDisabledExtensions = (): TExtensions[] =>
+  isSelfHostedFeatureEnabled("collaboration_cursor") ? ["ai"] : ["ai", "collaboration-cursor"];
+
 /**
  * @description extensions disabled in various editors
  */
-export const useEditorFlagging = (_props: TEditorFlaggingHookProps): TEditorFlaggingHookReturnType => ({
-  document: {
-    disabled: ["ai", "collaboration-cursor"],
-    flagged: [],
-  },
-  liteText: {
-    disabled: ["ai", "collaboration-cursor"],
-    flagged: [],
-  },
-  richText: {
-    disabled: ["ai", "collaboration-cursor"],
-    flagged: [],
-  },
-});
+export const useEditorFlagging = (_props: TEditorFlaggingHookProps): TEditorFlaggingHookReturnType => {
+  const disabled = getDisabledExtensions();
+
+  return {
+    document: {
+      disabled,
+      flagged: [],
+    },
+    liteText: {
+      disabled,
+      flagged: [],
+    },
+    richText: {
+      disabled,
+      flagged: [],
+    },
+  };
+};

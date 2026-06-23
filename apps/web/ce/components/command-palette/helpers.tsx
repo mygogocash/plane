@@ -88,9 +88,12 @@ export const commandGroups: TCommandGroups = {
   page: {
     icon: <PageIcon className="h-3 w-3" />,
     itemName: (page: IWorkspacePageSearchResult) => (
-      <h6>
-        <span className="text-11 text-tertiary">{page.project__identifiers?.[0]}</span> {page.name}
-      </h6>
+      <div className="flex flex-col gap-0.5">
+        <h6>
+          <span className="text-11 text-tertiary">{page.project__identifiers?.[0]}</span> {page.name}
+        </h6>
+        {page.snippet && <p className="line-clamp-2 text-11 text-tertiary">{page.snippet}</p>}
+      </div>
     ),
     path: (page: IWorkspacePageSearchResult, projectId: string | undefined) => {
       let redirectProjectId = page?.project_ids?.[0];

@@ -313,15 +313,15 @@ class TestCopilotMessagesEndpoint:
 
     @pytest.mark.django_db
     @override_settings(SKIP_ENV_VAR=False)
-    def test_instance_config__given_vertex_provider__then_reports_llm_configured_without_api_key(self, api_client):
+    def test_instance_config__given_cloudflare_provider__then_reports_default_model_and_unconfigured_without_secret(self, api_client):
         _create_instance()
 
         with patch.dict(
             "os.environ",
             {
                 "LLM_API_KEY": "",
-                "LLM_PROVIDER": "vertexai",
-                "LLM_MODEL": "gemini-2.5-flash",
+                "LLM_PROVIDER": "cloudflare",
+                "LLM_MODEL": "@cf/zai-org/glm-5.2",
                 "LLM_VERTEX_PROJECT": "plane-test-project",
                 "LLM_VERTEX_LOCATION": "us-central1",
             },
@@ -329,4 +329,4 @@ class TestCopilotMessagesEndpoint:
             response = api_client.get("/api/instances/")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["config"]["has_llm_configured"] is True
+        assert response.data["config"]["has_llm_configured"] is False

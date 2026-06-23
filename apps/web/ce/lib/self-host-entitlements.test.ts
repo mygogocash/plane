@@ -28,6 +28,7 @@ describe("self-host entitlements", () => {
       "analytics",
       "audit_logs",
       "bulk_operations",
+      "collaboration_cursor",
       "dashboards",
       "epics",
       "estimates_time",

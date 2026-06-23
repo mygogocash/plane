@@ -143,6 +143,7 @@ export interface IWorkspacePageSearchResult {
   project_ids: string[];
   project__identifiers: string[];
   workspace__slug: string;
+  snippet?: string;
 }
 
 export interface IWorkspaceProjectSearchResult {
