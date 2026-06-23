@@ -1,3 +1,7 @@
+# Copyright (c) 2023-present Plane Software, Inc. and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+# See the LICENSE file for details.
+
 """Tests for context-engineering edge case handling.
 
 Tests the error handling improvements in compression_evaluator.py and context_analyzer.py:

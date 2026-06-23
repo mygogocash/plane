@@ -313,7 +313,9 @@ class TestCopilotMessagesEndpoint:
 
     @pytest.mark.django_db
     @override_settings(SKIP_ENV_VAR=False)
-    def test_instance_config__given_cloudflare_provider__then_reports_default_model_and_unconfigured_without_secret(self, api_client):
+    def test_instance_config__given_cloudflare_provider__then_reports_default_model_and_unconfigured_without_secret(
+        self, api_client
+    ):
         _create_instance()
 
         with patch.dict(

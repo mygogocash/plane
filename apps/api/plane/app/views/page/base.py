@@ -630,7 +630,10 @@ class PageTemplateEndpoint(BaseAPIView):
             return Response({"error": "Project not found"}, status=status.HTTP_400_BAD_REQUEST)
 
         if project is not None and not self._can_write_project(project, request.user):
-            return Response({"error": "You are not allowed to create page templates for this project"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "You are not allowed to create page templates for this project"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         serializer = PageTemplateSerializer(data=request.data, context={"workspace": workspace})
         if not serializer.is_valid():
@@ -649,7 +652,10 @@ class PageTemplateEndpoint(BaseAPIView):
             return Response({"error": "Page template not found"}, status=status.HTTP_404_NOT_FOUND)
 
         if template.owned_by_id != request.user.id and not self._can_write_workspace(workspace, request.user):
-            return Response({"error": "You are not allowed to update this page template"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "You are not allowed to update this page template"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         project = template.project
         if "project" in request.data:
@@ -658,7 +664,10 @@ class PageTemplateEndpoint(BaseAPIView):
                 return Response({"error": "Project not found"}, status=status.HTTP_400_BAD_REQUEST)
 
         if project is not None and not self._can_write_project(project, request.user):
-            return Response({"error": "You are not allowed to update page templates for this project"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "You are not allowed to update page templates for this project"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         serializer = PageTemplateSerializer(template, data=request.data, partial=True, context={"workspace": workspace})
         if not serializer.is_valid():
@@ -677,7 +686,10 @@ class PageTemplateEndpoint(BaseAPIView):
             return Response({"error": "Page template not found"}, status=status.HTTP_404_NOT_FOUND)
 
         if template.owned_by_id != request.user.id and not self._can_write_workspace(workspace, request.user):
-            return Response({"error": "You are not allowed to delete this page template"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "You are not allowed to delete this page template"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         template.is_active = False
         template.save(update_fields=["is_active", "updated_at"])
@@ -702,10 +714,16 @@ class PageTemplateApplyEndpoint(PageTemplateEndpoint):
             return Response({"error": "Project not found"}, status=status.HTTP_400_BAD_REQUEST)
 
         if template.project_id is not None and template.project_id != project.id:
-            return Response({"error": "Page template does not belong to this project"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Page template does not belong to this project"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not self._can_write_project(project, request.user):
-            return Response({"error": "You are not allowed to create pages in this project"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "You are not allowed to create pages in this project"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         page = Page.objects.create(
             workspace=workspace,

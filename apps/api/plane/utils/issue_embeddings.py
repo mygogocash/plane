@@ -26,7 +26,10 @@ def issue_embeddings_enabled():
 
 
 def get_issue_embedding_model_name():
-    return os.environ.get("WORKSPACE_AI_EMBEDDING_MODEL", DEFAULT_ISSUE_EMBEDDING_MODEL).strip() or DEFAULT_ISSUE_EMBEDDING_MODEL
+    return (
+        os.environ.get("WORKSPACE_AI_EMBEDDING_MODEL", DEFAULT_ISSUE_EMBEDDING_MODEL).strip()
+        or DEFAULT_ISSUE_EMBEDDING_MODEL
+    )
 
 
 def issue_embedding_model():

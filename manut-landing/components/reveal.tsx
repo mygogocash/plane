@@ -1,14 +1,20 @@
-'use client';
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+"use client";
 
-import { cn } from '@/lib/utils';
+import { type ReactNode, useEffect, useRef, useState } from "react";
+
+import { cn } from "@/lib/utils";
 
 interface RevealProps {
   children: ReactNode;
   className?: string;
   delay?: number;
-  as?: 'div' | 'section' | 'article' | 'ul';
+  as?: "div" | "section" | "article" | "ul";
 }
 
 /**
@@ -16,12 +22,7 @@ interface RevealProps {
  * GPU-composited: opacity + transform only.
  * Honors prefers-reduced-motion via the `.reveal` utility in globals.css.
  */
-export function Reveal({
-  children,
-  className,
-  delay = 0,
-  as: Tag = 'div',
-}: RevealProps) {
+export function Reveal({ children, className, delay = 0, as: Tag = "div" }: RevealProps) {
   const ref = useRef<HTMLElement | null>(null);
   const [visible, setVisible] = useState(false);
 
@@ -29,7 +30,7 @@ export function Reveal({
     const node = ref.current;
     if (!node) return;
     const observer = new IntersectionObserver(
-      entries => {
+      (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
             setVisible(true);
@@ -38,7 +39,7 @@ export function Reveal({
           }
         }
       },
-      { threshold: 0.12, rootMargin: '0px 0px -10% 0px' }
+      { threshold: 0.12, rootMargin: "0px 0px -10% 0px" }
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -47,7 +48,7 @@ export function Reveal({
   return (
     <Tag
       ref={ref as never}
-      className={cn('reveal', visible && 'is-visible', className)}
+      className={cn("reveal", visible && "is-visible", className)}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
