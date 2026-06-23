@@ -34,6 +34,7 @@ from plane.app.views import (
     IssuePropertyOptionViewSet,
     IssuePropertyViewSet,
     RecurringWorkItemViewSet,
+    DuplicateCheckEndpoint,
     SimilarIssuesEndpoint,
     WorkItemTemplateViewSet,
 )
@@ -53,6 +54,11 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/similar/",
         SimilarIssuesEndpoint.as_view(),
         name="project-similar-issues",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/duplicate-check/",
+        DuplicateCheckEndpoint.as_view(),
+        name="project-issue-duplicate-check",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues-detail/",

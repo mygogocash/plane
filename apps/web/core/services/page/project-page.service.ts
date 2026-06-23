@@ -12,6 +12,19 @@ import type { TDocumentPayload, TPage, TPageCreatePayload } from "@plane/types";
 import { APIService } from "@/services/api.service";
 import { FileUploadService } from "@/services/file-upload.service";
 
+export type TPageBacklink = {
+  id: string;
+  name: string;
+  workspace__slug: string;
+  project_ids: string[];
+  project_identifiers: string[];
+  updated_at: string;
+};
+
+export type TPageBacklinksResponse = {
+  backlinks: TPageBacklink[];
+};
+
 export class ProjectPageService extends APIService {
   private fileUploadService: FileUploadService;
 
@@ -171,6 +184,14 @@ export class ProjectPageService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error;
+      });
+  }
+
+  async fetchBacklinks(workspaceSlug: string, projectId: string, pageId: string): Promise<TPageBacklinksResponse> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/${pageId}/backlinks/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
       });
   }
 

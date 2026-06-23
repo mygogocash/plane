@@ -47,6 +47,11 @@ import { useProjectIssueProperties } from "@/hooks/use-project-issue-properties"
 import { DeDupeButtonRoot } from "@/plane-web/components/de-dupe/de-dupe-button";
 import { DuplicateModalRoot } from "@/plane-web/components/de-dupe/duplicate-modal";
 import {
+  buildDuplicateOverridePayload,
+  DuplicateOverrideWarning,
+  shouldRequireDuplicateOverride,
+} from "@/plane-web/components/de-dupe/duplicate-override-warning";
+import {
   IssueTypeSelect,
   RecurringWorkItemModalSection,
   WorkItemTemplateSelect,
@@ -257,6 +262,17 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
         };
 
     // this condition helps to move the issues from draft to project issues
+    const duplicateOverridePayload = buildDuplicateOverridePayload(
+      duplicateIssues,
+      hasAcknowledgedDuplicateOverride,
+      hasHighConfidenceDuplicate,
+      duplicateCheck?.threshold
+    );
+
+    if (duplicateOverridePayload)
+      (submitData as typeof submitData & { duplicate_override?: unknown }).duplicate_override =
+        duplicateOverridePayload;
+
     if (formData.hasOwnProperty("is_draft")) submitData.is_draft = formData.is_draft;
 
     try {
@@ -321,7 +337,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   };
 
   // debounced duplicate issues swr
-  const { duplicateIssues } = useDebouncedDuplicateIssues(
+  const { duplicateIssues, duplicateCheck, hasHighConfidenceDuplicate } = useDebouncedDuplicateIssues(
     workspaceSlug?.toString(),
     projectDetails?.workspace.toString(),
     projectId ?? undefined,
@@ -379,7 +395,16 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // TODO: Remove this after the de-dupe feature is implemented
 
+  const [hasAcknowledgedDuplicateOverride, setHasAcknowledgedDuplicateOverride] = useState(false);
+  const isDuplicateOverrideRequired = shouldRequireDuplicateOverride(
+    hasHighConfidenceDuplicate,
+    hasAcknowledgedDuplicateOverride
+  );
   const shouldRenderDuplicateModal = isDuplicateModalOpen && duplicateIssues?.length > 0;
+
+  useEffect(() => {
+    setHasAcknowledgedDuplicateOverride(false);
+  }, [duplicateIssues]);
 
   return (
     <FormProvider {...methods}>
@@ -435,6 +460,12 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                         : `${duplicateIssues.length} ${t("duplicate_issues_found")}`
                     }
                     handleOnClick={() => handleDuplicateIssueModal(!isDuplicateModalOpen)}
+                  />
+                )}
+                {hasHighConfidenceDuplicate && (
+                  <DuplicateOverrideWarning
+                    checked={hasAcknowledgedDuplicateOverride}
+                    onCheckedChange={setHasAcknowledgedDuplicateOverride}
                   />
                 )}
               </div>
@@ -565,7 +596,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                         type="submit"
                         ref={submitBtnRef}
                         loading={isSubmitting}
-                        disabled={isDisabled}
+                        disabled={isDisabled || isDuplicateOverrideRequired}
                       >
                         {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
                       </Button>

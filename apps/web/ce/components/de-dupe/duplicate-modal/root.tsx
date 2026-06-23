@@ -40,6 +40,20 @@ export const shouldRenderDuplicateBanner = (issues: TSimilarIssue[], isDismissed
 
 export const formatConfidence = (confidence: number) => `${Math.round(confidence * 100)}%`;
 
+const MATCHED_FIELD_LABELS: Record<string, string> = {
+  title: "title",
+  description: "description",
+};
+
+export const formatMatchedFields = (matchedOn: string[] = []) => {
+  const labels = matchedOn.map((field) => MATCHED_FIELD_LABELS[field] ?? field.replace(/_/g, " ")).filter(Boolean);
+
+  if (labels.length === 0) return "";
+  if (labels.length === 1) return labels[0];
+
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+};
+
 export const linkDuplicateIssue = async ({
   workspaceSlug,
   projectId,
@@ -127,6 +141,11 @@ export function DuplicateModalRoot(props: TDuplicateModalRootProps) {
                 <div className="min-w-0">
                   <div className="text-xs truncate font-medium text-primary">{issue.name}</div>
                   <div className="text-xs mt-1 text-secondary">{formatConfidence(issue.confidence)} confidence</div>
+                  {issue.matched_on?.length ? (
+                    <div className="text-xs mt-1 text-secondary">
+                      Matched on {formatMatchedFields(issue.matched_on)}
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"

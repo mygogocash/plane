@@ -13,6 +13,7 @@ from django.db.models import (
     Exists,
     OuterRef,
     Q,
+    CharField,
     Value,
     UUIDField,
     Count,
@@ -35,15 +36,19 @@ from plane.app.serializers import (
     PageSerializer,
     PageDetailSerializer,
     PageBinaryUpdateSerializer,
+    PageTemplateSerializer,
 )
 from plane.db.models import (
     Page,
     PageLog,
+    PageTemplate,
     UserFavorite,
     ProjectMember,
     ProjectPage,
     Project,
     UserRecentVisit,
+    Workspace,
+    WorkspaceMember,
 )
 from plane.utils.error_codes import ERROR_CODES
 
@@ -480,6 +485,242 @@ class PageViewSet(BaseViewSet):
         )
 
         return Response(stats, status=status.HTTP_200_OK)
+
+
+class PageBacklinksEndpoint(BaseAPIView):
+    permission_classes = [ProjectPagePermission]
+
+    def get(self, request, slug, project_id, page_id):
+        project_member_exists = ProjectMember.objects.filter(
+            workspace__slug=slug,
+            project_id=project_id,
+            member=request.user,
+            is_active=True,
+        ).exists()
+        if not project_member_exists:
+            return Response({"error": "You are not allowed to view this page"}, status=status.HTTP_403_FORBIDDEN)
+
+        target_page = (
+            Page.objects.filter(
+                pk=page_id,
+                workspace__slug=slug,
+                project_pages__project_id=project_id,
+                project_pages__deleted_at__isnull=True,
+            )
+            .distinct()
+            .first()
+        )
+        if target_page is None:
+            return Response({"error": "Page not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if target_page.access == Page.PRIVATE_ACCESS and target_page.owned_by_id != request.user.id:
+            return Response({"error": "You are not allowed to view this page"}, status=status.HTTP_403_FORBIDDEN)
+
+        backlink_page_ids = PageLog.objects.filter(
+            workspace__slug=slug,
+            entity_identifier=page_id,
+            entity_name__in=["back_link", "page_mention"],
+        ).values_list("page_id", flat=True)
+
+        backlinks = (
+            Page.objects.filter(
+                pk__in=backlink_page_ids,
+                workspace__slug=slug,
+                project_pages__project__project_projectmember__member=request.user,
+                project_pages__project__project_projectmember__is_active=True,
+                project_pages__deleted_at__isnull=True,
+            )
+            .filter(Q(access=Page.PUBLIC_ACCESS) | Q(owned_by=request.user))
+            .annotate(
+                project_ids=Coalesce(
+                    ArrayAgg(
+                        "project_pages__project_id",
+                        distinct=True,
+                        filter=~Q(project_pages__project_id=None),
+                    ),
+                    Value([], output_field=ArrayField(UUIDField())),
+                )
+            )
+            .annotate(
+                project_identifiers=Coalesce(
+                    ArrayAgg(
+                        "project_pages__project__identifier",
+                        distinct=True,
+                        filter=~Q(project_pages__project_id=None),
+                    ),
+                    Value([], output_field=ArrayField(CharField())),
+                )
+            )
+            .order_by("-updated_at")
+            .distinct()
+            .values("id", "name", "workspace__slug", "project_ids", "project_identifiers", "updated_at")
+        )
+
+        return Response({"backlinks": list(backlinks)}, status=status.HTTP_200_OK)
+
+
+class PageTemplateEndpoint(BaseAPIView):
+    def _workspace(self, slug):
+        return Workspace.objects.filter(slug=slug).first()
+
+    def _is_workspace_member(self, workspace, user):
+        return WorkspaceMember.objects.filter(workspace=workspace, member=user, is_active=True).exists()
+
+    def _can_write_workspace(self, workspace, user):
+        return WorkspaceMember.objects.filter(workspace=workspace, member=user, is_active=True, role__gte=15).exists()
+
+    def _can_write_project(self, project, user):
+        return ProjectMember.objects.filter(project=project, member=user, is_active=True, role__gte=15).exists()
+
+    def _project(self, workspace, project_id):
+        if not project_id:
+            return None
+        return Project.objects.filter(pk=project_id, workspace=workspace, archived_at__isnull=True).first()
+
+    def _visible_templates(self, workspace, user):
+        return (
+            PageTemplate.objects.filter(workspace=workspace, is_active=True)
+            .filter(Q(access=PageTemplate.PUBLIC_ACCESS) | Q(owned_by=user))
+            .filter(
+                Q(project__isnull=True)
+                | Q(project__project_projectmember__member=user, project__project_projectmember__is_active=True)
+            )
+            .select_related("workspace", "project", "owned_by")
+            .distinct()
+            .order_by("-created_at")
+        )
+
+    def _template(self, workspace, user, template_id):
+        return self._visible_templates(workspace, user).filter(pk=template_id).first()
+
+    def get(self, request, slug, template_id=None):
+        workspace = self._workspace(slug)
+        if workspace is None:
+            return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not self._is_workspace_member(workspace, request.user):
+            return Response({"error": "You are not a member of this workspace"}, status=status.HTTP_403_FORBIDDEN)
+
+        if template_id:
+            template = self._template(workspace, request.user, template_id)
+            if template is None:
+                return Response({"error": "Page template not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(PageTemplateSerializer(template).data, status=status.HTTP_200_OK)
+
+        queryset = self._visible_templates(workspace, request.user)
+        project_id = request.GET.get("project_id")
+        if project_id:
+            project = self._project(workspace, project_id)
+            if project is None:
+                return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+            queryset = queryset.filter(Q(project__isnull=True) | Q(project=project))
+
+        return Response(PageTemplateSerializer(queryset, many=True).data, status=status.HTTP_200_OK)
+
+    def post(self, request, slug):
+        workspace = self._workspace(slug)
+        if workspace is None:
+            return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not self._can_write_workspace(workspace, request.user):
+            return Response({"error": "You are not allowed to create page templates"}, status=status.HTTP_403_FORBIDDEN)
+
+        project = self._project(workspace, request.data.get("project"))
+        if request.data.get("project") and project is None:
+            return Response({"error": "Project not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if project is not None and not self._can_write_project(project, request.user):
+            return Response({"error": "You are not allowed to create page templates for this project"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PageTemplateSerializer(data=request.data, context={"workspace": workspace})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        template = serializer.save(workspace=workspace, project=project, owned_by=request.user)
+        return Response(PageTemplateSerializer(template).data, status=status.HTTP_201_CREATED)
+
+    def patch(self, request, slug, template_id):
+        workspace = self._workspace(slug)
+        if workspace is None:
+            return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        template = self._template(workspace, request.user, template_id)
+        if template is None:
+            return Response({"error": "Page template not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if template.owned_by_id != request.user.id and not self._can_write_workspace(workspace, request.user):
+            return Response({"error": "You are not allowed to update this page template"}, status=status.HTTP_403_FORBIDDEN)
+
+        project = template.project
+        if "project" in request.data:
+            project = self._project(workspace, request.data.get("project"))
+            if request.data.get("project") and project is None:
+                return Response({"error": "Project not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if project is not None and not self._can_write_project(project, request.user):
+            return Response({"error": "You are not allowed to update page templates for this project"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PageTemplateSerializer(template, data=request.data, partial=True, context={"workspace": workspace})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        template = serializer.save(project=project)
+        return Response(PageTemplateSerializer(template).data, status=status.HTTP_200_OK)
+
+    def delete(self, request, slug, template_id):
+        workspace = self._workspace(slug)
+        if workspace is None:
+            return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        template = self._template(workspace, request.user, template_id)
+        if template is None:
+            return Response({"error": "Page template not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if template.owned_by_id != request.user.id and not self._can_write_workspace(workspace, request.user):
+            return Response({"error": "You are not allowed to delete this page template"}, status=status.HTTP_403_FORBIDDEN)
+
+        template.is_active = False
+        template.save(update_fields=["is_active", "updated_at"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PageTemplateApplyEndpoint(PageTemplateEndpoint):
+    def post(self, request, slug, template_id):
+        workspace = self._workspace(slug)
+        if workspace is None:
+            return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not self._is_workspace_member(workspace, request.user):
+            return Response({"error": "You are not a member of this workspace"}, status=status.HTTP_403_FORBIDDEN)
+
+        template = self._template(workspace, request.user, template_id)
+        if template is None:
+            return Response({"error": "Page template not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        project = self._project(workspace, request.data.get("project_id"))
+        if project is None:
+            return Response({"error": "Project not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if template.project_id is not None and template.project_id != project.id:
+            return Response({"error": "Page template does not belong to this project"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not self._can_write_project(project, request.user):
+            return Response({"error": "You are not allowed to create pages in this project"}, status=status.HTTP_403_FORBIDDEN)
+
+        page = Page.objects.create(
+            workspace=workspace,
+            owned_by=request.user,
+            name=request.data.get("name") or template.name,
+            description_json=json.loads(json.dumps(template.description_json or {}, cls=DjangoJSONEncoder)),
+            description_binary=template.description_binary,
+            description_html=template.description_html,
+            logo_props=json.loads(json.dumps(template.logo_props or {}, cls=DjangoJSONEncoder)),
+            access=request.data.get("access", Page.PUBLIC_ACCESS),
+            is_global=True,
+        )
+        ProjectPage.objects.create(project=project, page=page, workspace=workspace)
+
+        return Response(PageDetailSerializer(page).data, status=status.HTTP_201_CREATED)
 
 
 class PageFavoriteViewSet(BaseViewSet):

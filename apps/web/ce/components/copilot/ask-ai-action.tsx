@@ -7,8 +7,6 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, ExternalLink, Loader2, Send, Sparkles } from "lucide-react";
 // plane imports
-import { Button } from "@plane/propel/button";
-import { TextArea } from "@plane/ui";
 import { cn } from "@plane/utils";
 // services
 import {
@@ -18,10 +16,44 @@ import {
   type TCopilotQueryScope,
 } from "@/services/ai.service";
 
+type CopilotButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  prependIcon?: React.ReactNode;
+  size?: "sm" | "md" | "lg" | string;
+  variant?: "primary" | "secondary";
+};
+
+const CopilotButton = ({
+  children,
+  className,
+  disabled,
+  prependIcon,
+  size,
+  variant = "secondary",
+  ...props
+}: CopilotButtonProps) => (
+  <button
+    type="button"
+    className={cn(
+      "inline-flex items-center gap-1.5 rounded-md font-medium transition-colors",
+      size === "sm" ? "text-sm px-3 py-1.5" : "text-base px-4 py-2",
+      variant === "primary"
+        ? "bg-custom-primary-100 hover:bg-custom-primary-200 text-white"
+        : "border-custom-border-200 text-custom-text-200 hover:bg-custom-background-90 border",
+      disabled && "cursor-not-allowed opacity-60",
+      className
+    )}
+    disabled={disabled}
+    {...props}
+  >
+    {prependIcon}
+    {children}
+  </button>
+);
+
 export type TAskAIActionOwner = {
-  scope: Extract<TCopilotQueryScope, "epic" | "initiative">;
+  scope: Extract<TCopilotQueryScope, "epic" | "initiative" | "project" | "workspace">;
   workspaceSlug: string;
-  objectId: string;
+  objectId?: string;
   title?: string | undefined;
 };
 
@@ -65,9 +97,13 @@ const defaultCopilotQueryService: TAskAIQueryService = {
 };
 
 const defaultQuestion = (owner: TAskAIActionOwner) =>
-  owner.scope === "initiative"
-    ? `Summarize progress for this initiative${owner.title ? `: ${owner.title}` : ""}.`
-    : `Summarize progress for this epic${owner.title ? `: ${owner.title}` : ""}.`;
+  owner.scope === "workspace"
+    ? `Summarize progress for this workspace${owner.title ? `: ${owner.title}` : ""}.`
+    : owner.scope === "project"
+      ? `Summarize progress for this project${owner.title ? `: ${owner.title}` : ""}.`
+      : owner.scope === "initiative"
+        ? `Summarize progress for this initiative${owner.title ? `: ${owner.title}` : ""}.`
+        : `Summarize progress for this epic${owner.title ? `: ${owner.title}` : ""}.`;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -148,11 +184,13 @@ export const submitCopilotQuestion = async ({
   }
 
   try {
-    const result = await service.query(owner.workspaceSlug, {
+    const payload: TCopilotQueryPayload = {
       scope: owner.scope,
-      object_id: owner.objectId,
       question: trimmedQuestion,
-    });
+    };
+    if (owner.objectId) payload.object_id = owner.objectId;
+
+    const result = await service.query(owner.workspaceSlug, payload);
     return { status: "success", result };
   } catch (error) {
     return resolveCopilotError(error);
@@ -218,7 +256,7 @@ export const AskAIAction = ({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
+        <CopilotButton
           type="button"
           variant="secondary"
           size="sm"
@@ -227,8 +265,8 @@ export const AskAIAction = ({
           onClick={() => setIsOpen((current) => !current)}
         >
           {status === "not_configured" ? "Configure AI provider" : "Ask AI"}
-        </Button>
-        <Button
+        </CopilotButton>
+        <CopilotButton
           type="button"
           variant="secondary"
           size="sm"
@@ -237,7 +275,7 @@ export const AskAIAction = ({
           onClick={() => submitQuestion(defaultQuestion(owner))}
         >
           Summarize progress
-        </Button>
+        </CopilotButton>
         {providerHint && (
           <span className="flex min-w-0 items-center gap-1 text-12 text-tertiary">
             <AlertCircle className="size-3.5 flex-shrink-0" />
@@ -248,21 +286,19 @@ export const AskAIAction = ({
 
       {isOpen && status !== "not_configured" && (
         <div className="space-y-3 rounded-md border border-subtle bg-layer-1 p-3">
-          <TextArea
+          <textarea
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") submitQuestion();
             }}
-            mode="primary"
-            textAreaSize="sm"
             className="min-h-20 text-13"
             disabled={disabled || status === "loading"}
             placeholder={`Ask about this ${owner.scope}`}
           />
           <div className="flex items-center justify-between gap-3">
             <p className="text-11 text-tertiary">Scoped to this {owner.scope} and its readable status updates.</p>
-            <Button
+            <CopilotButton
               type="button"
               variant="primary"
               size="sm"
@@ -271,7 +307,7 @@ export const AskAIAction = ({
               onClick={() => submitQuestion()}
             >
               Send
-            </Button>
+            </CopilotButton>
           </div>
 
           {status === "unavailable" && (

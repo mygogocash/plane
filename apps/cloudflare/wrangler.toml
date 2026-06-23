@@ -6,6 +6,18 @@ account_id = "187ab61ed9dbc6e616cb23e6b95aa8f1"
 
 [observability]
 enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
 
 [vars]
 APP_ENV = "preview"

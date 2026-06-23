@@ -15,8 +15,10 @@ import { useAppRouter } from "@/hooks/use-app-router";
 // plane web hooks
 import type { EPageStoreType } from "@/plane-web/hooks/store";
 import { usePageStore } from "@/plane-web/hooks/store";
+import { isSelfHostedFeatureEnabled } from "@/plane-web/lib/self-host-entitlements";
 // local imports
 import { PageForm } from "./page-form";
+import { TemplateGalleryModal } from "./template-gallery-modal";
 
 type Props = {
   workspaceSlug: string;
@@ -44,6 +46,8 @@ export function CreatePageModal(props: Props) {
     name: "",
     logo_props: undefined,
   });
+  const [isTemplateGalleryOpen, setTemplateGalleryOpen] = useState(false);
+  const templatesEnabled = isSelfHostedFeatureEnabled("templates");
   // router
   const router = useAppRouter();
   // store hooks
@@ -82,11 +86,32 @@ export function CreatePageModal(props: Props) {
       position={EModalPosition.TOP}
       width={EModalWidth.XXL}
     >
+      {templatesEnabled ? (
+        <div className="border-custom-border-200 border-b px-5 py-4">
+          <button
+            type="button"
+            className="border-custom-border-200 text-sm text-custom-text-200 hover:bg-custom-background-90 rounded-md border px-3 py-2 font-medium"
+            onClick={() => setTemplateGalleryOpen(true)}
+          >
+            Browse templates
+          </button>
+        </div>
+      ) : null}
       <PageForm
         formData={pageFormData}
         handleFormData={handlePageFormData}
         handleModalClose={handleStateClear}
         handleFormSubmit={handleFormSubmit}
+      />
+      <TemplateGalleryModal
+        isOpen={isTemplateGalleryOpen}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        onClose={() => setTemplateGalleryOpen(false)}
+        onTemplateApplied={(pageData) => {
+          handleStateClear();
+          if (redirectionEnabled) router.push(`/${workspaceSlug}/projects/${projectId}/pages/${pageData.id}`);
+        }}
       />
     </ModalCore>
   );

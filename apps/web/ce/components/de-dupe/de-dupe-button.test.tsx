@@ -7,8 +7,21 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("@plane/propel/toast", () => ({
+  TOAST_TYPE: {
+    ERROR: "error",
+    SUCCESS: "success",
+  },
+  setToast: vi.fn(),
+}));
+
 import { DeDupeButtonRoot } from "./de-dupe-button";
-import { DuplicateModalRoot, linkDuplicateIssue, shouldRenderDuplicateBanner } from "./duplicate-modal";
+import {
+  DuplicateModalRoot,
+  formatMatchedFields,
+  linkDuplicateIssue,
+  shouldRenderDuplicateBanner,
+} from "./duplicate-modal";
 import type { TSimilarIssue } from "@/types/similar-issue";
 
 const issue = (overrides: Partial<TSimilarIssue> = {}): TSimilarIssue => ({
@@ -41,7 +54,10 @@ describe("DuplicateModalRoot", () => {
         workspaceSlug="acme"
         projectId="project-1"
         rootIssueId="issue-root"
-        issues={[issue(), issue({ id: "issue-2", name: "Checkout fails after 3DS", confidence: 0.72 })]}
+        issues={[
+          issue({ matched_on: ["title", "description"] }),
+          issue({ id: "issue-2", name: "Checkout fails after 3DS", confidence: 0.72 }),
+        ]}
         handleDuplicateIssueModal={vi.fn()}
       />
     );
@@ -49,8 +65,15 @@ describe("DuplicateModalRoot", () => {
     expect(markup).toContain('aria-live="polite"');
     expect(markup).toContain("Similar work items");
     expect(markup).toContain("86%");
+    expect(markup).toContain("Matched on title and description");
     expect(markup).toContain("Checkout payment fails on mobile");
     expect(markup).toContain("Link as duplicate");
+  });
+
+  it("formats matched fields for transparent duplicate scoring", () => {
+    expect(formatMatchedFields(["title"])).toBe("title");
+    expect(formatMatchedFields(["title", "description"])).toBe("title and description");
+    expect(formatMatchedFields(["source_issue", "description"])).toBe("source issue and description");
   });
 
   it("does not render when results are empty or dismissed", () => {

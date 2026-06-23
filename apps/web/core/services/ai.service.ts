@@ -49,7 +49,7 @@ export type TCopilotMessagePayload = {
   issue_id?: string;
 };
 
-export type TCopilotQueryScope = "epic" | "initiative" | "workspace";
+export type TCopilotQueryScope = "epic" | "initiative" | "project" | "workspace";
 
 export type TCopilotQueryPayload = {
   scope: TCopilotQueryScope;

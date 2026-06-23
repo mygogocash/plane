@@ -19,4 +19,13 @@ describe("Wrangler production config", () => {
   it("does not check in a self-referential legacy GKE origin", () => {
     expect(wranglerConfig).not.toContain('LEGACY_GKE_ORIGIN = "https://app.manut.xyz"');
   });
+
+  it("keeps logs and traces observability persistent across deployments", () => {
+    expect(wranglerConfig).toContain("[observability]");
+    expect(wranglerConfig).toContain("head_sampling_rate = 1");
+    expect(wranglerConfig).toContain("[observability.logs]");
+    expect(wranglerConfig).toContain("invocation_logs = true");
+    expect(wranglerConfig).toContain("[observability.traces]");
+    expect(wranglerConfig).toContain("persist = true");
+  });
 });
