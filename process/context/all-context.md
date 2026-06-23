@@ -1,5 +1,22 @@
 # Manut / Plane Repository Context
 
+## Current Continuation Status - 2026-06-23
+
+Use
+`process/general-plans/active/pending-continuation-lanes_PLAN_23-06-26.md`
+for cross-cutting continuation work that spans repo/process recovery, live
+rollout validation, product parity reconciliation, and product implementation
+sequencing.
+
+The active Cloudflare migration feature remains under
+`process/features/cloudflare-stack-migration/active/`. New rollout evidence
+belongs under `process/features/cloudflare-stack-migration/reports/`.
+
+Latest follow-up artifacts:
+
+- `process/features/cloudflare-stack-migration/reports/live-smoke-followup_23-06-26.md`
+- `process/general-plans/reports/product-parity-reconciliation-2026-06-23.md`
+
 This file is the root context entrypoint for substantial planning, debugging,
 review, and implementation work in this repository.
 

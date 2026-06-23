@@ -32,6 +32,7 @@ from .integration import (
 from .issue import (
     CommentReaction,
     Issue,
+    IssueEmbedding,
     IssueActivity,
     IssueAssignee,
     IssueBlocker,
@@ -49,7 +50,7 @@ from .issue import (
 )
 from .module import Module, ModuleIssue, ModuleLink, ModuleMember, ModuleUserProperties
 from .notification import EmailNotificationLog, Notification, UserNotificationPreference
-from .page import Page, PageLabel, PageLog, ProjectPage, PageVersion
+from .page import Page, PageLabel, PageLog, PageTemplate, ProjectPage, PageVersion
 from .project import (
     Project,
     ProjectBaseModel,

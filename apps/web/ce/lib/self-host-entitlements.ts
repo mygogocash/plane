@@ -1,3 +1,7 @@
+// Copyright (c) 2023-present Plane Software, Inc. and contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+// See the LICENSE file for details.
+
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -15,6 +19,7 @@ export const SELF_HOSTED_FEATURE_FLAGS = {
   analytics: true,
   audit_logs: true,
   bulk_operations: true,
+  collaboration_cursor: true,
   dashboards: true,
   epics: true,
   estimates_time: true,

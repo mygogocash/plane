@@ -63,12 +63,12 @@ class CopilotMessageSerializer(serializers.Serializer):
 
 
 class CopilotQuerySerializer(serializers.Serializer):
-    scope = serializers.ChoiceField(choices=("epic", "initiative", "workspace"))
+    scope = serializers.ChoiceField(choices=("epic", "initiative", "project", "workspace"))
     object_id = serializers.UUIDField(required=False, allow_null=True)
     question = serializers.CharField(allow_blank=False, trim_whitespace=True)
 
     def validate(self, attrs):
-        if attrs["scope"] in {"epic", "initiative"} and not attrs.get("object_id"):
+        if attrs["scope"] in {"epic", "initiative", "project"} and not attrs.get("object_id"):
             raise serializers.ValidationError({"object_id": "object_id is required for scoped Copilot queries."})
         return attrs
 
@@ -525,6 +525,8 @@ def retrieve_copilot_query_evidence(slug, user, question, scope, object_id=None)
         return retrieve_copilot_evidence(slug=slug, user=user, message=question)
     if scope == "epic":
         return _epic_query_evidence(slug=slug, user=user, epic_id=object_id)
+    if scope == "project":
+        return _project_query_evidence(slug=slug, user=user, project_id=object_id)
     if scope == "initiative":
         return _initiative_query_evidence(slug=slug, user=user, initiative_id=object_id)
     return Response({"error": "Unsupported Copilot query scope."}, status=status.HTTP_400_BAD_REQUEST)
@@ -553,6 +555,33 @@ def _epic_query_evidence(slug, user, epic_id):
     evidence = [_issue_evidence(epic, slug, entity_type="epic")]
     evidence.extend(_status_update_evidence(slug=slug, user=user, epic=epic, initiative=None))
     return evidence[:EVIDENCE_LIMIT]
+
+
+def _project_query_evidence(slug, user, project_id):
+    project = Project.objects.filter(id=project_id, workspace__slug=slug).first()
+    if project is None:
+        return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not ProjectMember.objects.filter(project=project, member=user, is_active=True).exists():
+        return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    evidence = [
+        {
+            "entity_type": "project",
+            "entity_id": str(project.id),
+            "title": project.name,
+            "text": f"Project {project.name}",
+            "source_url": f"/{slug}/projects/{project.id}/issues",
+        }
+    ]
+    project_epics = Issue.issue_objects.filter(
+        workspace__slug=slug,
+        project=project,
+        type__is_epic=True,
+    ).select_related("project", "workspace")[:EVIDENCE_LIMIT]
+    for epic in project_epics:
+        evidence.extend(_status_update_evidence(slug=slug, user=user, epic=epic))
+    return evidence
 
 
 def _initiative_query_evidence(slug, user, initiative_id):
@@ -611,8 +640,10 @@ def _initiative_evidence(initiative, slug):
     )
 
 
-def _status_update_evidence(slug, user, epic=None, initiative=None):
+def _status_update_evidence(slug, user, epic=None, initiative=None, project=None):
     queryset = StatusUpdate.objects.filter(workspace__slug=slug)
+    if project is not None:
+        queryset = queryset.filter(epic__project=project, epic__project_id__in=_readable_project_ids(slug, user))
     if epic is not None:
         queryset = queryset.filter(epic=epic, epic__project_id__in=_readable_project_ids(slug, user))
     elif initiative is not None:

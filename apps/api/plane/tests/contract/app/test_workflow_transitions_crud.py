@@ -129,8 +129,12 @@ class TestWorkflowTransitionsCRUD:
         assert rule.actors.filter(member=member_pm, deleted_at__isnull=True).count() == 1
 
     @pytest.mark.django_db
-    def test_delete_as_admin__soft_deletes(self, session_client, workspace, project, state_a, state_b):
+    def test_delete_as_admin__soft_deletes(self, session_client, workspace, project, state_a, state_b, monkeypatch):
         rule = WorkflowTransition.objects.create(project=project, from_state=state_a, to_state=state_b)
+        monkeypatch.setattr(
+            "plane.db.mixins.soft_delete_related_objects.delay",
+            lambda *args, **kwargs: None,
+        )
         response = session_client.delete(_rules_url(workspace.slug, project.id, rule.id))
 
         assert response.status_code == status.HTTP_204_NO_CONTENT

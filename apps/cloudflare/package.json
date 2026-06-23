@@ -23,6 +23,7 @@
     "cutover:readiness": "node tools/cutover-readiness.mjs",
     "live:shadow": "node tools/live-shadow-validation.mjs",
     "smoke:worker": "node tools/smoke-worker.mjs",
+    "smoke:workers-ai": "node tools/workers-ai-smoke.mjs",
     "deploy:preview": "wrangler deploy --env=\"\"",
     "deploy:production": "wrangler deploy --env production",
     "dev": "wrangler dev",

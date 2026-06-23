@@ -170,7 +170,7 @@ from .issue.link import IssueLinkViewSet
 
 from .issue.property import IssuePropertyOptionViewSet, IssuePropertyViewSet
 from .issue.recurring import RecurringWorkItemViewSet
-from .issue.similar import SimilarIssuesEndpoint
+from .issue.similar import DuplicateCheckEndpoint, SimilarIssuesEndpoint
 from .issue.template import WorkItemTemplateViewSet
 
 from .issue.relation import IssueRelationViewSet
@@ -202,6 +202,9 @@ from .page.base import (
     PageFavoriteViewSet,
     PagesDescriptionViewSet,
     PageDuplicateEndpoint,
+    PageBacklinksEndpoint,
+    PageTemplateApplyEndpoint,
+    PageTemplateEndpoint,
 )
 from .page.version import PageVersionEndpoint
 

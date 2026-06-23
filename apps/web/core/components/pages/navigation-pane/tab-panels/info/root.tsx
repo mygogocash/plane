@@ -1,3 +1,7 @@
+// Copyright (c) 2023-present Plane Software, Inc. and contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+// See the LICENSE file for details.
+
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -11,6 +15,7 @@ import type { TPageRootHandlers } from "@/components/pages/editor/page-root";
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
 import { PageNavigationPaneInfoTabActorsInfo } from "./actors-info";
+import { PageNavigationPaneInfoTabBacklinks } from "./backlinks";
 import { PageNavigationPaneInfoTabDocumentInfo } from "./document-info";
 import { PageNavigationPaneInfoTabVersionHistory } from "./version-history";
 
@@ -26,6 +31,7 @@ export const PageNavigationPaneInfoTabPanel = observer(function PageNavigationPa
       <div className="mt-5 flex-1 overflow-y-auto">
         <PageNavigationPaneInfoTabDocumentInfo page={page} />
         <PageNavigationPaneInfoTabActorsInfo page={page} />
+        <PageNavigationPaneInfoTabBacklinks page={page} />
         <div className="my-3 h-px flex-shrink-0 bg-layer-1" />
         <PageNavigationPaneInfoTabVersionHistory page={page} versionHistory={versionHistory} />
       </div>

@@ -1,3 +1,7 @@
+// Copyright (c) 2023-present Plane Software, Inc. and contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+// See the LICENSE file for details.
+
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -63,6 +67,7 @@ export type TPageSearchResponse = {
   logo_props: TPage["logo_props"];
   projects__id: TPage["project_ids"];
   workspace__slug: IWorkspace["slug"];
+  snippet?: string;
 };
 
 export type TSearchResponse = {

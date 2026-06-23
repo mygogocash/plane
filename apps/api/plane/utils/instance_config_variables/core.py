@@ -204,13 +204,13 @@ llm_config_variables = [
     },
     {
         "key": "LLM_PROVIDER",
-        "value": os.environ.get("LLM_PROVIDER", "vertexai"),
+        "value": os.environ.get("LLM_PROVIDER", "cloudflare"),
         "category": "AI",
         "is_encrypted": False,
     },
     {
         "key": "LLM_MODEL",
-        "value": os.environ.get("LLM_MODEL", "gemini-2.5-flash"),
+        "value": os.environ.get("LLM_MODEL", "@cf/zai-org/glm-5.2"),
         "category": "AI",
         "is_encrypted": False,
     },
