@@ -154,7 +154,10 @@ export function buildTemplate() {
       branch: "codex/cloudflare-cutoff-gates",
       commit_sha: "<commit-sha>",
       build_command: "pnpm --filter @manut/cloudflare ci:cloudflare",
+      build_command_observed: false,
       deploy_command: "pnpm --filter @manut/cloudflare exec wrangler versions upload --env production",
+      deploy_command_observed: false,
+      github_check_conclusion: "success",
       is_production_branch: false,
       worker_version_uploaded: true,
       production_traffic_changed: false,
@@ -239,6 +242,10 @@ export function validateCloudflareBuildsShadowInput(input) {
       errors.push("build_command_invalid");
     }
 
+    if (input.run.build_command_observed !== true) {
+      errors.push("build_command_not_observed");
+    }
+
     const isProductionBranch = input.run.branch === input.production_branch || input.run.is_production_branch === true;
     if (input.run.is_production_branch !== isProductionBranch) {
       errors.push("is_production_branch_mismatch");
@@ -249,6 +256,14 @@ export function validateCloudflareBuildsShadowInput(input) {
       : ACCEPTED_PREVIEW_DEPLOY_COMMANDS;
     if (!acceptedDeployCommands.has(input.run.deploy_command)) {
       errors.push("deploy_command_invalid");
+    }
+
+    if (input.run.deploy_command_observed !== true) {
+      errors.push("deploy_command_not_observed");
+    }
+
+    if (input.run.github_check_conclusion !== "success") {
+      errors.push("github_check_not_successful");
     }
 
     if (input.run.worker_version_uploaded !== true) {

@@ -1,16 +1,15 @@
 {
-  "kind": "cloudflare-builds-shadow-input",
-  "generated_at": "2026-06-24T13:11:52.737Z",
+  "kind": "cloudflare-builds-shadow-report",
+  "generated_at": "2026-06-24T13:12:00.861Z",
+  "ok": false,
   "worker_name": "manut-app",
   "repository": "mygogocash/plane",
   "production_branch": "preview",
-  "root_directory": ".",
-  "package_manager": "pnpm",
   "run": {
-    "build_url": "https://dash.cloudflare.com/<account>/workers/services/view/manut-app/production/builds/<build_uuid>",
-    "github_check_url": "https://github.com/mygogocash/plane/actions/runs/<run_id>",
+    "build_url": "https://dash.cloudflare.com/187ab61ed9dbc6e616cb23e6b95aa8f1/workers/services/view/manut-app/production/builds/4a54064d-7fba-437b-aa19-d2b7d28bb5cc",
+    "github_check_url": "https://github.com/mygogocash/plane/runs/83199924061",
     "branch": "codex/cloudflare-cutoff-gates",
-    "commit_sha": "<commit-sha>",
+    "commit_sha": "a5ca19c32a22b006179b1994f08fa97883baa2ef",
     "build_command": "pnpm --filter @manut/cloudflare ci:cloudflare",
     "build_command_observed": false,
     "deploy_command": "pnpm --filter @manut/cloudflare exec wrangler versions upload --env production",
@@ -36,5 +35,15 @@
       "phase8-seven-green-days"
     ]
   },
-  "notes": "Fill this with the first real Cloudflare Workers Builds shadow run. Do not use public probes as authenticated smoke evidence."
+  "validation": {
+    "ok": false,
+    "errors": ["build_command_not_observed", "deploy_command_not_observed"],
+    "warnings": [],
+    "readiness": {
+      "total": 19,
+      "passed": 14,
+      "blocked": 5
+    }
+  },
+  "conclusion": "Cloudflare Builds shadow evidence is incomplete or unsafe."
 }

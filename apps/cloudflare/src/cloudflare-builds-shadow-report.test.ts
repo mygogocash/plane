@@ -21,6 +21,9 @@ function validInput(overrides: Record<string, unknown> = {}) {
         "https://dash.cloudflare.com/187ab61ed9dbc6e616cb23e6b95aa8f1/workers/services/view/manut-app/production/builds/build-uuid",
       github_check_url: "https://github.com/mygogocash/plane/actions/runs/28000000000",
       commit_sha: "04dcbfbb7",
+      build_command_observed: true,
+      deploy_command_observed: true,
+      github_check_conclusion: "success",
     },
     ...overrides,
   };
@@ -67,6 +70,35 @@ describe("Cloudflare Builds shadow report", () => {
     expect(validateCloudflareBuildsShadowInput(input)).toMatchObject({
       ok: false,
       errors: expect.arrayContaining(["production_deploy_not_reviewed"]),
+    });
+  });
+
+  it("rejects evidence when Cloudflare build commands were not observed", () => {
+    const input = validInput({
+      run: {
+        ...validInput().run,
+        build_command_observed: false,
+        deploy_command_observed: false,
+      },
+    });
+
+    expect(validateCloudflareBuildsShadowInput(input)).toMatchObject({
+      ok: false,
+      errors: expect.arrayContaining(["build_command_not_observed", "deploy_command_not_observed"]),
+    });
+  });
+
+  it("rejects evidence when the GitHub check is not successful", () => {
+    const input = validInput({
+      run: {
+        ...validInput().run,
+        github_check_conclusion: "failure",
+      },
+    });
+
+    expect(validateCloudflareBuildsShadowInput(input)).toMatchObject({
+      ok: false,
+      errors: expect.arrayContaining(["github_check_not_successful"]),
     });
   });
 
