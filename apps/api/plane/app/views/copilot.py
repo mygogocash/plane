@@ -4,6 +4,7 @@
 
 import json
 import re
+import secrets
 from typing import Any
 
 from django.db import transaction
@@ -36,9 +37,10 @@ from .base import BaseAPIView
 from .external.base import get_llm_config, get_vertex_ai_config, is_llm_configured, is_vertex_provider
 
 
-COPILOT_MODES = ("answer", "draft_subtasks", "command", "auto")
+COPILOT_MODES = ("answer", "draft_subtasks", "command", "auto", "build_project")
 EVIDENCE_LIMIT = 8
 TEXT_LIMIT = 700
+BUILD_PROJECT_MAX_WORK_ITEMS = 50
 ISSUE_ACTION_FIELDS = {
     "name",
     "description_html",
@@ -51,7 +53,7 @@ ISSUE_ACTION_FIELDS = {
     "target_date",
 }
 ISSUE_PRIORITIES = {"urgent", "high", "medium", "low", "none"}
-WRITE_MODES = {"command", "draft_subtasks"}
+WRITE_MODES = {"command", "draft_subtasks", "build_project"}
 
 
 class CopilotMessageSerializer(serializers.Serializer):
@@ -139,6 +141,20 @@ class CopilotMessagesEndpoint(BaseAPIView):
             "issue_id": str(issue_id) if issue_id else None,
         }
 
+        if mode == "build_project":
+            return self._build_project_response(
+                conversation=conversation,
+                user=request.user,
+                project_id=project_id,
+                issue_id=issue_id,
+                api_key=api_key,
+                model=model,
+                provider=provider,
+                message=payload["message"],
+                evidence=evidence,
+                context=context,
+            )
+
         try:
             llm_result = call_copilot_llm(
                 api_key=api_key,
@@ -203,6 +219,77 @@ class CopilotMessagesEndpoint(BaseAPIView):
                 "subtask_draft": _normalize_subtask_draft(llm_result.get("subtask_draft"), mode),
                 "actions": actions,
                 "action_results": action_results,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _build_project_response(
+        self,
+        conversation,
+        user,
+        project_id,
+        issue_id,
+        api_key,
+        model,
+        provider,
+        message,
+        evidence,
+        context,
+    ):
+        """Synthesize a non-persisted, editable project draft.
+
+        Build mode never finalizes anything: it returns an editable
+        ``project_draft`` plus a one-time ``draft_token`` the client echoes back
+        to the apply endpoint. On any synthesis failure (e.g. provider quota) we
+        fail closed with 503 and persist nothing.
+        """
+        try:
+            raw_draft = synthesize_build_project_draft(
+                api_key=api_key,
+                model=model,
+                provider=provider,
+                message=message,
+                evidence=evidence,
+                context=context,
+            )
+        except Exception as error:
+            log_exception(error)
+            return Response(
+                {
+                    "error": "AI is temporarily unavailable. Please retry.",
+                    "retry": True,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        draft = _normalize_project_draft(raw_draft)
+        draft_token = secrets.token_urlsafe(24)
+        citations = [_citation_from_evidence(item) for item in evidence]
+
+        _persist_copilot_message(
+            conversation=conversation,
+            user=user,
+            project_id=project_id,
+            issue_id=issue_id,
+            mode="build_project",
+            prompt=message,
+            answer="",
+            citations=citations,
+            actions=[],
+            action_results=[],
+        )
+
+        return Response(
+            {
+                "conversation_id": str(conversation.id),
+                "mode": "build_project",
+                "answer": "",
+                "citations": citations,
+                "subtask_draft": None,
+                "actions": [],
+                "action_results": [],
+                "project_draft": draft,
+                "draft_token": draft_token,
             },
             status=status.HTTP_200_OK,
         )
@@ -750,6 +837,146 @@ def call_vertex_copilot_llm(model, mode, message, evidence, context):
     if not output_text:
         raise ValueError("Google Vertex AI response did not include JSON text")
     return json.loads(output_text)
+
+
+def synthesize_build_project_draft(api_key, model, provider, message, evidence, context):
+    """Synthesize a project draft from a natural-language description.
+
+    Returns a raw draft dict from the LLM seam. This is the single point tests
+    mock; the live path dispatches by provider exactly like ``call_copilot_llm``.
+    Nothing is persisted here.
+    """
+    return call_build_project_llm(
+        api_key=api_key,
+        model=model,
+        provider=provider,
+        message=message,
+        evidence=evidence,
+        context=context,
+    )
+
+
+def call_build_project_llm(api_key, model, provider, message, evidence, context):
+    if is_vertex_provider(provider):
+        project, location = get_vertex_ai_config()
+        if not project or not location:
+            raise ValueError("Missing Google Vertex AI project or location")
+
+        from google import genai
+        from google.genai.types import HttpOptions
+
+        client = genai.Client(
+            vertexai=True,
+            project=project,
+            location=location,
+            http_options=HttpOptions(api_version="v1"),
+        )
+        response = client.models.generate_content(
+            model=model,
+            contents=f"{_build_project_system_prompt()}\n\n{_build_project_user_prompt(message, evidence, context)}",
+            config={
+                "response_mime_type": "application/json",
+                "temperature": 0.2,
+            },
+        )
+        output_text = getattr(response, "text", None)
+        if not output_text:
+            raise ValueError("Google Vertex AI response did not include JSON text")
+        return json.loads(output_text)
+
+    client = OpenAI(api_key=api_key)
+    if provider.lower() == "gemini":
+        model = f"gemini/{model}"
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": _build_project_system_prompt()},
+            {"role": "user", "content": _build_project_user_prompt(message, evidence, context)},
+        ],
+        response_format={"type": "json_object"},
+    )
+    return json.loads(response.choices[0].message.content)
+
+
+def _build_project_system_prompt():
+    return (
+        "You are Manut Build mode. From the user's description and the provided Plane workspace "
+        "evidence, propose an editable project draft the user must review before anything is "
+        "created. Never finalize or persist anything. Return JSON with keys: name (string), "
+        "description (string), work_items (array of objects with name, description, estimate "
+        "[integer or null], priority [one of urgent/high/medium/low/none], labels [array of "
+        "strings], assignee_suggestion [string or null]), and suggested_cycle (object with name, "
+        "start_date, end_date or null)."
+    )
+
+
+def _build_project_user_prompt(message, evidence, context):
+    return json.dumps(
+        {
+            "mode": "build_project",
+            "message": message,
+            "context": context,
+            "evidence": evidence,
+        },
+        default=str,
+    )
+
+
+def _normalize_project_draft(raw):
+    """Clamp and sanitize an LLM draft into the contract shape.
+
+    The shape mirrors the frontend ``TBuildProjectDraft`` so the build editor and
+    apply endpoint can rely on a stable structure regardless of LLM output.
+    """
+    if not isinstance(raw, dict):
+        raw = {}
+
+    work_items = []
+    raw_items = raw.get("work_items")
+    if isinstance(raw_items, list):
+        for item in raw_items[:BUILD_PROJECT_MAX_WORK_ITEMS]:
+            if not isinstance(item, dict):
+                continue
+            name = _strip_text(item.get("name"))
+            if not name:
+                continue
+            priority = item.get("priority") if item.get("priority") in ISSUE_PRIORITIES else "none"
+            estimate = item.get("estimate")
+            if not isinstance(estimate, int):
+                estimate = None
+            labels = [
+                _strip_text(label)[:255]
+                for label in (item.get("labels") if isinstance(item.get("labels"), list) else [])
+                if _strip_text(label)
+            ]
+            assignee = item.get("assignee_suggestion")
+            work_items.append(
+                {
+                    "name": name[:255],
+                    "description": _strip_text(item.get("description")),
+                    "estimate": estimate,
+                    "priority": priority,
+                    "labels": labels,
+                    "assignee_suggestion": str(assignee) if assignee else None,
+                }
+            )
+
+    suggested_cycle = None
+    raw_cycle = raw.get("suggested_cycle")
+    if isinstance(raw_cycle, dict):
+        suggested_cycle = {
+            "name": _strip_text(raw_cycle.get("name"))[:255] or "Cycle",
+            "start_date": raw_cycle.get("start_date") or None,
+            "end_date": raw_cycle.get("end_date") or None,
+        }
+
+    return {
+        "name": _strip_text(raw.get("name"))[:255] or "Untitled project",
+        "description": _strip_text(raw.get("description")),
+        "work_items": work_items,
+        "suggested_cycle": suggested_cycle,
+    }
 
 
 def _copilot_system_prompt():

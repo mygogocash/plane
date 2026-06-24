@@ -199,6 +199,13 @@ export interface IWorkspaceSidebarNavigationItem {
 }
 
 export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS: Record<string, IWorkspaceSidebarNavigationItem> = {
+  ai_chat: {
+    key: "ai_chat",
+    labelTranslationKey: "sidebar.ai_chat",
+    href: `/ai-chat/`,
+    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST],
+    highlight: (pathname: string, url: string) => pathname.includes(url),
+  },
   views: {
     key: "views",
     labelTranslationKey: "views",

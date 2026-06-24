@@ -1,0 +1,67 @@
+{
+  "feature": "cloudflare-stack-migration",
+  "generated_at": "2026-06-24T11:34:16.000Z",
+  "snippets": [
+    {
+      "id": "readiness-status",
+      "source": "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json",
+      "summary": "Phase 7 readiness remains blocked at 14/19 with five operator-controlled gates outstanding.",
+      "evidence": {
+        "status": "blocked",
+        "passed": 14,
+        "total": 19,
+        "blocked_gates": [
+          "d1-import-validation",
+          "authenticated-smoke",
+          "betterstack-cutover-green",
+          "operator-cutover-approval",
+          "phase8-seven-green-days"
+        ]
+      }
+    },
+    {
+      "id": "review-decision",
+      "source": "process/features/cloudflare-stack-migration/harness/review-decision.json",
+      "summary": "The cutoff tooling PR is safe to open for review, but production cutover must not proceed.",
+      "evidence": {
+        "decision": "open_pr",
+        "production_decision": "do_not_cut_over",
+        "reason": "Remaining gates require real external evidence and operator approval."
+      }
+    },
+    {
+      "id": "adversarial-validation",
+      "source": "process/features/cloudflare-stack-migration/harness/adversarial-validation.json",
+      "summary": "False-green paths found during adversarial review were mitigated, with production gates still requiring real evidence.",
+      "evidence": {
+        "mitigated_findings": [
+          "authenticated smoke legacy bypass",
+          "operator approval legacy schema bypass",
+          "Better Stack monitor-state provenance and freshness"
+        ],
+        "remaining_gate_type": "operator/live evidence"
+      }
+    },
+    {
+      "id": "risk-gate",
+      "source": "process/features/cloudflare-stack-migration/harness/risk-gate.json",
+      "summary": "Production cutoff remains blocked until the required operator inputs are captured and validated.",
+      "evidence": {
+        "status": "blocked_for_production_cutover",
+        "pr_decision": "safe_to_open_and_review",
+        "production_decision": "do_not_cut_over"
+      }
+    },
+    {
+      "id": "verification",
+      "source": "process/features/cloudflare-stack-migration/harness/verification.json",
+      "summary": "Local verification for the cutoff-gate tooling passed, and the readiness command is blocked as expected.",
+      "evidence": {
+        "status": "cutoff_gate_tooling_verified",
+        "branch": "codex/cloudflare-cutoff-gates",
+        "commit": "91382f635",
+        "readiness_result": "expected_blocked"
+      }
+    }
+  ]
+}

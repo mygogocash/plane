@@ -44,6 +44,14 @@ function authenticatedSmokeInput() {
       edge_header: "x-manut-cloudflare-phase",
       worker_url: "https://manut-app.bettergogocash.workers.dev",
     },
+    operator_evidence_required: true,
+    operator_evidence: {
+      run_id: "auth-smoke-20260621",
+      workspace_identifier: "gogocash",
+      authenticated_workspace_url: "https://app.manut.xyz/workspaces/gogocash",
+      user_identity_redacted: "operator@example.com redacted",
+      browser_artifact: "process/features/cloudflare-stack-migration/reports/auth-smoke.png",
+    },
     checks: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((check) => ({
       id: check.id,
       ok: true,
@@ -63,6 +71,36 @@ function operatorApprovalInput() {
       start_at: "2026-06-21T13:00:00.000Z",
       end_at: "2026-06-21T14:00:00.000Z",
     },
+    operator_inputs: {
+      maintenance_window: {
+        announcement_url: "https://changes.example.com/manut-cutover-window",
+        owner: "operator@example.com",
+      },
+      rollback_checkpoint: {
+        rollback_target: "GKE production service before Cloudflare routing change",
+        rollback_command: "kubectl rollout undo deployment/manut-app",
+        checkpoint_evidence_path: "process/features/cloudflare-stack-migration/reports/rollback-checkpoint.json",
+        owner: "operator@example.com",
+      },
+      dns_routing: {
+        change_ticket_url: "https://changes.example.com/manut-dns-routing",
+        current_origin: "https://gcp.manut.xyz",
+        cutover_origin: "https://app.manut.xyz",
+        routing_owner: "operator@example.com",
+      },
+      write_freeze: {
+        start_at: "2026-06-21T12:55:00.000Z",
+        end_at: "2026-06-21T14:05:00.000Z",
+        announcement_url: "https://changes.example.com/manut-write-freeze",
+        coordinator: "operator@example.com",
+      },
+      smoke_readiness: {
+        public_smoke_command: "pnpm --filter @manut/cloudflare smoke:worker",
+        authenticated_smoke_command: "pnpm --filter @manut/cloudflare auth:smoke-report",
+        evidence_path: "process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json",
+        owner: "operator@example.com",
+      },
+    },
     checks: REQUIRED_OPERATOR_APPROVAL_CHECKS.map((check) => ({
       id: check.id,
       ok: true,
@@ -77,6 +115,15 @@ function sevenGreenDaysInput() {
     cutover_at: "2026-06-21T00:00:00.000Z",
     verified_through: "2026-06-28T00:00:00.000Z",
     target_origin: "https://app.manut.xyz",
+    phase7_readiness: {
+      ok: true,
+      status: "ready",
+      verified_at: "2026-06-28T00:00:00.000Z",
+      evidence: "Phase 7 cutover readiness command returned ready with zero selected blockers.",
+      command: "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --phase phase-07 --json",
+      report_path:
+        "process/features/cloudflare-stack-migration/reports/phase-07-production-cutover-readiness_21-06-26.md",
+    },
     checks: REQUIRED_SEVEN_GREEN_DAYS_CHECKS.map((check) => ({
       id: check.id,
       ok: true,
@@ -90,6 +137,7 @@ function betterStackReportPayload() {
   return {
     ok: true,
     evidence_kind: "betterstack-cutover",
+    monitor_source: "betterstack-api",
     monitor_summary: { total: 3, passed: 3, failed: 0 },
     endpoint_summary: { total: 3, passed: 3, failed: 0 },
     monitor_checks: [

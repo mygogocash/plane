@@ -5,7 +5,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,7 @@ import {
   buildBlockedMonitorReport,
   buildCutoverReport,
   buildMonitorReport,
+  buildMonitorReportFromState,
   endpointProbeHeaders,
   findMatchingMonitor,
   normalizeMonitorUrl,
@@ -387,6 +388,127 @@ describe("Better Stack cutover report helpers", () => {
       endpoint_probes_required: true,
       monitor_summary: { failed: 0 },
       endpoint_summary: { failed: 1 },
+    });
+  });
+
+  it("builds green monitor checks from operator-provided monitor state", () => {
+    const definitions = requiredMonitorDefinitions(env);
+    const report = buildMonitorReportFromState(
+      {
+        monitors: [
+          {
+            id: "betterstack-public-site",
+            name: "manut.xyz",
+            url: "https://manut.xyz/",
+            status: "up",
+          },
+          {
+            id: "betterstack-app-root",
+            name: "app.manut.xyz",
+            url: "https://app.manut.xyz/",
+            status: "up",
+          },
+          {
+            id: "betterstack-api-instances",
+            name: "app.manut.xyz API instances",
+            url: "https://app.manut.xyz/api/instances/",
+            status: "up",
+          },
+        ],
+      },
+      definitions
+    );
+
+    expect(report).toMatchObject({
+      ok: true,
+      summary: { total: 3, passed: 3, failed: 0 },
+    });
+    expect(report.checks.map((check) => [check.id, check.monitor_id, check.status, check.url_matches])).toEqual([
+      ["public-site", "betterstack-public-site", "up", true],
+      ["app-root", "betterstack-app-root", "up", true],
+      ["api-instances", "betterstack-api-instances", "up", true],
+    ]);
+  });
+
+  it("keeps missing monitors blocked when monitor state is incomplete", () => {
+    const definitions = requiredMonitorDefinitions(env);
+    const report = buildMonitorReportFromState(
+      {
+        monitors: [
+          {
+            id: "betterstack-public-site",
+            name: "manut.xyz",
+            url: "https://manut.xyz/",
+            status: "up",
+          },
+        ],
+      },
+      definitions
+    );
+
+    expect(report).toMatchObject({
+      ok: false,
+      summary: { total: 3, passed: 1, failed: 2 },
+    });
+    expect(report.checks.find((check) => check.id === "app-root")).toMatchObject({
+      ok: false,
+      monitor_id: null,
+      status: null,
+      remediation: "Better Stack monitor app.manut.xyz was not found by name or URL.",
+    });
+  });
+
+  it("uses monitor-state files only when no Better Stack API token is available", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "betterstack-state-"));
+    const outPath = path.join(tempDir, "report.json");
+    const monitorStatePath = path.join(tempDir, "monitor-state.json");
+    await writeFile(
+      monitorStatePath,
+      `${JSON.stringify({
+        monitor_checks: [
+          {
+            id: "public-site",
+            monitor_id: "betterstack-public-site",
+            expected_name: "manut.xyz",
+            url: "http://127.0.0.1:9",
+            expected_url: "http://127.0.0.1:9",
+            status: "up",
+          },
+          {
+            id: "app-root",
+            monitor_id: "betterstack-app-root",
+            expected_name: "app.manut.xyz",
+            url: "http://127.0.0.1:9",
+            expected_url: "http://127.0.0.1:9",
+            status: "up",
+          },
+          {
+            id: "api-instances",
+            monitor_id: "betterstack-api-instances",
+            expected_name: "app.manut.xyz API instances",
+            url: "http://127.0.0.1:9/api/instances/",
+            expected_url: "http://127.0.0.1:9/api/instances/",
+            status: "up",
+          },
+        ],
+      })}\n`,
+      "utf8"
+    );
+
+    const result = await runReportCli(["--monitor-state", monitorStatePath], outPath, {
+      BETTERSTACK_APP_URL: "http://127.0.0.1:9",
+      BETTERSTACK_SITE_URL: "http://127.0.0.1:9",
+    });
+    const report = JSON.parse(await readFile(outPath, "utf8"));
+
+    expect(result.code).toBe(1);
+    expect(report).toMatchObject({
+      ok: false,
+      betterstack_api_error: null,
+      monitor_source: "monitor-state-file",
+      monitor_state_path: monitorStatePath,
+      monitor_summary: { total: 3, passed: 3, failed: 0 },
+      endpoint_summary: { failed: 3 },
     });
   });
 });

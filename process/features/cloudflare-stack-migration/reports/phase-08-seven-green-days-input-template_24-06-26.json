@@ -1,31 +1,55 @@
 {
   "cutover_at": "2026-06-24T00:00:00.000Z",
   "verified_through": "2026-07-01T00:00:00.000Z",
+  "target_origin": "https://app.manut.xyz",
+  "phase7_readiness": {
+    "ok": false,
+    "status": "blocked",
+    "verified_at": null,
+    "evidence": "Paste Phase 7 readiness evidence only after cutover:readiness -- --phase phase-07 --json returns ready with zero selected blockers.",
+    "command": "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --phase phase-07 --json",
+    "report_path": "process/features/cloudflare-stack-migration/reports/phase-07-production-cutover-readiness_21-06-26.md"
+  },
   "checks": [
     {
       "id": "betterstack-monitors",
       "ok": false,
-      "evidence": "Better Stack monitors must be green for seven days after cutover."
+      "evidence": "Better Stack monitors must be green for seven days after cutover.",
+      "observed_at": null,
+      "url": null,
+      "note": null
     },
     {
       "id": "cloudflare-worker-logs",
       "ok": false,
-      "evidence": "Cloudflare Worker logs must show no unresolved production error trend for seven days."
+      "evidence": "Cloudflare Worker logs must show no unresolved production error trend for seven days.",
+      "observed_at": null,
+      "url": null,
+      "note": null
     },
     {
       "id": "d1-backup-export",
       "ok": false,
-      "evidence": "Attach final D1 export/backup evidence before GCP data-store decommission."
+      "evidence": "Attach final D1 export/backup evidence before GCP data-store decommission.",
+      "observed_at": null,
+      "url": null,
+      "note": null
     },
     {
       "id": "r2-backup-export",
       "ok": false,
-      "evidence": "Attach final R2 export/backup evidence before GCS decommission."
+      "evidence": "Attach final R2 export/backup evidence before GCS decommission.",
+      "observed_at": null,
+      "url": null,
+      "note": null
     },
     {
-      "id": "gke-gcp-disabled",
+      "id": "rollback-retention",
       "ok": false,
-      "evidence": "Only mark true after Phase 7 is complete, rollback window has passed, and GKE/GCP production workloads are intentionally disabled."
+      "evidence": "Confirm GKE/GCP rollback resources and final exports remain retained until explicit decommission approval.",
+      "observed_at": null,
+      "url": null,
+      "note": null
     }
   ]
 }

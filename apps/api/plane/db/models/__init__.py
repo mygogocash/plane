@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 
+from .ai import AISummary
 from .analytic import AnalyticView
 from .api import APIActivityLog, APIToken
 from .asset import FileAsset
+from .audit import AuditLog
+from .automation import AutomationRule, AutomationRun, AutomationAgent, AgentMention
 from .base import BaseModel
 from .copilot import CopilotConversation, CopilotMessage
 from .cycle import Cycle, CycleIssue, CycleUserProperties
@@ -19,13 +22,15 @@ from .draft import (
 from .estimate import Estimate, EstimatePoint
 from .exporter import ExporterHistory
 from .importer import Importer
-from .intake import Intake, IntakeIssue
+from .intake import Intake, IntakeIssue, TriageSuggestion
 from .integration import (
     GithubCommentSync,
     GithubIssueSync,
     GithubRepository,
     GithubRepositorySync,
     Integration,
+    SentryProjectSync,
+    SlackChannelBinding,
     SlackProjectSync,
     WorkspaceIntegration,
 )

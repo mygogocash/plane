@@ -13,6 +13,7 @@ const { mockService } = vi.hoisted(() => ({
     listTransitions: vi.fn(),
     stateTransition: vi.fn(),
     updateConfig: vi.fn(),
+    listApprovals: vi.fn(),
   },
 }));
 
@@ -54,18 +55,33 @@ describe("WorkflowStore", () => {
     });
   });
 
-  describe("optimistic transition", () => {
-    it("applies the new state immediately, then keeps it on a 200", async () => {
-      mockService.stateTransition.mockResolvedValue({ id: ISSUE, state_id: "B" });
+  describe("transitionWorkItem", () => {
+    it("keeps the work item state updated after a completed transition", async () => {
+      mockService.stateTransition.mockResolvedValue({
+        status: 200,
+        data: { id: ISSUE, state_id: "B" },
+      });
 
-      const pending = store.transitionWorkItem(SLUG, PROJECT, ISSUE, "A", "B");
+      const result = await store.transitionWorkItem(SLUG, PROJECT, ISSUE, "A", "B");
 
-      // Optimistic: the new state is visible synchronously, before the promise resolves.
+      expect(result).toEqual({ kind: "transitioned", issue: { id: ISSUE, state_id: "B" } });
       expect(store.getWorkItemState(ISSUE)).toBe("B");
+    });
 
-      await pending;
+    it("refreshes approvals without changing state when approval is required", async () => {
+      mockService.stateTransition.mockResolvedValue({
+        status: 202,
+        data: { approval_id: "approval-1" },
+      });
+      mockService.listApprovals.mockResolvedValue([
+        { id: "approval-1", issue: ISSUE, status: "pending", approvers: [] },
+      ]);
 
-      expect(store.getWorkItemState(ISSUE)).toBe("B");
+      const result = await store.transitionWorkItem(SLUG, PROJECT, ISSUE, "A", "B");
+
+      expect(result).toEqual({ kind: "approval_required", approvalId: "approval-1" });
+      expect(store.getWorkItemState(ISSUE)).toBeUndefined();
+      expect(mockService.listApprovals).toHaveBeenCalledWith(SLUG, PROJECT, ISSUE);
     });
 
     it("rolls back to the previous state when the service rejects with 403", async () => {

@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
 import type { ISuggestedTransition } from "@plane/types";
+import type { TWorkflowTransitionResult } from "@/plane-web/components/workflow/workflow-state-update";
 
 export type TAiSuggestionChipModel = {
   label: string;
@@ -47,6 +47,6 @@ export const acceptSuggestedTransition = ({
     issueId: string,
     fromStateId: string,
     toStateId: string
-  ) => Promise<unknown>;
+  ) => Promise<TWorkflowTransitionResult>;
   workspaceSlug: string;
-}): Promise<unknown> => transitionWorkItem(workspaceSlug, projectId, issueId, fromStateId, toStateId);
+}): Promise<TWorkflowTransitionResult> => transitionWorkItem(workspaceSlug, projectId, issueId, fromStateId, toStateId);

@@ -76,6 +76,11 @@ export const coreRoutes: RouteConfigEntry[] = [
           ),
         ]),
 
+        // Plane AI chat (AI-T27)
+        layout("./(all)/[workspaceSlug]/(ai)/layout.tsx", [
+          route(":workspaceSlug/ai-chat", "./(all)/[workspaceSlug]/(ai)/ai-chat/page.tsx"),
+        ]),
+
         // Analytics
         layout("./(all)/[workspaceSlug]/(projects)/analytics/[tabId]/layout.tsx", [
           route(":workspaceSlug/analytics/:tabId", "./(all)/[workspaceSlug]/(projects)/analytics/[tabId]/page.tsx"),
@@ -298,6 +303,11 @@ export const coreRoutes: RouteConfigEntry[] = [
           route(
             ":workspaceSlug/settings/webhooks/:webhookId",
             "./(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/[webhookId]/page.tsx"
+          ),
+          // Workspace Automations (AI-T28)
+          route(
+            ":workspaceSlug/settings/automations",
+            "./(all)/[workspaceSlug]/(settings)/settings/(workspace)/automations/page.tsx"
           ),
         ]),
 

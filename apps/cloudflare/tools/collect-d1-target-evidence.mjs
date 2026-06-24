@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import { buildD1ImportValidationNextSteps, buildD1ImportValidationRunbook } from "./d1-import-validation-contract.mjs";
 import { buildD1ValidationQueries } from "./d1-import-validation-queries.mjs";
 import { resolveRepoPath } from "./path-utils.mjs";
 
@@ -203,6 +204,10 @@ export function buildD1TargetEvidence({
   const validationInputReady =
     missingTables.length === 0 && missingRelationships.length === 0 && failedRelationships.length === 0;
   const finalImportReady = validationInputReady && requiredTotalRows > 0;
+  const operatorRunbook = buildD1ImportValidationRunbook({
+    targetCounts: outputFiles?.counts,
+    relationships: outputFiles?.relationships,
+  });
 
   return {
     generated_at: generatedAt,
@@ -234,6 +239,14 @@ export function buildD1TargetEvidence({
       relationship_checks_total: relationshipChecks.length,
       relationship_checks_failed: failedRelationships.length,
     },
+    operator_runbook: operatorRunbook,
+    operator_next_steps: buildD1ImportValidationNextSteps({
+      targetRows: requiredTotalRows,
+      missingTables,
+      missingRelationships,
+      hasRelationshipFailures: failedRelationships.length > 0,
+      ok: finalImportReady,
+    }),
     counts: {
       counts,
     },

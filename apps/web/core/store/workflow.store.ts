@@ -17,6 +17,9 @@ import type {
 } from "@plane/types";
 // services
 import { WorkflowService } from "@/services/workflow.service";
+// plane web
+import type { TWorkflowTransitionResult } from "@/plane-web/components/workflow/workflow-state-update";
+import { parseWorkflowTransitionResponse } from "@/plane-web/components/workflow/workflow-state-update";
 // store
 import type { CoreRootStore } from "./root.store";
 
@@ -60,7 +63,7 @@ export interface IWorkflowStore {
     issueId: string,
     fromStateId: string,
     toStateId: string
-  ) => Promise<unknown>;
+  ) => Promise<TWorkflowTransitionResult>;
   // approvals
   fetchApprovals: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IWorkItemApproval[]>;
   decideApproval: (
@@ -203,15 +206,21 @@ export class WorkflowStore implements IWorkflowStore {
     issueId: string,
     fromStateId: string,
     toStateId: string
-  ): Promise<unknown> => {
-    // Optimistically apply the new state immediately.
-    runInAction(() => {
-      set(this.workItemStateMap, [issueId], toStateId);
-    });
+  ): Promise<TWorkflowTransitionResult> => {
     try {
-      return await this.workflowService.stateTransition(workspaceSlug, projectId, issueId, toStateId);
+      const response = await this.workflowService.stateTransition(workspaceSlug, projectId, issueId, toStateId);
+      const parsed = parseWorkflowTransitionResponse(response.status, response.data);
+
+      if (parsed.kind === "approval_required") {
+        await this.fetchApprovals(workspaceSlug, projectId, issueId);
+        return parsed;
+      }
+
+      runInAction(() => {
+        set(this.workItemStateMap, [issueId], parsed.issue.state_id ?? toStateId);
+      });
+      return parsed;
     } catch (error) {
-      // Server is authoritative: roll back to the previous state on any rejection (403/409/…).
       runInAction(() => {
         set(this.workItemStateMap, [issueId], fromStateId);
       });

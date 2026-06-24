@@ -83,8 +83,47 @@ describe("migration validation tools", () => {
         count_tables_mismatched: 0,
         relationship_checks_failed: 0,
       },
+      operator_runbook: {
+        readiness_blocker_id: "d1-import-validation",
+        canonical_report:
+          "process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json",
+      },
     });
+    expect(stdoutReport.operator_runbook.commands.validate_import).toContain("d1:validate-import");
     expect(fileReport).toMatchObject({ ok: true });
+  });
+
+  it("keeps D1 import validation blocked when target required rows are empty", async () => {
+    const tmpDir = await mkdtemp(path.join(tmpdir(), "manut-d1-validation-"));
+    const sourceCounts = path.join(tmpDir, "postgres-counts.json");
+    const d1Counts = path.join(tmpDir, "d1-counts.json");
+    const relationships = path.join(tmpDir, "relationships.json");
+
+    await writeFile(sourceCounts, JSON.stringify({ counts: { workspaces: 1, projects: 2 } }), "utf8");
+    await writeFile(d1Counts, JSON.stringify({ counts: { workspaces: 0, projects: 0 } }), "utf8");
+    await writeFile(relationships, JSON.stringify([d1RelationshipCheck()]), "utf8");
+
+    const result = runTool([
+      "tools/validate-d1-import.mjs",
+      sourceCounts,
+      d1Counts,
+      "--relationships",
+      relationships,
+      "--json",
+    ]);
+    expect(result.exitCode).toBe(1);
+
+    const report = JSON.parse(result.stdout);
+    expect(report).toMatchObject({
+      ok: false,
+      summary: {
+        required_scope_source_rows: 3,
+        required_scope_target_rows: 0,
+      },
+    });
+    expect(report.operator_next_steps).toEqual(
+      expect.arrayContaining([expect.stringContaining("operator-approved D1 import")])
+    );
   });
 
   it("fails D1 import validation when relationship checks are missing", async () => {

@@ -10,3 +10,5 @@ export * from "./workflow-disabled-message";
 export * from "./workflow-group-tree";
 export * from "./workflow-disabled-overlay";
 export * from "./workflow-enforcement";
+export * from "./workflow-group-tree.utils";
+export * from "./workflow-state-update";
