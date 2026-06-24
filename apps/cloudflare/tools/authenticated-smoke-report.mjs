@@ -612,7 +612,7 @@ Operator evidence required: true`
     return 0;
   }
 
-  const input = JSON.parse(await readFile(options.inputPath, "utf8"));
+  const input = JSON.parse(await readFile(resolveRepoPath(options.inputPath), "utf8"));
   const report = buildAuthenticatedSmokeReport(input);
 
   if (options.outPath) {
