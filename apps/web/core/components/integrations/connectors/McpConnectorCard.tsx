@@ -12,7 +12,7 @@ type TMcpConnectorCardProps = {
 
 export const McpConnectorCard = ({
   className,
-  docsHref = "https://modelcontextprotocol.io",
+  docsHref = "https://github.com/mygogocash/plane/blob/preview/apps/mcp/README.md",
 }: TMcpConnectorCardProps) => (
   <div
     className={cn("flex flex-col gap-2 rounded-lg border border-subtle p-4", className)}
