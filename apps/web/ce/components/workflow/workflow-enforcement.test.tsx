@@ -9,7 +9,6 @@ import { describe, expect, it } from "vitest";
 import type { IWorkflowTransition } from "@plane/types";
 
 import {
-  WORKFLOW_APPROVAL_REQUIRED_MESSAGE,
   WORKFLOW_TRANSITION_NOT_ALLOWED_MESSAGE,
   getWorkflowStateIdFromGrouping,
   getWorkflowTransitionDecision,
@@ -100,7 +99,7 @@ describe("workflow enforcement helpers", () => {
       ).toEqual({ disabled: true, reason: WORKFLOW_TRANSITION_NOT_ALLOWED_MESSAGE });
     });
 
-    it("blocks approval-required targets with an approval reason", () => {
+    it("allows approval-required targets so the workflow API can create a pending approval", () => {
       expect(
         getWorkflowTransitionDecision({
           featureEnabled: true,
@@ -110,7 +109,55 @@ describe("workflow enforcement helpers", () => {
           legalTargetStateIds: ["state-b"],
           transition: transition({ approval_required: true }),
         })
-      ).toEqual({ disabled: true, reason: WORKFLOW_APPROVAL_REQUIRED_MESSAGE });
+      ).toEqual({ disabled: false });
+    });
+  });
+
+  describe("locked source states (no outgoing rules)", () => {
+    it("blocks every drag out of a source with no legal targets once the project has rules", () => {
+      expect(
+        getWorkflowTransitionDecision({
+          featureEnabled: true,
+          workflowStatus: "enabled",
+          sourceStateId: "state-terminal",
+          targetStateId: "state-b",
+          legalTargetStateIds: [],
+          hasTransitionRules: true,
+        })
+      ).toEqual({ disabled: true, reason: WORKFLOW_TRANSITION_NOT_ALLOWED_MESSAGE });
+    });
+
+    it("does not enforce when no transition rules exist anywhere in the project", () => {
+      expect(
+        getWorkflowTransitionDecision({
+          featureEnabled: true,
+          workflowStatus: "enabled",
+          sourceStateId: "state-a",
+          targetStateId: "state-b",
+          legalTargetStateIds: [],
+          hasTransitionRules: false,
+        })
+      ).toEqual({ disabled: false });
+    });
+
+    it("greys every option for a locked source while rules exist elsewhere", () => {
+      expect(
+        shouldFilterStateOption({
+          featureEnabled: true,
+          workflowStatus: "enabled",
+          filterAvailableStateIds: true,
+          alwaysAllowStateChange: false,
+          optionStateId: "state-b",
+          selectedStateId: "state-terminal",
+          legalTargetStateIds: [],
+          hasTransitionRules: true,
+        })
+      ).toBe(true);
+    });
+
+    it("returns no governing transition when the target is unreachable from the source", () => {
+      const transitions = [transition({ id: "a-b", from_state: "state-a", to_state: "state-b" })];
+      expect(getWorkflowTransitionForTarget(transitions, "state-a", "state-z")).toBeUndefined();
     });
   });
 

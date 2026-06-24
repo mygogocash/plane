@@ -25,6 +25,15 @@ function passingInput() {
     cutover_at: "2026-06-21T00:00:00.000Z",
     verified_through: "2026-06-28T00:00:00.000Z",
     target_origin: "https://app.manut.xyz",
+    phase7_readiness: {
+      ok: true,
+      status: "ready",
+      verified_at: "2026-06-28T00:00:00.000Z",
+      evidence: "Phase 7 cutover readiness command returned ready with zero selected blockers.",
+      command: "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --phase phase-07 --json",
+      report_path:
+        "process/features/cloudflare-stack-migration/reports/phase-07-production-cutover-readiness_21-06-26.md",
+    },
     checks: REQUIRED_SEVEN_GREEN_DAYS_CHECKS.map((check) => ({
       id: check.id,
       ok: true,
@@ -126,6 +135,56 @@ describe("seven green days report", () => {
       green_days_verified: false,
       target_origin: null,
       validation_error: "Seven green days report target_origin must be https://app.manut.xyz.",
+    });
+  });
+
+  it("requires green Phase 7 readiness evidence before seven-green-days can pass", () => {
+    const { phase7_readiness: _phase7Readiness, ...input } = passingInput();
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      green_days_verified: false,
+      phase7_readiness: {
+        ok: false,
+        status: "blocked",
+      },
+      validation_error: "Phase 7 cutover readiness must be green before Phase 8 seven-green-days evidence can pass.",
+    });
+    expect(validateSevenGreenDaysReport(report)).toEqual({
+      ok: false,
+      message: "Evidence JSON must contain ok: true.",
+    });
+  });
+
+  it("rejects Phase 7 readiness evidence that is not ready", () => {
+    const input = passingInput();
+    input.phase7_readiness = {
+      ...input.phase7_readiness,
+      ok: true,
+      status: "blocked",
+    };
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      green_days_verified: false,
+      phase7_readiness: {
+        ok: false,
+        status: "blocked",
+      },
+      validation_error: "Phase 7 cutover readiness must be green before Phase 8 seven-green-days evidence can pass.",
+    });
+  });
+
+  it("rejects claimed-green reports without Phase 7 readiness evidence", () => {
+    const { phase7_readiness: _phase7Readiness, ...report } = buildSevenGreenDaysReport(passingInput());
+
+    expect(validateSevenGreenDaysReport(report)).toEqual({
+      ok: false,
+      message: "Phase 7 cutover readiness must be green before Phase 8 seven-green-days evidence can pass.",
     });
   });
 

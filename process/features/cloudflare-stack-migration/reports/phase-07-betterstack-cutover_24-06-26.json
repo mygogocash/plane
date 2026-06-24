@@ -1,0 +1,88 @@
+{
+  "generated_at": "2026-06-24T07:41:46.168Z",
+  "evidence_kind": "betterstack-cutover",
+  "ok": false,
+  "api_base": "https://uptime.betterstack.com/api/v2",
+  "betterstack_api_error": null,
+  "endpoint_probes_required": true,
+  "monitor_summary": {
+    "total": 3,
+    "passed": 0,
+    "failed": 3
+  },
+  "endpoint_summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  },
+  "monitor_checks": [
+    {
+      "id": "public-site",
+      "ok": false,
+      "expected_name": "manut.xyz",
+      "expected_url": "https://manut.xyz",
+      "status": null,
+      "remediation": "BETTERSTACK_API_TOKEN is required to verify monitor state."
+    },
+    {
+      "id": "app-root",
+      "ok": false,
+      "expected_name": "app.manut.xyz",
+      "expected_url": "https://app.manut.xyz",
+      "status": null,
+      "remediation": "BETTERSTACK_API_TOKEN is required to verify monitor state."
+    },
+    {
+      "id": "api-instances",
+      "ok": false,
+      "expected_name": "app.manut.xyz API instances",
+      "expected_url": "https://app.manut.xyz/api/instances/",
+      "status": null,
+      "remediation": "BETTERSTACK_API_TOKEN is required to verify monitor state."
+    }
+  ],
+  "endpoint_checks": [
+    {
+      "id": "public-site",
+      "ok": true,
+      "url": "https://manut.xyz",
+      "status": 200,
+      "duration_ms": 300,
+      "content_type": "text/html; charset=utf-8",
+      "required_keyword": "Manut",
+      "keyword_found": true,
+      "body_sample": "<!DOCTYPE html><html lang=\"en\" class=\"h-full antialiased\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewp",
+      "fallback_url": "https://manut.pages.dev",
+      "fallback_used": false,
+      "remediation": null
+    },
+    {
+      "id": "app-root",
+      "ok": true,
+      "url": "https://app.manut.xyz",
+      "status": 200,
+      "duration_ms": 211,
+      "content_type": "text/html",
+      "required_keyword": "Manut",
+      "keyword_found": true,
+      "body_sample": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><meta name=\"theme-color\" conten",
+      "fallback_url": null,
+      "fallback_used": false,
+      "remediation": null
+    },
+    {
+      "id": "api-instances",
+      "ok": true,
+      "url": "https://app.manut.xyz/api/instances/",
+      "status": 200,
+      "duration_ms": 260,
+      "content_type": "application/json",
+      "required_keyword": "current_version",
+      "keyword_found": true,
+      "body_sample": "{\"config\":{\"enable_signup\":false,\"is_workspace_creation_disabled\":false,\"is_google_enabled\":false,\"is_github_enabled\":false,\"is_gitlab_enabled\":false,\"is_gitea_",
+      "fallback_url": null,
+      "fallback_used": false,
+      "remediation": null
+    }
+  ]
+}

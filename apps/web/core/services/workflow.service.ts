@@ -80,11 +80,16 @@ export class WorkflowService extends APIService {
 
   /** Move a work item to ``toState`` through the enforcement gate. May 200 (moved),
    *  202 (approval required → returns ``{ approval_id }``), 403, or 409. */
-  async stateTransition(workspaceSlug: string, projectId: string, issueId: string, toState: string): Promise<unknown> {
+  async stateTransition(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    toState: string
+  ): Promise<{ status: number; data: unknown }> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/state-transition/`, {
       to_state: toState,
     })
-      .then((res) => res?.data)
+      .then((res) => ({ status: res.status, data: res?.data }))
       .catch((err) => {
         throw err?.response?.data;
       });

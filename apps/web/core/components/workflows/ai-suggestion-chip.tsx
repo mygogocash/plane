@@ -65,7 +65,7 @@ export const AiSuggestionChip = observer(function AiSuggestionChip(props: Props)
     setIsAccepting(true);
     setError(null);
     try {
-      await acceptSuggestedTransition({
+      const result = await acceptSuggestedTransition({
         fromStateId,
         issueId,
         projectId,
@@ -73,6 +73,10 @@ export const AiSuggestionChip = observer(function AiSuggestionChip(props: Props)
         transitionWorkItem: store.workflow.transitionWorkItem,
         workspaceSlug,
       });
+
+      if (result.kind === "transitioned") {
+        store.issue.issues.updateIssue(issueId, result.issue);
+      }
     } catch (acceptError) {
       setError(getWorkflowErrorMessage(acceptError));
     } finally {

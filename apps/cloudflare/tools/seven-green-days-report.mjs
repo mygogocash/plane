@@ -136,6 +136,55 @@ function validateTargetOrigin(value) {
   return { ok: true };
 }
 
+function normalizePhase7Readiness(value) {
+  const fallback = {
+    ok: false,
+    status: "blocked",
+    verified_at: null,
+    evidence: null,
+    command: null,
+    report_path: null,
+    message: "Phase 7 cutover readiness must be green before Phase 8 seven-green-days evidence can pass.",
+  };
+
+  if (!isRecord(value)) {
+    return fallback;
+  }
+
+  const status =
+    typeof value.status === "string" && value.status.trim().length > 0 ? value.status.trim() : fallback.status;
+  const verifiedAt =
+    typeof value.verified_at === "string" && value.verified_at.trim().length > 0 ? value.verified_at.trim() : null;
+  const evidence = hasEvidence(value.evidence) ? String(value.evidence).trim() : null;
+  const command = typeof value.command === "string" && value.command.trim().length > 0 ? value.command.trim() : null;
+  const reportPath =
+    typeof value.report_path === "string" && value.report_path.trim().length > 0 ? value.report_path.trim() : null;
+  const verifiedAtValid = verifiedAt !== null && Number.isFinite(Date.parse(verifiedAt));
+  const ok = value.ok === true && status === "ready" && verifiedAtValid && evidence !== null;
+
+  return {
+    ok,
+    status,
+    verified_at: verifiedAt,
+    evidence,
+    command,
+    report_path: reportPath,
+    message: ok
+      ? "Phase 7 cutover readiness is green."
+      : "Phase 7 cutover readiness must be green before Phase 8 seven-green-days evidence can pass.",
+  };
+}
+
+function validatePhase7Readiness(value) {
+  const phase7Readiness = normalizePhase7Readiness(value);
+
+  if (!phase7Readiness.ok) {
+    return { ok: false, message: phase7Readiness.message };
+  }
+
+  return { ok: true };
+}
+
 function parseTimestamp(value, label) {
   if (typeof value !== "string" || value.trim() === "") {
     return { ok: false, message: `Seven green days report must include ${label}.` };
@@ -257,6 +306,11 @@ export function validateSevenGreenDaysReport(report) {
     }
   }
 
+  const phase7Readiness = validatePhase7Readiness(report.phase7_readiness);
+  if (!phase7Readiness.ok) {
+    return phase7Readiness;
+  }
+
   return { ok: true };
 }
 
@@ -307,13 +361,15 @@ export function buildSevenGreenDaysReport(input, options = {}) {
       note: check.note,
     };
   });
+  const phase7Readiness = normalizePhase7Readiness(input.phase7_readiness);
   const failed = checks.filter((check) => !check.ok);
   const report = {
     generated_at: new Date().toISOString(),
     evidence_kind: "seven-green-days",
-    ok: window.ok && failed.length === 0,
-    green_days_verified: window.ok && failed.length === 0,
+    ok: phase7Readiness.ok && window.ok && failed.length === 0,
+    green_days_verified: phase7Readiness.ok && window.ok && failed.length === 0,
     target_origin: options.targetOrigin ?? input.target_origin ?? null,
+    phase7_readiness: phase7Readiness,
     cutover_at: input.cutover_at ?? null,
     verified_through: input.verified_through ?? null,
     stability_window_days: window.days ?? 0,
@@ -326,11 +382,13 @@ export function buildSevenGreenDaysReport(input, options = {}) {
     checks,
   };
 
-  const validation = !window.ok
-    ? { ok: false, message: window.message }
-    : failed.length > 0
-      ? { ok: false, message: failedCheckMessage(failed[0]) }
-      : validateSevenGreenDaysReport(report);
+  const validation = !phase7Readiness.ok
+    ? { ok: false, message: phase7Readiness.message }
+    : !window.ok
+      ? { ok: false, message: window.message }
+      : failed.length > 0
+        ? { ok: false, message: failedCheckMessage(failed[0]) }
+        : validateSevenGreenDaysReport(report);
   return validation.ok
     ? report
     : { ...report, ok: false, green_days_verified: false, validation_error: validation.message };

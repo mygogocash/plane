@@ -13,6 +13,7 @@ import { useInstance } from "@/hooks/store/use-instance";
 import { useUser } from "@/hooks/store/user";
 // plane web components
 import { AskAIAction } from "@/plane-web/components/copilot";
+import { GetDigestButton } from "@/components/ai/summaries/GetDigestButton";
 import { StatusUpdateThread } from "@/plane-web/components/status-updates";
 
 type InitiativeDetailPanelProps = {
@@ -156,6 +157,14 @@ export const InitiativeDetailPanel = ({
 
         <AskAIAction
           owner={{ scope: "initiative", workspaceSlug, objectId: initiative.id, title: initiative.name }}
+          isProviderConfigured={config?.has_llm_configured}
+        />
+
+        <GetDigestButton
+          workspaceSlug={workspaceSlug}
+          entityType="initiative"
+          entityId={initiative.id}
+          entityTitle={initiative.name}
           isProviderConfigured={config?.has_llm_configured}
         />
 

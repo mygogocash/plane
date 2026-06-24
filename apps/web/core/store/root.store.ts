@@ -73,6 +73,8 @@ import type { IUserStore } from "./user";
 import { UserStore } from "./user";
 import type { IWorkflowStore } from "./workflow.store";
 import { WorkflowStore } from "./workflow.store";
+import type { IAICopilotStore } from "./ai/copilot.store";
+import { AICopilotStore } from "./ai/copilot.store";
 import type { IWorkItemTemplateStore } from "./work-item-template.store";
 import { WorkItemTemplateStore } from "./work-item-template.store";
 import type { IWorkspaceRootStore } from "./workspace";
@@ -111,6 +113,7 @@ export class CoreRootStore {
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
   workflow: IWorkflowStore;
+  aiCopilot: IAICopilotStore;
   workItemTemplate: IWorkItemTemplateStore;
   recurringWorkItem: IRecurringWorkItemStore;
 
@@ -146,6 +149,7 @@ export class CoreRootStore {
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
     this.workflow = new WorkflowStore(this);
+    this.aiCopilot = new AICopilotStore(this);
     this.workItemTemplate = new WorkItemTemplateStore(this);
     this.recurringWorkItem = new RecurringWorkItemStore(this);
   }
@@ -183,6 +187,7 @@ export class CoreRootStore {
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
     this.workflow = new WorkflowStore(this);
+    this.aiCopilot = new AICopilotStore(this);
     this.workItemTemplate = new WorkItemTemplateStore(this);
     this.recurringWorkItem = new RecurringWorkItemStore(this);
   }

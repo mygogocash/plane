@@ -20,6 +20,8 @@ import { ChevronRightIcon } from "@plane/propel/icons";
 import { cn } from "@plane/utils";
 // components
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
+// components
+import { getAiChatNavItem } from "@/components/ai/shared/ai-surface.utils";
 // store hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import useLocalStorage from "@/hooks/use-local-storage";
@@ -28,6 +30,7 @@ import {
   useWorkspaceNavigationPreferences,
 } from "@/hooks/use-navigation-preferences";
 // plane-web imports
+import { isSelfHostedFeatureEnabled } from "@/plane-web/lib/self-host-entitlements";
 import { SidebarItem } from "@/plane-web/components/workspace/sidebar/sidebar-item";
 
 export const SidebarMenuItems = observer(function SidebarMenuItems() {
@@ -83,14 +86,16 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
     return [...items, ...personalItems];
   }, [personalPreferences]);
 
+  // AI chat nav item is gated by the `ai_copilot` flag; hidden (never paywalled) when off.
+  const aiChatNavItem = useMemo(() => getAiChatNavItem(isSelfHostedFeatureEnabled("ai_copilot")), []);
+
   const sortedNavigationItems = useMemo(
     () =>
       WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS.map((item) => {
         const preference = workspacePreferences.items[item.key];
-        return {
-          ...item,
+        return Object.assign({}, item, {
           sort_order: preference ? preference.sort_order : 0,
-        };
+        });
       }).sort((a, b) => a.sort_order - b.sort_order),
     [workspacePreferences]
   );
@@ -98,8 +103,8 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
   return (
     <>
       <div className="flex flex-col gap-0.5">
-        {filteredStaticNavigationItems.map((item, _index) => (
-          <SidebarItem key={`static_${_index}`} item={item} />
+        {filteredStaticNavigationItems.map((item) => (
+          <SidebarItem key={`static_${item.key}`} item={item} />
         ))}
       </div>
       <Disclosure as="div" className="flex flex-col" defaultOpen={!!isWorkspaceMenuOpen}>
@@ -141,11 +146,12 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
           {isWorkspaceMenuOpen && (
             <Disclosure.Panel as="div" className="flex flex-col gap-0.5" static>
               <>
-                {WORKSPACE_SIDEBAR_STATIC_PINNED_NAVIGATION_ITEMS_LINKS.map((item, _index) => (
-                  <SidebarItem key={`static_${_index}`} item={item} />
+                {WORKSPACE_SIDEBAR_STATIC_PINNED_NAVIGATION_ITEMS_LINKS.map((item) => (
+                  <SidebarItem key={`pinned_${item.key}`} item={item} />
                 ))}
-                {sortedNavigationItems.map((item, _index) => (
-                  <SidebarItem key={`dynamic_${_index}`} item={item} />
+                {aiChatNavItem ? <SidebarItem key="ai_chat" item={aiChatNavItem} /> : null}
+                {sortedNavigationItems.map((item) => (
+                  <SidebarItem key={`dynamic_${item.key}`} item={item} />
                 ))}
                 <SidebarNavItem>
                   <button

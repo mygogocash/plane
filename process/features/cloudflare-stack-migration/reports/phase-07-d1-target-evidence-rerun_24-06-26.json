@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-06-24T07:58:53.727Z",
+  "evidence_kind": "d1-target-snapshot",
+  "schema_version": 1,
+  "ok": false,
+  "database": "manut-production",
+  "mode": "remote",
+  "final_import_ready": false,
+  "final_import_blocked": {
+    "reason": "D1 target required tables are empty; final import validation requires non-empty imported rows.",
+    "missing_tables": [],
+    "missing_relationships": [],
+    "failed_relationships": []
+  },
+  "required_scope": {
+    "count_tables": ["workspaces", "projects"],
+    "relationships": ["projects.workspace_id"]
+  },
+  "summary": {
+    "count_tables_total": 2,
+    "required_scope_target_rows": 0,
+    "relationship_checks_total": 1,
+    "relationship_checks_failed": 0
+  },
+  "counts": {
+    "counts": {
+      "projects": 0,
+      "workspaces": 0
+    }
+  },
+  "relationships": {
+    "checks": [
+      {
+        "name": "projects.workspace_id",
+        "ok": true,
+        "source": "projects",
+        "target": "workspaces",
+        "orphan_count": 0
+      }
+    ]
+  },
+  "output_files": {
+    "counts": "process/features/cloudflare-stack-migration/reports/phase-07-d1-target-counts-rerun_24-06-26.json",
+    "relationships": "process/features/cloudflare-stack-migration/reports/phase-07-d1-target-relationships-rerun_24-06-26.json",
+    "summary": "process/features/cloudflare-stack-migration/reports/phase-07-d1-target-evidence-rerun_24-06-26.json"
+  }
+}

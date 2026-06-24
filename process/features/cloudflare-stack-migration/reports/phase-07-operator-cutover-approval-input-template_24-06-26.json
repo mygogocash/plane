@@ -1,0 +1,180 @@
+{
+  "template_kind": "operator-approval-input",
+  "schema_version": 2,
+  "generated_at": "2026-06-24T08:41:51.541Z",
+  "instructions": "Fill this from an explicit operator approval event. Do not mark cutover approval true until the maintenance window, rollback checkpoint, DNS/routing approval, write freeze, and smoke plan are all confirmed.",
+  "approved_by": "",
+  "approved_at": "",
+  "target_origin": "https://app.manut.xyz",
+  "maintenance_window": {
+    "start_at": "",
+    "end_at": ""
+  },
+  "operator_inputs": {
+    "maintenance_window": {
+      "announcement_url": "",
+      "owner": ""
+    },
+    "rollback_checkpoint": {
+      "rollback_target": "",
+      "rollback_command": "",
+      "checkpoint_evidence_path": "",
+      "owner": ""
+    },
+    "dns_routing": {
+      "change_ticket_url": "",
+      "current_origin": "",
+      "cutover_origin": "",
+      "routing_owner": ""
+    },
+    "write_freeze": {
+      "start_at": "",
+      "end_at": "",
+      "announcement_url": "",
+      "coordinator": ""
+    },
+    "smoke_readiness": {
+      "public_smoke_command": "",
+      "authenticated_smoke_command": "",
+      "evidence_path": "",
+      "owner": ""
+    }
+  },
+  "checks": [
+    {
+      "id": "maintenance-window-announced",
+      "label": "Maintenance window is announced and scheduled.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "maintenance_window.start_at",
+          "label": "Maintenance window start timestamp"
+        },
+        {
+          "path": "maintenance_window.end_at",
+          "label": "Maintenance window end timestamp"
+        },
+        {
+          "path": "operator_inputs.maintenance_window.announcement_url",
+          "label": "Maintenance announcement or calendar URL"
+        },
+        {
+          "path": "operator_inputs.maintenance_window.owner",
+          "label": "Maintenance-window operator owner"
+        }
+      ]
+    },
+    {
+      "id": "rollback-checkpoint-confirmed",
+      "label": "Rollback target, commands, and evidence capture path are confirmed.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.rollback_checkpoint.rollback_target",
+          "label": "Rollback target or checkpoint"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.rollback_command",
+          "label": "Rollback command or runbook step"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.checkpoint_evidence_path",
+          "label": "Rollback checkpoint evidence path"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.owner",
+          "label": "Rollback owner"
+        }
+      ]
+    },
+    {
+      "id": "dns-change-approved",
+      "label": "The app.manut.xyz routing or DNS change is explicitly approved.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.dns_routing.change_ticket_url",
+          "label": "DNS or routing change ticket URL"
+        },
+        {
+          "path": "operator_inputs.dns_routing.current_origin",
+          "label": "Current production origin before cutoff"
+        },
+        {
+          "path": "operator_inputs.dns_routing.cutover_origin",
+          "label": "Approved Cloudflare cutover origin"
+        },
+        {
+          "path": "operator_inputs.dns_routing.routing_owner",
+          "label": "DNS or routing owner"
+        }
+      ]
+    },
+    {
+      "id": "write-freeze-confirmed",
+      "label": "Write freeze or maintenance coordination is confirmed for final delta import.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.write_freeze.start_at",
+          "label": "Write-freeze start timestamp"
+        },
+        {
+          "path": "operator_inputs.write_freeze.end_at",
+          "label": "Write-freeze end timestamp"
+        },
+        {
+          "path": "operator_inputs.write_freeze.announcement_url",
+          "label": "Write-freeze announcement URL"
+        },
+        {
+          "path": "operator_inputs.write_freeze.coordinator",
+          "label": "Write-freeze coordinator"
+        }
+      ]
+    },
+    {
+      "id": "smoke-plan-ready",
+      "label": "Public and authenticated smoke checklist is ready for immediate execution.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.smoke_readiness.public_smoke_command",
+          "label": "Public smoke command"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.authenticated_smoke_command",
+          "label": "Authenticated smoke command"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.evidence_path",
+          "label": "Smoke evidence output path"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.owner",
+          "label": "Smoke executor owner"
+        }
+      ]
+    }
+  ]
+}

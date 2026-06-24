@@ -5,7 +5,7 @@
  */
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
 // plane imports
@@ -25,9 +25,11 @@ import {
   PROJECT_MODULES,
   PROJECT_VIEWS,
   PROJECT_INTAKE_STATE,
+  PROJECT_WORKFLOWS,
 } from "@/constants/fetch-keys";
 // hooks
 import { useProjectEstimates } from "@/hooks/store/estimates";
+import { useWorkflow } from "@/hooks/store/use-workflow";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
@@ -37,6 +39,8 @@ import { useProjectState } from "@/hooks/store/use-project-state";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { useTimeLineChart } from "@/hooks/use-timeline-chart";
+import { StoreContext } from "@/lib/store-context";
+import { isSelfHostedFeatureEnabled } from "@/plane-web/lib/self-host-entitlements";
 
 interface IProjectAuthWrapper {
   workspaceSlug: string;
@@ -64,6 +68,9 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { data: currentUserData } = useUser();
   const { fetchProjectLabels } = useLabel();
   const { getProjectEstimates } = useProjectEstimates();
+  const { fetchConfig, fetchTransitions } = useWorkflow();
+  const store = useContext(StoreContext);
+  const workflowsEnabled = isSelfHostedFeatureEnabled("workflows_approvals");
   // derived values
   const hasPermissionToCurrentProject = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
@@ -135,6 +142,14 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
+  // fetching project workflow rules for board/list enforcement and state filtering
+  useSWR(
+    workflowsEnabled && store && currentProjectRole ? PROJECT_WORKFLOWS(projectId, currentProjectRole) : null,
+    async () => {
+      await Promise.all([fetchConfig(workspaceSlug, projectId), fetchTransitions(workspaceSlug, projectId)]);
+    },
+    { revalidateIfStale: false, revalidateOnFocus: false }
+  );
 
   // handle join project
   const handleJoinProject = () => {

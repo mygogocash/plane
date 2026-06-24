@@ -35,8 +35,10 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useAppRouter } from "@/hooks/use-app-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { useInstance } from "@/hooks/store/use-instance";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/plane-web/components/breadcrumbs/common";
+import { GetDigestButton } from "@/components/ai/summaries/GetDigestButton";
 
 export const IssuesHeader = observer(function IssuesHeader() {
   // router
@@ -54,6 +56,7 @@ export const IssuesHeader = observer(function IssuesHeader() {
   const { toggleCreateIssueModal } = useCommandPalette();
   const { allowPermissions } = useUserPermissions();
   const { isMobile } = usePlatformOS();
+  const { config } = useInstance();
 
   const SPACE_APP_URL = (SPACE_BASE_URL.trim() === "" ? window.location.origin : SPACE_BASE_URL) + SPACE_BASE_PATH;
   const publishedURL = `${SPACE_APP_URL}/issues/${currentProjectDetails?.anchor}`;
@@ -116,6 +119,15 @@ export const IssuesHeader = observer(function IssuesHeader() {
             canUserCreateIssue={canUserCreateIssue}
           />
         </div>
+        {workspaceSlug && projectId ? (
+          <GetDigestButton
+            workspaceSlug={workspaceSlug.toString()}
+            entityType="project"
+            entityId={projectId.toString()}
+            entityTitle={currentProjectDetails?.name}
+            isProviderConfigured={config?.has_llm_configured}
+          />
+        ) : null}
         {canUserCreateIssue && (
           <Button
             variant="primary"

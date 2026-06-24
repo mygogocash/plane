@@ -1,32 +1,32 @@
 {
   "feature": "cloudflare-stack-migration",
-  "generated_at": "2026-06-21T07:30:00.000Z",
-  "status": "production_cutover_not_safe",
+  "generated_at": "2026-06-24T10:50:40.000Z",
+  "status": "resolved_findings_with_operator_gates_remaining",
   "hypotheses": [
     {
-      "hypothesis": "A Cloudflare-only push could still redeploy GKE because pnpm-lock.yaml is treated as a shared frontend input.",
-      "result": "confirmed_and_mitigated",
-      "mitigation": "Manut CI/CD now detects Cloudflare-only push sets and forces GKE component flags false."
+      "hypothesis": "A legacy authenticated-smoke payload can still become a canonical green report without operator session evidence.",
+      "result": "mitigated",
+      "impact": "Phase 7 authenticated smoke now stays blocked unless operator session evidence validates.",
+      "evidence": "Regression coverage in cutover-readiness.test.ts rejects legacy authenticated-smoke JSON without operator evidence."
     },
     {
-      "hypothesis": "The Worker /api/instances/ placeholder is incompatible with current frontend expectations.",
-      "result": "confirmed_and_mitigated",
-      "mitigation": "Worker response now follows nested config and instance contract shape."
+      "hypothesis": "A legacy operator-approval payload can still produce cutover_approved=true without schema v2 operator inputs.",
+      "result": "mitigated",
+      "impact": "Phase 7 operator approval now requires schema v2 readiness-facing evidence.",
+      "evidence": "validateOperatorApprovalReport rejects missing or pre-v2 schema before readiness can pass."
     },
     {
-      "hypothesis": "Proxying to https://app.manut.xyz from a Worker attached to app.manut.xyz could recurse or blackhole traffic.",
-      "result": "confirmed_and_mitigated",
-      "mitigation": "Default same-origin LEGACY_GKE_ORIGIN was removed and proxy helper refuses same-origin upstreams."
-    },
-    {
-      "hypothesis": "R2 upload handling could accidentally replace GCS before object parity is proven.",
-      "result": "confirmed_and_mitigated",
-      "mitigation": "Uploads remain classified as legacy proxy routes; the R2 handler exists standalone but is not wired into app routing."
-    },
-    {
-      "hypothesis": "Production D1 could report cloudflare-preview because shared migration seeds current_version.",
-      "result": "confirmed_and_mitigated",
-      "mitigation": "Environment-specific current_version seed was removed; runtime falls back to INSTANCE_VERSION."
+      "hypothesis": "A Better Stack monitor-state file can stand in for live API evidence without freshness or provenance checks.",
+      "result": "mitigated",
+      "impact": "Manual monitor-state evidence now needs explicit provenance and fresh per-monitor timestamps.",
+      "evidence": "cutover-readiness validates monitor_source, monitor_state_path, generated_at, and monitor last_checked_at freshness."
     }
+  ],
+  "remaining_operator_gates": [
+    "D1 import validation from real source and target counts",
+    "Authenticated production smoke from a real logged-in browser run",
+    "Better Stack monitor evidence from API token or fresh monitor-state export",
+    "Schema-v2 operator approval with complete rollback, DNS, write-freeze, and smoke-readiness inputs",
+    "Seven elapsed green days after Phase 7 cutover"
   ]
 }

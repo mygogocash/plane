@@ -42,19 +42,18 @@ import {
 // hooks
 import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useInstance } from "@/hooks/store/use-instance";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useProjectIssueProperties } from "@/hooks/use-project-issue-properties";
+import { DuplicateWarning, isDuplicateSubmitBlocked } from "@/components/ai/duplicate-detection/DuplicateWarning";
 // plane web imports
+import { isSelfHostedFeatureEnabled } from "@/plane-web/lib/self-host-entitlements";
 import { DeDupeButtonRoot } from "@/plane-web/components/de-dupe/de-dupe-button";
 import { DuplicateModalRoot } from "@/plane-web/components/de-dupe/duplicate-modal";
-import {
-  buildDuplicateOverridePayload,
-  DuplicateOverrideWarning,
-  shouldRequireDuplicateOverride,
-} from "@/plane-web/components/de-dupe/duplicate-override-warning";
+import { buildDuplicateOverridePayload } from "@/plane-web/components/de-dupe/duplicate-override-warning";
 import {
   IssueTypeSelect,
   RecurringWorkItemModalSection,
@@ -134,6 +133,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // store hooks
   const { getProjectById } = useProject();
+  const { config } = useInstance();
   const {
     workItemTemplateId,
     isApplyingTemplate,
@@ -400,7 +400,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   // TODO: Remove this after the de-dupe feature is implemented
 
   const [hasAcknowledgedDuplicateOverride, setHasAcknowledgedDuplicateOverride] = useState(false);
-  const isDuplicateOverrideRequired = shouldRequireDuplicateOverride(
+  const isDuplicateOverrideRequired = isDuplicateSubmitBlocked(
     hasHighConfidenceDuplicate,
     hasAcknowledgedDuplicateOverride
   );
@@ -466,12 +466,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                     handleOnClick={() => handleDuplicateIssueModal(!isDuplicateModalOpen)}
                   />
                 )}
-                {hasHighConfidenceDuplicate && (
-                  <DuplicateOverrideWarning
-                    checked={hasAcknowledgedDuplicateOverride}
-                    onCheckedChange={setHasAcknowledgedDuplicateOverride}
-                  />
-                )}
               </div>
               {watch("parent_id") && selectedParentIssue && (
                 <div className="pb-4">
@@ -489,6 +483,15 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   issueTitleRef={issueTitleRef}
                   formState={formState}
                   handleFormChange={handleFormChange}
+                />
+                <DuplicateWarning
+                  candidates={duplicateIssues}
+                  highConfidence={hasHighConfidenceDuplicate}
+                  threshold={duplicateCheck?.threshold ?? null}
+                  featureEnabled={isSelfHostedFeatureEnabled("ai_copilot")}
+                  isProviderConfigured={config?.has_llm_configured}
+                  acknowledgedOverride={hasAcknowledgedDuplicateOverride}
+                  onAcknowledgedOverrideChange={setHasAcknowledgedDuplicateOverride}
                 />
               </div>
             </div>
