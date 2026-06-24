@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-06-24T13:40:59.430Z",
+  "ok": false,
+  "status": "blocked",
+  "checks": [
+    {
+      "id": "cloudflare-builds-shadow-evidence",
+      "ok": true,
+      "status": "passed",
+      "evidence_path": "process/features/cloudflare-stack-migration/reports/cloudflare-builds-shadow-evidence_24-06-26.json",
+      "missing": [],
+      "build_url": "https://dash.cloudflare.com/187ab61ed9dbc6e616cb23e6b95aa8f1/workers/services/view/manut-app/production/builds/4a54064d-7fba-437b-aa19-d2b7d28bb5cc",
+      "github_check_url": "https://github.com/mygogocash/plane/runs/83199924061"
+    },
+    {
+      "id": "cloudflare-builds-command-observation",
+      "ok": false,
+      "status": "blocked",
+      "evidence_path": "process/features/cloudflare-stack-migration/reports/cloudflare-builds-command-observation_24-06-26.json",
+      "blocker_path": "process/features/cloudflare-stack-migration/reports/cloudflare-builds-command-observation-blocker_24-06-26.md",
+      "missing": ["ok:true", "source", "build_command", "deploy_command", "observed_at"]
+    },
+    {
+      "id": "phase-7-cutover-readiness",
+      "ok": false,
+      "status": "blocked",
+      "passed": 14,
+      "total": 19,
+      "blocked": 5,
+      "blocked_checks": [
+        "phase-00-baseline-report",
+        "phase-01-foundation-report",
+        "phase-02-routing-report",
+        "phase-03-r2-report",
+        "phase-04-d1-report",
+        "phase-05-live-report",
+        "phase-06-cicd-report",
+        "phase-07-cutover-plan",
+        "phase-08-decommission-plan",
+        "cloudflare-preview-smoke",
+        "cloudflare-production-deploy",
+        "cloudflare-production-smoke",
+        "d1-import-validation",
+        "r2-manifest-validation",
+        "live-shadow-validation",
+        "authenticated-smoke",
+        "betterstack-cutover-green",
+        "phase8-seven-green-days",
+        "operator-cutover-approval"
+      ]
+    }
+  ],
+  "blocked_reasons": ["cloudflare-builds-command-observation", "phase-7-cutover-readiness"],
+  "github_actions_retirement_allowed": false,
+  "allowed_actions": [
+    "Keep GitHub Actions workflows enabled.",
+    "Continue Cloudflare Builds shadow validation.",
+    "Collect missing operator evidence."
+  ],
+  "forbidden_actions": [
+    "Disable GitHub Actions workflows.",
+    "Remove GitHub Actions required checks from protected branches.",
+    "Cut off or decommission GCP-backed production paths."
+  ],
+  "workflows_to_keep_enabled_until_ready": [
+    ".github/workflows/ci-cd.yml",
+    ".github/workflows/cloudflare-ci-cd.yml",
+    ".github/workflows/betterstack-monitoring.yml",
+    ".github/workflows/build-branch.yml",
+    ".github/workflows/feature-deployment.yml",
+    ".github/workflows/pull-request-build-lint-api.yml",
+    ".github/workflows/pull-request-build-lint-web-apps.yml",
+    ".github/workflows/check-version.yml",
+    ".github/workflows/copyright-check.yml",
+    ".github/workflows/i18n-sync-check.yml"
+  ],
+  "required_operator_inputs": [
+    "Cloudflare Builds Build command observation.",
+    "Cloudflare Builds Deploy command observation.",
+    "Phase 7 cutover readiness green evidence.",
+    "Explicit operator approval before workflow retirement."
+  ]
+}
