@@ -1,0 +1,135 @@
+{
+  "template_kind": "authenticated-smoke-input",
+  "schema_version": 1,
+  "evidence_model_version": 2,
+  "generated_at": "2026-06-24T16:16:12.169Z",
+  "instructions": "Fill every operator_evidence field and every check ok/evidence/observed_at/url field from a real logged-in production smoke run. Every check URL must be under https://app.manut.xyz and must not be a public health/API probe, auth page, or Sign up page. Do not mark checks passing from assumptions.",
+  "actor": "",
+  "target_origin": "https://app.manut.xyz",
+  "cloudflare_route_verified": false,
+  "cloudflare_route_evidence": {
+    "url": "",
+    "note": "Record Cloudflare production-route evidence, for example cf-ray/cdn-cgi trace captured during the authenticated run."
+  },
+  "operator_evidence_required": true,
+  "operator_evidence": {
+    "run_id": "",
+    "workspace_identifier": "",
+    "authenticated_workspace_url": "",
+    "user_identity_redacted": "",
+    "browser_artifact": "",
+    "note": ""
+  },
+  "checks": [
+    {
+      "id": "login",
+      "label": "User can log in and reach the authenticated app shell.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "session-refresh",
+      "label": "Authenticated session survives a hard refresh.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "workspace-sidebar",
+      "label": "Workspace sidebar renders expected workspace context.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "project-list",
+      "label": "Project list loads for the authenticated workspace.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "work-item-create",
+      "label": "A non-critical work item can be created.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "work-item-edit",
+      "label": "The non-critical work item can be edited.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "work-item-delete",
+      "label": "The non-critical work item can be deleted or archived.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "upload-attachment",
+      "label": "Attachment or logo upload succeeds and resolves through uploads.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "live-update",
+      "label": "A representative live update propagates to another view or session.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "admin-route",
+      "label": "The authorized admin route loads or correctly denies non-admin users.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    },
+    {
+      "id": "public-space-route",
+      "label": "A public space route loads without authenticated-session leakage.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "title": ""
+    }
+  ]
+}
