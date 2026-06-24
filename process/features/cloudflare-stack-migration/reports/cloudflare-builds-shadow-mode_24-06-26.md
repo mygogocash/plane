@@ -88,6 +88,26 @@ Recommended report path:
 process/features/cloudflare-stack-migration/reports/cloudflare-builds-shadow-evidence_24-06-26.md
 ```
 
+Operator input template:
+
+```text
+process/features/cloudflare-stack-migration/reports/cloudflare-builds-shadow-input-template_24-06-26.json
+```
+
+Generate or refresh the input template:
+
+```bash
+pnpm --silent --filter @manut/cloudflare cloudflare-builds:shadow-report --template --out process/features/cloudflare-stack-migration/reports/cloudflare-builds-shadow-input-template_24-06-26.json
+```
+
+Validate filled operator evidence:
+
+```bash
+pnpm --silent --filter @manut/cloudflare cloudflare-builds:shadow-report \
+  --input process/features/cloudflare-stack-migration/reports/cloudflare-builds-shadow-input-template_24-06-26.json \
+  --out process/features/cloudflare-stack-migration/reports/cloudflare-builds-shadow-evidence_24-06-26.json
+```
+
 ## Acceptance Criteria
 
 Shadow mode is complete only when:

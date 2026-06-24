@@ -1,0 +1,37 @@
+{
+  "kind": "cloudflare-builds-shadow-input",
+  "generated_at": "2026-06-24T12:54:21.861Z",
+  "worker_name": "manut-app",
+  "repository": "mygogocash/plane",
+  "production_branch": "preview",
+  "root_directory": ".",
+  "package_manager": "pnpm",
+  "run": {
+    "build_url": "https://dash.cloudflare.com/<account>/workers/services/view/manut-app/production/builds/<build_uuid>",
+    "github_check_url": "https://github.com/mygogocash/plane/actions/runs/<run_id>",
+    "branch": "codex/cloudflare-cutoff-gates",
+    "commit_sha": "<commit-sha>",
+    "build_command": "pnpm --filter @manut/cloudflare ci:cloudflare",
+    "deploy_command": "pnpm --filter @manut/cloudflare exec wrangler versions upload --env production",
+    "is_production_branch": false,
+    "worker_version_uploaded": true,
+    "production_traffic_changed": false,
+    "production_deploy_reviewed": false
+  },
+  "readiness": {
+    "status": "blocked",
+    "summary": {
+      "total": 19,
+      "passed": 14,
+      "blocked": 5
+    },
+    "blocked_checks": [
+      "d1-import-validation",
+      "authenticated-smoke",
+      "betterstack-cutover-green",
+      "operator-cutover-approval",
+      "phase8-seven-green-days"
+    ]
+  },
+  "notes": "Fill this with the first real Cloudflare Workers Builds shadow run. Do not use public probes as authenticated smoke evidence."
+}
