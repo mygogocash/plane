@@ -3,6 +3,7 @@
 # See the LICENSE file for details.
 
 # Django imports
+from django.conf import settings
 from django.db import models
 
 # Module imports
@@ -82,3 +83,45 @@ class IntakeIssue(ProjectBaseModel):
     def __str__(self):
         """Return name of the Issue"""
         return f"{self.issue.name} <{self.intake.name}>"
+
+
+class TriageSuggestion(ProjectBaseModel):
+    """AI triage suggestion for an :class:`IntakeIssue` (1:1, human-approved)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPLIED = "applied", "Applied"
+        REJECTED = "rejected", "Rejected"
+
+    intake_issue = models.OneToOneField(
+        "db.IntakeIssue",
+        on_delete=models.CASCADE,
+        related_name="triage_suggestion",
+    )
+    suggested_labels = models.JSONField(default=list, blank=True)
+    suggested_assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="triage_suggestions",
+    )
+    suggested_priority = models.CharField(max_length=20, blank=True, default="")
+    suggested_project = models.ForeignKey(
+        "db.Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="suggested_triage_suggestions",
+    )
+    confidence = models.FloatField(default=0.0)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    class Meta:
+        verbose_name = "Triage Suggestion"
+        verbose_name_plural = "Triage Suggestions"
+        db_table = "triage_suggestions"
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.intake_issue_id}:{self.status}"

@@ -38,6 +38,7 @@ from plane.app.views import (
     SimilarIssuesEndpoint,
     WorkItemTemplateViewSet,
 )
+from plane.app.views.generate_brief import GenerateBriefEndpoint
 
 urlpatterns = [
     path(
@@ -59,6 +60,11 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/duplicate-check/",
         DuplicateCheckEndpoint.as_view(),
         name="project-issue-duplicate-check",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/generate-brief/",
+        GenerateBriefEndpoint.as_view(),
+        name="project-issue-generate-brief",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues-detail/",

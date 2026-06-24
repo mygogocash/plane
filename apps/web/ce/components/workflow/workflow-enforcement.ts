@@ -112,7 +112,7 @@ export const getWorkflowTransitionDecision = ({
   legalTargetStateIds,
   sourceStateId,
   targetStateId,
-  transition,
+  transition: _transition,
   workflowStatus,
 }: TTransitionDecision): TWorkflowDecision => {
   if (
@@ -127,10 +127,6 @@ export const getWorkflowTransitionDecision = ({
 
   if (!legalTargetStateIds.includes(targetStateId)) {
     return { disabled: true, reason: WORKFLOW_TRANSITION_NOT_ALLOWED_MESSAGE };
-  }
-
-  if (transition?.approval_required) {
-    return { disabled: true, reason: WORKFLOW_APPROVAL_REQUIRED_MESSAGE };
   }
 
   return { disabled: false };

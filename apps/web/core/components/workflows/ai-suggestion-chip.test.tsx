@@ -32,7 +32,10 @@ describe("AI suggestion chip helpers", () => {
   });
 
   it("accepts the suggestion through the transition store action", async () => {
-    const transitionWorkItem = vi.fn().mockResolvedValue({ id: "issue-1" });
+    const transitionWorkItem = vi.fn().mockResolvedValue({
+      kind: "transitioned",
+      issue: { id: "issue-1", state_id: "state-done" },
+    });
 
     await acceptSuggestedTransition({
       transitionWorkItem,

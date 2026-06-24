@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { CornerDownRight, RefreshCcw, Sparkles, TriangleAlert } from "lucide-react";
+import { CornerDownRight, Languages, RefreshCcw, Sparkles, TriangleAlert } from "lucide-react";
 // plane editor
 import type { EditorRefApi } from "@plane/editor";
 import { ChevronRightIcon } from "@plane/propel/icons";
@@ -21,6 +21,7 @@ import { AI_EDITOR_TASKS, LOADING_TEXTS } from "@/constants/ai";
 import type { TTaskPayload } from "@/services/ai.service";
 import { AIService } from "@/services/ai.service";
 import { AskPiMenu } from "./ask-pi-menu";
+import { TRANSLATE_LANGUAGES, validateTranslateInput } from "./translate.utils";
 const aiService = new AIService();
 
 type Props = {
@@ -40,6 +41,11 @@ const MENU_ITEMS: {
     key: AI_EDITOR_TASKS.ASK_ANYTHING,
     icon: Sparkles,
     label: "Ask Pi",
+  },
+  {
+    key: AI_EDITOR_TASKS.TRANSLATE,
+    icon: Languages,
+    label: "Translate",
   },
 ];
 
@@ -70,6 +76,8 @@ export function EditorAIMenu(props: Props) {
   const [activeTask, setActiveTask] = useState<AI_EDITOR_TASKS | null>(null);
   const [response, setResponse] = useState<string | undefined>(undefined);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   // refs
   const responseContainerRef = useRef<HTMLDivElement>(null);
   // params
@@ -77,12 +85,62 @@ export function EditorAIMenu(props: Props) {
     if (!workspaceSlug) return;
     await aiService.performEditorTask(workspaceSlug.toString(), payload).then((res) => setResponse(res.response));
   };
+
+  const handleTranslate = async (languageKey: string) => {
+    const selection = editorRef?.getSelectedText();
+    const validation = validateTranslateInput(selection, languageKey);
+
+    if (!validation.ok) {
+      setValidationError(validation.message);
+      setResponse(undefined);
+      setTargetLanguage(languageKey);
+      return;
+    }
+
+    setValidationError(null);
+    setTargetLanguage(languageKey);
+    setResponse(undefined);
+    setIsRegenerating(true);
+
+    await aiService
+      .translate(workspaceSlug.toString(), {
+        text_input: selection ?? "",
+        target_language: languageKey,
+      })
+      .then((res) => setResponse(res.response))
+      .catch((error) => {
+        const message =
+          typeof error?.error === "string"
+            ? error.error
+            : typeof error?.message === "string"
+              ? error.message
+              : "Failed to translate selection.";
+        setValidationError(message);
+      })
+      .finally(() => setIsRegenerating(false));
+  };
   // handle task click
   const handleClick = async (key: AI_EDITOR_TASKS) => {
     const selection = editorRef?.getSelectedText();
-    if (!selection || activeTask === key) return;
+    if (activeTask === key) return;
+
+    if (key === AI_EDITOR_TASKS.TRANSLATE) {
+      const validation = validateTranslateInput(selection, "es");
+      if (!selection?.trim()) {
+        setValidationError(validation.ok ? null : validation.message);
+      } else {
+        setValidationError(null);
+      }
+    }
+
     setActiveTask(key);
-    if (key === AI_EDITOR_TASKS.ASK_ANYTHING) return;
+    if (key === AI_EDITOR_TASKS.ASK_ANYTHING || key === AI_EDITOR_TASKS.TRANSLATE) {
+      setResponse(undefined);
+      setIsRegenerating(false);
+      setTargetLanguage(null);
+      return;
+    }
+    if (!selection) return;
     setResponse(undefined);
     setIsRegenerating(false);
     await handleGenerateResponse({
@@ -94,6 +152,17 @@ export function EditorAIMenu(props: Props) {
   const handleRegenerate = async () => {
     const selection = editorRef?.getSelectedText();
     if (!selection || !activeTask) return;
+
+    if (activeTask === AI_EDITOR_TASKS.TRANSLATE) {
+      if (!targetLanguage) return;
+      await handleTranslate(targetLanguage);
+      responseContainerRef.current?.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+      return;
+    }
+
     setIsRegenerating(true);
     await handleGenerateResponse({
       task: activeTask,
@@ -133,11 +202,24 @@ export function EditorAIMenu(props: Props) {
     onClose();
   };
 
+  const handleTranslateAccept = () => {
+    if (!response) return;
+    handleInsertText(false);
+  };
+
+  const handleTranslateCancel = () => {
+    setResponse(undefined);
+    setValidationError(null);
+    onClose();
+  };
+
   // reset on close
   useEffect(() => {
     if (!isOpen) {
       setActiveTask(null);
       setResponse(undefined);
+      setTargetLanguage(null);
+      setValidationError(null);
     }
   }, [isOpen]);
 
@@ -202,6 +284,99 @@ export function EditorAIMenu(props: Props) {
               response={response}
               workspaceSlug={workspaceSlug}
             />
+          ) : activeTask === AI_EDITOR_TASKS.TRANSLATE ? (
+            <div className="flex flex-col gap-3 px-4 py-3.5">
+              <div className="flex items-start gap-3">
+                <span className="grid size-7 flex-shrink-0 place-items-center rounded-full border border-subtle text-secondary">
+                  <Languages className="size-3" />
+                </span>
+                <div className="w-full">
+                  <p className="text-13 font-medium text-secondary">Translate selection</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {TRANSLATE_LANGUAGES.map((language) => (
+                      <button
+                        key={language.key}
+                        type="button"
+                        className={cn(
+                          "rounded-sm bg-layer-1 px-2 py-1 text-11 font-medium text-secondary transition-colors outline-none hover:bg-layer-2-hover",
+                          {
+                            "bg-accent-primary/20 text-accent-primary": targetLanguage === language.key,
+                          }
+                        )}
+                        data-testid={`translate-language-${language.key}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleTranslate(language.key);
+                        }}
+                        disabled={isRegenerating}
+                      >
+                        {language.label}
+                      </button>
+                    ))}
+                  </div>
+                  {validationError ? (
+                    <p className="mt-3 text-13 text-danger-primary" data-testid="translate-validation-error">
+                      {validationError}
+                    </p>
+                  ) : null}
+                  {response ? (
+                    <div className="mt-4">
+                      <RichTextEditor
+                        displayConfig={{
+                          fontSize: "small-font",
+                        }}
+                        editable={false}
+                        id="editor-ai-translate-response"
+                        initialValue={response}
+                        containerClassName="!p-0 border-none"
+                        editorClassName="!pl-0"
+                        workspaceId={workspaceId}
+                        workspaceSlug={workspaceSlug}
+                      />
+                      <div className="mt-3 flex items-center gap-3">
+                        <button
+                          type="button"
+                          className="rounded-sm p-1 text-13 font-medium text-accent-primary outline-none hover:bg-layer-1"
+                          data-testid="translate-accept"
+                          onClick={handleTranslateAccept}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-sm p-1 text-13 font-medium text-tertiary outline-none hover:bg-layer-1"
+                          data-testid="translate-cancel"
+                          onClick={handleTranslateCancel}
+                        >
+                          Cancel
+                        </button>
+                        <Tooltip tooltipContent="Re-generate translation">
+                          <button
+                            type="button"
+                            className="grid size-6 flex-shrink-0 place-items-center rounded-sm outline-none hover:bg-layer-1"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              void handleRegenerate();
+                            }}
+                            disabled={isRegenerating || !targetLanguage}
+                          >
+                            <RefreshCcw
+                              className={cn("size-4 text-tertiary", {
+                                "animate-spin": isRegenerating,
+                              })}
+                            />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  ) : targetLanguage && !validationError ? (
+                    <p className="mt-3 text-13 text-secondary">{LOADING_TEXTS[AI_EDITOR_TASKS.TRANSLATE]}...</p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           ) : (
             <>
               <div

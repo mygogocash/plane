@@ -15,6 +15,7 @@ import { EFileAssetType, EIssueServiceType } from "@plane/types";
 import { getTextContent } from "@plane/utils";
 // components
 import { CopilotPanel } from "@/components/copilot";
+import { GenerateBriefButton } from "@/components/ai/brief/GenerateBriefButton";
 import { DescriptionVersionsRoot } from "@/components/core/description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
 // hooks
@@ -160,6 +161,14 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
           projectId={issue.project_id}
           setIsSubmitting={(value) => setIsSubmitting(value)}
           workspaceSlug={workspaceSlug}
+        />
+
+        <GenerateBriefButton
+          workspaceSlug={workspaceSlug}
+          projectId={issue.project_id}
+          issueId={issue.id}
+          disabled={isArchived || !isEditable}
+          isProviderConfigured={config?.has_llm_configured}
         />
 
         {issue.is_epic && (
