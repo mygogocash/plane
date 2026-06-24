@@ -1,0 +1,31 @@
+{
+  "cutover_at": "2026-06-24T00:00:00.000Z",
+  "verified_through": "2026-07-01T00:00:00.000Z",
+  "checks": [
+    {
+      "id": "betterstack-monitors",
+      "ok": false,
+      "evidence": "Better Stack monitors must be green for seven days after cutover."
+    },
+    {
+      "id": "cloudflare-worker-logs",
+      "ok": false,
+      "evidence": "Cloudflare Worker logs must show no unresolved production error trend for seven days."
+    },
+    {
+      "id": "d1-backup-export",
+      "ok": false,
+      "evidence": "Attach final D1 export/backup evidence before GCP data-store decommission."
+    },
+    {
+      "id": "r2-backup-export",
+      "ok": false,
+      "evidence": "Attach final R2 export/backup evidence before GCS decommission."
+    },
+    {
+      "id": "gke-gcp-disabled",
+      "ok": false,
+      "evidence": "Only mark true after Phase 7 is complete, rollback window has passed, and GKE/GCP production workloads are intentionally disabled."
+    }
+  ]
+}

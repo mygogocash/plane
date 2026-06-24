@@ -1,0 +1,60 @@
+{
+  "template_kind": "operator-approval-input",
+  "schema_version": 1,
+  "generated_at": "2026-06-24T07:21:53.568Z",
+  "instructions": "Fill this from an explicit operator approval event. Do not mark cutover approval true until the maintenance window, rollback checkpoint, DNS/routing approval, write freeze, and smoke plan are all confirmed.",
+  "approved_by": "",
+  "approved_at": "",
+  "target_origin": "https://app.manut.xyz",
+  "maintenance_window": {
+    "start_at": "",
+    "end_at": ""
+  },
+  "checks": [
+    {
+      "id": "maintenance-window-announced",
+      "label": "Maintenance window is announced and scheduled.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": ""
+    },
+    {
+      "id": "rollback-checkpoint-confirmed",
+      "label": "Rollback target, commands, and evidence capture path are confirmed.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": ""
+    },
+    {
+      "id": "dns-change-approved",
+      "label": "The app.manut.xyz routing or DNS change is explicitly approved.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": ""
+    },
+    {
+      "id": "write-freeze-confirmed",
+      "label": "Write freeze or maintenance coordination is confirmed for final delta import.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": ""
+    },
+    {
+      "id": "smoke-plan-ready",
+      "label": "Public and authenticated smoke checklist is ready for immediate execution.",
+      "ok": false,
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": ""
+    }
+  ]
+}
