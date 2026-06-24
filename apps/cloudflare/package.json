@@ -6,6 +6,7 @@
   "scripts": {
     "baseline": "node tools/capture-baseline.mjs",
     "check": "tsc --noEmit",
+    "ci:cloudflare": "node tools/cloudflare-ci-check.mjs",
     "d1:compare": "node tools/compare-row-counts.mjs",
     "d1:validate-import": "node tools/validate-d1-import.mjs",
     "d1:source-counts": "node tools/postgres-source-counts-report.mjs",
