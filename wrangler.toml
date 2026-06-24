@@ -1,0 +1,59 @@
+# Root-level Cloudflare Workers Builds config.
+#
+# Workers Builds runs the default deploy command from the connected repository
+# root. Keep the app-local config in apps/cloudflare/wrangler.toml for local
+# development and GitHub Actions; this file makes root `npx wrangler deploy`
+# target the production Worker service.
+
+name = "manut-app"
+main = "apps/cloudflare/src/index.ts"
+compatibility_date = "2026-06-21"
+compatibility_flags = ["nodejs_compat"]
+account_id = "187ab61ed9dbc6e616cb23e6b95aa8f1"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
+[vars]
+APP_ENV = "production"
+APP_ORIGIN = "https://app.manut.xyz"
+INSTANCE_VERSION = "cloudflare-production"
+
+[[d1_databases]]
+binding = "MANUT_DB"
+database_name = "manut-production"
+database_id = "a29a2712-f899-45ee-8ab9-f64afded7e1c"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "manut-uploads-prod"
+
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "e3fdd6cf29dc4f03a9a240830814c629"
+
+[[queues.producers]]
+binding = "JOBS"
+queue = "manut-jobs-prod"
+
+[[queues.consumers]]
+queue = "manut-jobs-prod"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[[durable_objects.bindings]]
+name = "LIVE_ROOMS"
+class_name = "LiveRoomDurableObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveRoomDurableObject"]
