@@ -51,3 +51,50 @@ export const parseWorkflowTransitionResponse = (status: number, data: unknown): 
 
   return { kind: "transitioned", issue: (data ?? {}) as Partial<TIssue> };
 };
+
+export type TWorkflowIssueUpdateContext = {
+  workspaceSlug: string;
+  projectId: string;
+  issueId: string;
+  data: Partial<TIssue>;
+  shouldSync: boolean;
+  issueBeforeUpdate: Partial<TIssue> | undefined;
+  workflowStatus: TWorkflowStatus | undefined;
+  transitionWorkItem: (
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    fromStateId: string,
+    toStateId: string
+  ) => Promise<TWorkflowTransitionResult>;
+  onApprovalRequired: () => void;
+  onTransitioned: (issue: Partial<TIssue>) => Promise<void>;
+};
+
+export const tryWorkflowRoutedIssueUpdate = async (ctx: TWorkflowIssueUpdateContext): Promise<boolean> => {
+  if (!ctx.shouldSync) return false;
+
+  const workflowStateChange = shouldRouteStateChangeThroughWorkflow({
+    data: ctx.data,
+    issueBeforeUpdate: ctx.issueBeforeUpdate,
+    workflowStatus: ctx.workflowStatus,
+  });
+
+  if (!workflowStateChange) return false;
+
+  const result = await ctx.transitionWorkItem(
+    ctx.workspaceSlug,
+    ctx.projectId,
+    ctx.issueId,
+    workflowStateChange.fromStateId,
+    workflowStateChange.toStateId
+  );
+
+  if (result.kind === "approval_required") {
+    ctx.onApprovalRequired();
+    return true;
+  }
+
+  await ctx.onTransitioned(result.issue);
+  return true;
+};
