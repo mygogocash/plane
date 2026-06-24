@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-24T07:45:39.815Z",
+  "generated_at": "2026-06-24T07:58:53.727Z",
   "evidence_kind": "d1-target-snapshot",
   "schema_version": 1,
-  "ok": true,
+  "ok": false,
   "database": "manut-production",
   "mode": "remote",
   "final_import_ready": false,

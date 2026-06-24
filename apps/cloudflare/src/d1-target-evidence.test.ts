@@ -57,7 +57,7 @@ describe("D1 target evidence collection", () => {
     });
 
     expect(report).toMatchObject({
-      ok: true,
+      ok: false,
       evidence_kind: "d1-target-snapshot",
       database: "manut-prod",
       final_import_ready: false,
