@@ -101,7 +101,7 @@ export const TopNavPowerK = observer(() => {
     return () => {
       setTopNavInputRef(null);
     };
-  }, [setTopNavInputRef]);
+  }, [inputRef, setTopNavInputRef]);
 
   const handleClear = () => {
     setSearchTerm("");
@@ -203,25 +203,26 @@ export const TopNavPowerK = observer(() => {
         return;
       }
     },
-    [searchTerm, activePage, context, shouldShowContextBasedActions, setActivePage, closePanel]
+    [searchTerm, activePage, context, shouldShowContextBasedActions, setActivePage, closePanel, isOpen, containerRef]
   );
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative w-full sm:w-auto">
       <div
-        className={cn("relative z-30 flex w-[364px] items-center transition-all duration-300 ease-in-out", {
-          "w-[554px]": isOpen,
-        })}
+        className={cn(
+          "relative z-30 flex h-9 w-full items-center transition-all duration-300 ease-in-out sm:h-auto sm:w-[364px]",
+          {
+            "sm:w-[554px]": isOpen,
+          }
+        )}
       >
-        <div
+        <label
           className={cn(
-            "flex h-7 w-full items-center rounded-lg border border-subtle-1 bg-layer-2 p-2 transition-colors duration-200",
+            "flex h-9 w-full items-center rounded-lg border border-subtle-1 bg-layer-2 px-2 transition-colors duration-200 sm:h-7",
             {
               "bg-layer-1": isOpen,
             }
           )}
-          onClick={() => inputRef.current?.focus()}
-          role="button"
         >
           <SearchIcon className="mr-2 size-3.5 shrink-0 text-placeholder" />
           <input
@@ -236,20 +237,20 @@ export const TopNavPowerK = observer(() => {
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             placeholder="Search commands..."
-            className="placeholder-text-placeholder min-w-0 flex-1 bg-transparent text-13 text-primary outline-none"
+            className="placeholder-text-placeholder text-base min-w-0 flex-1 bg-transparent text-primary outline-none sm:text-13"
           />
           {searchTerm && (
             <button type="button" onClick={handleClear} className="ml-2 shrink-0">
               <CloseIcon className="size-3.5 text-placeholder hover:text-primary" />
             </button>
           )}
-        </div>
+        </label>
       </div>
       <div
         className={cn(
-          "shadow-lg absolute -top-[6px] left-1/2 z-20 flex -translate-x-1/2 flex-col overflow-hidden rounded-md border border-subtle bg-surface-1 px-0 pt-10 transition-all duration-300 ease-in-out",
+          "shadow-lg absolute top-[calc(100%+4px)] left-0 z-20 flex flex-col overflow-hidden rounded-md border border-subtle bg-surface-1 px-0 pt-2 transition-all duration-300 ease-in-out sm:-top-[6px] sm:left-1/2 sm:-translate-x-1/2 sm:pt-10",
           {
-            "max-h-[80vh] w-[574px] opacity-100": isOpen,
+            "max-h-[70vh] w-full opacity-100 sm:max-h-[80vh] sm:w-[574px]": isOpen,
             "h-0 w-0 opacity-0": !isOpen,
           }
         )}
@@ -269,7 +270,7 @@ export const TopNavPowerK = observer(() => {
                      but we might need the context indicator if we want that feature.
                      For now, let's just render the list. */}
 
-            <Command.List className="vertical-scrollbar scrollbar-sm max-h-[60vh] overflow-y-auto px-2 pb-4 outline-none">
+            <Command.List className="vertical-scrollbar scrollbar-sm max-h-[52vh] overflow-y-auto px-2 pb-4 outline-none sm:max-h-[60vh]">
               <ProjectsAppPowerKCommandsList
                 activePage={activePage}
                 context={context}

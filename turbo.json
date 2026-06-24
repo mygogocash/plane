@@ -33,7 +33,7 @@
     "VITE_WEBSITE_URL"
   ],
   "remoteCache": {
-    "enabled": false
+    "enabled": true
   },
   "tasks": {
     "build": {

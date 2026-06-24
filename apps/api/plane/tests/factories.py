@@ -7,7 +7,6 @@ from uuid import uuid4
 from django.utils import timezone as django_timezone
 
 from plane.db.models import (
-    AgentRun,
     Issue,
     IssueProperty,
     IssuePropertyValue,
@@ -230,23 +229,5 @@ class RecurringWorkItemRunFactory(factory.django.DjangoModelFactory):
     recurring_work_item = factory.SubFactory(RecurringWorkItemFactory, project=factory.SelfAttribute("..project"))
     generated_issue = factory.SubFactory(IssueFactory, project=factory.SelfAttribute("..project"))
     run_at = factory.LazyFunction(django_timezone.now)
-    created_at = factory.LazyFunction(django_timezone.now)
-    updated_at = factory.LazyFunction(django_timezone.now)
-
-
-class AgentRunFactory(factory.django.DjangoModelFactory):
-    """Factory for creating AgentRun instances"""
-
-    class Meta:
-        model = AgentRun
-
-    id = factory.LazyFunction(uuid4)
-    project = factory.SubFactory(ProjectFactory)
-    workspace = factory.SelfAttribute("project.workspace")
-    issue = factory.SubFactory(IssueFactory, project=factory.SelfAttribute("..project"))
-    agent_key = factory.Sequence(lambda n: f"agent-{n}")
-    requested_by = factory.SubFactory(UserFactory)
-    status = AgentRun.Status.QUEUED
-    input = factory.LazyFunction(dict)
     created_at = factory.LazyFunction(django_timezone.now)
     updated_at = factory.LazyFunction(django_timezone.now)

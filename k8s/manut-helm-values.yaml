@@ -1,0 +1,70 @@
+planeVersion: preview
+
+ingress:
+  enabled: false
+  appHost: app.manut.xyz
+  ingressClass: nginx
+
+ssl:
+  tls_secret_name: app-manut-xyz-tls
+  createIssuer: false
+  generateCerts: false
+
+redis:
+  local_setup: false
+
+postgres:
+  local_setup: false
+
+minio:
+  local_setup: false
+
+rabbitmq:
+  local_setup: true
+  default_user: plane
+  default_password: plane
+
+web:
+  replicas: 2
+  image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-frontend
+  pullPolicy: Always
+
+space:
+  replicas: 2
+  image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-space
+  pullPolicy: Always
+
+admin:
+  replicas: 2
+  image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-admin
+  pullPolicy: Always
+
+live:
+  replicas: 2
+  image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-live
+  pullPolicy: Always
+
+api:
+  replicas: 2
+  image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-backend
+  pullPolicy: Always
+
+worker:
+  image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-backend
+  pullPolicy: Always
+
+beatworker:
+  image: asia-southeast1-docker.pkg.dev/affine-495114/affine/manut-backend
+  pullPolicy: Always
+
+external_secrets:
+  rabbitmq_existingSecret: ""
+  pgdb_existingSecret: manut-pgdb
+  doc_store_existingSecret: manut-doc-store
+  app_env_existingSecret: manut-app-env
+  live_env_existingSecret: manut-live-env
+
+env:
+  pgdb_name: plane
+  docstore_bucket: plane-affine-495114-uploads
+  cors_allowed_origins: "https://app.manut.xyz,http://app.manut.xyz"

@@ -77,6 +77,56 @@ class Page(BaseModel):
         super(Page, self).save(*args, **kwargs)
 
 
+class PageTemplate(BaseModel):
+    PRIVATE_ACCESS = 1
+    PUBLIC_ACCESS = 0
+
+    TEMPLATE_TYPE_CHOICES = (
+        ("meeting_notes", "Meeting Notes"),
+        ("runbook", "Runbook"),
+        ("charter", "Charter"),
+        ("custom", "Custom"),
+    )
+
+    ACCESS_CHOICES = ((PRIVATE_ACCESS, "Private"), (PUBLIC_ACCESS, "Public"))
+
+    workspace = models.ForeignKey("db.Workspace", on_delete=models.CASCADE, related_name="page_templates")
+    project = models.ForeignKey(
+        "db.Project", on_delete=models.CASCADE, related_name="page_templates", null=True, blank=True
+    )
+    name = models.CharField(max_length=255)
+    description_json = models.JSONField(default=dict, blank=True)
+    description_binary = models.BinaryField(null=True, blank=True)
+    description_html = models.TextField(blank=True, default="<p></p>")
+    description_stripped = models.TextField(blank=True, null=True)
+    logo_props = models.JSONField(default=dict, blank=True)
+    template_type = models.CharField(max_length=30, choices=TEMPLATE_TYPE_CHOICES, default="custom")
+    access = models.PositiveSmallIntegerField(choices=ACCESS_CHOICES, default=PUBLIC_ACCESS)
+    owned_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="page_templates")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Page Template"
+        verbose_name_plural = "Page Templates"
+        db_table = "page_templates"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["workspace", "project", "access"]),
+            models.Index(fields=["workspace", "owned_by"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.description_stripped = (
+            None
+            if (self.description_html == "" or self.description_html is None)
+            else strip_tags(self.description_html)
+        )
+        super(PageTemplate, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} <{self.workspace_id}>"
+
+
 class PageLog(BaseModel):
     TYPE_CHOICES = (
         ("to_do", "To Do"),

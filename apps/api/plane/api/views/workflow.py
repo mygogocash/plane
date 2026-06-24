@@ -45,6 +45,7 @@ from plane.utils.workflow import (
     IllegalTransition,
     create_approval,
     enforce_state_transition,
+    workflow_error_message,
 )
 
 
@@ -188,9 +189,9 @@ class IssueStateTransitionAPIEndpoint(BaseAPIView):
         try:
             decision = enforce_state_transition(issue, to_state, request.user)
         except IllegalTransition as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+            return Response({"error": workflow_error_message(exc)}, status=status.HTTP_409_CONFLICT)
         except ActorNotAllowed as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": workflow_error_message(exc)}, status=status.HTTP_403_FORBIDDEN)
 
         # Approval-gated transition: defer the state change, create a pending approval,
         # and return 202 without touching state_id.

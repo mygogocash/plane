@@ -18,6 +18,7 @@ interface IContentOverflowWrapper {
   containerClassName?: string;
   fallback?: ReactNode;
   customButton?: ReactNode;
+  disableOverflowOnMobile?: boolean;
 }
 
 export const ContentOverflowWrapper = observer(function ContentOverflowWrapper(props: IContentOverflowWrapper) {
@@ -28,12 +29,14 @@ export const ContentOverflowWrapper = observer(function ContentOverflowWrapper(p
     containerClassName,
     fallback = null,
     customButton,
+    disableOverflowOnMobile = false,
   } = props;
 
   // states
   const [containerHeight, setContainerHeight] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isMobileOverflowDisabled, setIsMobileOverflowDisabled] = useState(false);
 
   // refs
   const contentRef = useRef<HTMLDivElement>(null);
@@ -86,6 +89,20 @@ export const ContentOverflowWrapper = observer(function ContentOverflowWrapper(p
   }, []);
 
   useEffect(() => {
+    if (!disableOverflowOnMobile) return;
+
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const updateMobileState = () => setIsMobileOverflowDisabled(mediaQuery.matches);
+
+    updateMobileState();
+    mediaQuery.addEventListener("change", updateMobileState);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateMobileState);
+    };
+  }, [disableOverflowOnMobile]);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -106,6 +123,15 @@ export const ContentOverflowWrapper = observer(function ContentOverflowWrapper(p
   };
 
   if (!children) return fallback;
+
+  if (isMobileOverflowDisabled)
+    return (
+      <div className={cn("relative", containerClassName)}>
+        <div ref={contentRef} className="h-auto">
+          {children}
+        </div>
+      </div>
+    );
 
   return (
     <div

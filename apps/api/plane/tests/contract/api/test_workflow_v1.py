@@ -178,6 +178,7 @@ class TestWorkflowV1StateTransition:
         )
 
         assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.data["error"] == "Transition is not permitted"
         issue.refresh_from_db()
         assert issue.state_id == state_a.id
 
@@ -199,5 +200,6 @@ class TestWorkflowV1StateTransition:
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data["error"] == "You are not permitted to perform this transition"
         issue.refresh_from_db()
         assert issue.state_id == state_a.id

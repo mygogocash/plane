@@ -6,16 +6,14 @@
 Unit tests for APITokenLogMiddleware.
 
 Covers the credential-hygiene guarantees of the external API request logger:
-- the raw API key is never persisted (a non-reversible hash is stored instead)
+- the raw API key is never persisted (a non-reversible signed identifier is stored instead)
 - sensitive request headers are redacted before being logged
 """
 
-import hashlib
-import hmac
 from unittest.mock import Mock, patch
 
 import pytest
-from django.conf import settings
+from django.core.signing import Signer
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
 from django.test import RequestFactory
@@ -53,13 +51,11 @@ class TestAPITokenLogMiddleware:
             assert process_logs.delay.called
             return process_logs.delay.call_args.kwargs["log_data"]
 
-    def test_token_identifier_is_hashed_not_plaintext(self, middleware, request_factory):
+    def test_token_identifier_is_signed_not_plaintext(self, middleware, request_factory):
         log_data = self._captured_log_data(middleware, request_factory)
 
-        expected_hash = hmac.new(
-            settings.SECRET_KEY.encode(), self.API_KEY.encode(), hashlib.sha256
-        ).hexdigest()
-        assert log_data["token_identifier"] == expected_hash
+        expected_identifier = Signer(salt="plane.api-token-log").signature(self.API_KEY)
+        assert log_data["token_identifier"] == expected_identifier
         assert self.API_KEY not in log_data["token_identifier"]
 
     def test_sensitive_headers_are_redacted(self, middleware, request_factory):

@@ -36,6 +36,7 @@ export function RecentPage(props: BlockProps) {
   const pageLink = pageDetails.project_id
     ? `/${workspaceSlug}/projects/${pageDetails.project_id}/pages/${pageDetails.id}`
     : `/${workspaceSlug}/pages/${pageDetails.id}`;
+  const visitedAt = calculateTimeAgo(activity.visited_at);
 
   return (
     <ListItem
@@ -59,19 +60,20 @@ export function RecentPage(props: BlockProps) {
         </div>
       }
       appendTitleElement={
-        <div className="flex-shrink-0 text-11 font-medium text-placeholder">
-          {calculateTimeAgo(activity.visited_at)}
-        </div>
+        <div className="hidden flex-shrink-0 text-11 font-medium text-placeholder sm:block">{visitedAt}</div>
       }
       quickActionElement={
-        <div className="flex gap-4">
+        <div className="flex w-full items-center justify-between gap-3 text-placeholder sm:w-auto sm:justify-start sm:gap-4">
+          <span className="text-11 font-medium sm:hidden">{visitedAt}</span>
           <Avatar src={getFileURL(ownerDetails?.avatar_url ?? "")} name={ownerDetails?.display_name} />
         </div>
       }
       parentRef={ref}
       disableLink={false}
-      className="my-auto border-none !px-2 py-3"
-      itemClassName="my-auto bg-layer-transparent"
+      isMobile
+      className="shadow-sm my-auto rounded-lg !border border-subtle bg-layer-1 !px-3 py-3 sm:rounded-none sm:!border-none sm:bg-layer-transparent sm:!px-2 sm:shadow-none"
+      itemClassName="my-auto flex-col !items-start gap-2 bg-layer-transparent sm:flex-row sm:items-center sm:gap-3"
+      leftElementClassName="min-w-0 flex-1"
       onItemClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

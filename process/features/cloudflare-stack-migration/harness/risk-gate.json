@@ -1,0 +1,33 @@
+{
+  "feature": "cloudflare-stack-migration",
+  "generated_at": "2026-06-21T07:30:00.000Z",
+  "risk_tier": "R1",
+  "status": "blocked_for_production_cutover",
+  "allowed_actions": [
+    "commit local Cloudflare foundation code",
+    "run local typecheck, tests, baseline, and wrangler dry-runs",
+    "run validation-only GitHub workflow",
+    "provision preview resources after placeholder ids are replaced"
+  ],
+  "blocked_actions": [
+    "point app.manut.xyz to Cloudflare",
+    "apply production D1 migrations",
+    "route uploads to R2 before object-count and checksum validation",
+    "disable GKE/GCP rollback",
+    "delete or mutate Cloud SQL, GCS, Redis, RabbitMQ, or GKE resources"
+  ],
+  "required_before_cutover": [
+    "full /api/instances/ parity with current nested IInstanceInfo shape",
+    "distinct legacy upstream host for proxy fallback",
+    "D1 row-count and relationship validation",
+    "R2 object-count and checksum validation",
+    "authenticated smoke covering login, sidebar, project list, work item CRUD, uploads, and live update",
+    "Better Stack monitors green for GKE and Cloudflare preview"
+  ],
+  "rollback_anchor": {
+    "app_dns_gke_ip": "34.143.231.225",
+    "gke_namespace": "manut-ce",
+    "helm_release": "manut-app",
+    "gcs_uploads_bucket": "plane-affine-495114-uploads"
+  }
+}

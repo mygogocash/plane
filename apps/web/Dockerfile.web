@@ -70,7 +70,14 @@ ENV VITE_WEB_BASE_URL=$VITE_WEB_BASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURBO_TELEMETRY_DISABLED=1
 
-RUN pnpm turbo run build --filter=web
+# Turbo remote cache (optional): reuse cached build outputs when a turbo_token
+# build secret is provided; falls back to a clean local build when absent.
+ARG TURBO_API=""
+ARG TURBO_TEAM=""
+RUN --mount=type=secret,id=turbo_token \
+  TURBO_API="$TURBO_API" TURBO_TEAM="$TURBO_TEAM" \
+  TURBO_TOKEN="$(cat /run/secrets/turbo_token 2>/dev/null || true)" \
+  pnpm turbo run build --filter=web
 
 # *****************************************************************************
 # STAGE 3: Serve with nginx

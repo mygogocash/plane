@@ -85,7 +85,7 @@ def _collect_and_push_metrics() -> None:
     protocol = (os.environ.get("OTLP_METRICS_PROTOCOL") or "grpc").strip().lower()
     export_endpoint = get_otlp_grpc_endpoint() if protocol == "grpc" else get_otlp_http_metrics_url()
 
-    service_name = os.environ.get("SERVICE_NAME", "plane-ce-api")
+    service_name = os.environ.get("SERVICE_NAME", "manut-ce-api")
 
     # Create resource with instance identification for the collector
     resource = Resource.create({

@@ -1,0 +1,490 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-teal-ink: var(--teal-ink);
+  --color-coral: var(--coral);
+  --color-gold-warm: var(--gold-warm);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display-serif);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ── Light theme: cream canvas + ink type + coral focal + teal-ink atmosphere ── */
+:root {
+  --font-geist-sans:
+    'Geist', 'Aptos', 'SF Pro Text', ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono:
+    'Geist Mono', 'SFMono-Regular', ui-monospace, 'Cascadia Code', monospace;
+  --font-display-serif:
+    'Instrument Serif', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+
+  --radius: 0.5rem;
+
+  --background: oklch(0.985 0.008 85);
+  --foreground: oklch(0.18 0.01 260);
+
+  --surface: oklch(1 0 0);
+  --surface-elevated: oklch(0.995 0.005 85);
+  --ink: oklch(0.18 0.01 260);
+  --ink-soft: oklch(0.32 0.01 260);
+  --line: oklch(0.88 0.01 85);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.01 260);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 260);
+
+  --primary: oklch(0.18 0.01 260);
+  --primary-foreground: oklch(0.985 0.008 85);
+
+  --secondary: oklch(0.95 0.008 85);
+  --secondary-foreground: oklch(0.18 0.01 260);
+
+  --muted: oklch(0.95 0.008 85);
+  --muted-foreground: oklch(0.5 0.01 260);
+
+  /* Coral — Newton's robe; the focal warm. Replaces lime. */
+  --accent: oklch(0.78 0.16 25);
+  --accent-foreground: oklch(0.18 0.01 260);
+
+  /* Teal-ink — the deep cyan from the reference illustration */
+  --teal-ink: oklch(0.55 0.08 215);
+  /* Gold-warm — celestial/Principia gold for atmosphere */
+  --gold-warm: oklch(0.82 0.13 85);
+  /* Coral named alias for utility usage */
+  --coral: oklch(0.78 0.16 25);
+
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --border: oklch(0.88 0.01 85);
+  --input: oklch(0.92 0.01 85);
+  --ring: oklch(0.5 0.01 260);
+}
+
+/* ── Dark theme: deep ink + paper + coral ── */
+.dark {
+  --background: oklch(0.16 0.008 270);
+  --foreground: oklch(0.96 0.005 85);
+
+  --surface: oklch(0.2 0.008 270);
+  --surface-elevated: oklch(0.23 0.008 270);
+  --ink: oklch(0.96 0.005 85);
+  --ink-soft: oklch(0.78 0.008 85);
+  --line: oklch(1 0 0 / 10%);
+
+  --card: oklch(0.2 0.008 270);
+  --card-foreground: oklch(0.96 0.005 85);
+
+  --popover: oklch(0.22 0.008 270);
+  --popover-foreground: oklch(0.96 0.005 85);
+
+  --primary: oklch(0.96 0.005 85);
+  --primary-foreground: oklch(0.18 0.01 260);
+
+  --secondary: oklch(0.27 0.008 270);
+  --secondary-foreground: oklch(0.96 0.005 85);
+
+  --muted: oklch(0.27 0.008 270);
+  --muted-foreground: oklch(0.7 0.008 85);
+
+  /* Coral — slightly lifted for contrast against ink */
+  --accent: oklch(0.74 0.17 25);
+  --accent-foreground: oklch(0.96 0.005 85);
+
+  --teal-ink: oklch(0.68 0.1 215);
+  --gold-warm: oklch(0.86 0.14 85);
+  --coral: oklch(0.74 0.17 25);
+
+  --destructive: oklch(0.704 0.191 22.216);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.65 0.008 85);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'ss01', 'cv01', 'cv02', 'cv11';
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    background-color: oklch(0.78 0.16 25 / 0.45);
+    color: oklch(0.18 0.01 260);
+  }
+
+  /* Subtle grain on the page-level background only */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply;
+  }
+
+  .dark body::before {
+    opacity: 0.5;
+    mix-blend-mode: screen;
+  }
+}
+
+@layer utilities {
+  /* Editorial italic accent */
+  .display-italic {
+    font-family: var(--font-display, ui-serif, Georgia, serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+
+  /* Mono kicker label */
+  .kicker {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .kicker-line::before {
+    content: '';
+    display: inline-block;
+    width: 1.5rem;
+    height: 1px;
+    background: currentColor;
+    margin-right: 0.625rem;
+    vertical-align: middle;
+    transform: translateY(-1px);
+  }
+
+  /* Reveal-on-scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  .hero-word-flip-in {
+    animation: hero-word-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .hero-word-flip-out {
+    animation: hero-word-out 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes hero-word-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.35em);
+      filter: blur(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes hero-word-out {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+    to {
+      opacity: 0.35;
+      transform: translateY(-0.28em) scale(0.98);
+      filter: blur(4px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-word-flip-in,
+    .hero-word-flip-out {
+      animation: none;
+    }
+  }
+
+  /* Container with editorial gutters + notch-safe horizontal inset */
+  .container-prose {
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: max(1.25rem, env(safe-area-inset-left, 0px))
+      max(1.25rem, env(safe-area-inset-right, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .container-prose {
+      padding-inline: max(
+          clamp(1.25rem, 4vw, 2rem),
+          env(safe-area-inset-left, 0px)
+        )
+        max(clamp(1.25rem, 4vw, 2rem), env(safe-area-inset-right, 0px));
+    }
+  }
+
+  .section-pad {
+    padding-block: 4rem;
+  }
+
+  @media (min-width: 640px) {
+    .section-pad {
+      padding-block: 6rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .section-pad {
+      padding-block: 8rem;
+    }
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .touch-target {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  /* Numbered tabular figures for stats */
+  .nums-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Coral ring used on focused/active interactive surfaces */
+  .ring-accent-glow:focus-visible {
+    outline: 2px solid oklch(0.78 0.16 25);
+    outline-offset: 3px;
+  }
+
+  /* Gen Z accent — gradient type, sticker pills, soft mesh */
+  .text-gen-z-gradient {
+    background: linear-gradient(
+      115deg,
+      oklch(0.78 0.16 25) 0%,
+      oklch(0.68 0.13 215) 45%,
+      oklch(0.82 0.13 85) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Hero flip verb — gradient must live on the same node as the glyphs */
+  .hero-flip-word {
+    color: var(--accent);
+    background-image: linear-gradient(
+      118deg,
+      oklch(0.72 0.17 25) 0%,
+      oklch(0.58 0.1 215) 48%,
+      oklch(0.76 0.14 85) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 100% 100%;
+  }
+
+  .dark .hero-flip-word {
+    color: oklch(0.82 0.17 25);
+    background-image: linear-gradient(
+      118deg,
+      oklch(0.86 0.19 25) 0%,
+      oklch(0.78 0.14 215) 45%,
+      oklch(0.9 0.15 85) 100%
+    );
+  }
+
+  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .hero-flip-word {
+      -webkit-text-fill-color: currentColor;
+      color: var(--accent);
+      background-image: none;
+    }
+  }
+
+  .badge-sticker {
+    display: inline-flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    border: 1px solid oklch(0.78 0.16 25 / 0.35);
+    background: oklch(1 0 0 / 0.72);
+    padding: 0.35rem 0.85rem;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-shadow: 0 8px 24px -12px oklch(0.78 0.16 25 / 0.45);
+    transform: rotate(-1.5deg);
+  }
+
+  .dark .badge-sticker {
+    background: oklch(0.22 0.01 270 / 0.85);
+    border-color: oklch(0.78 0.16 25 / 0.4);
+  }
+
+  .hero-mesh-genz {
+    background-image:
+      radial-gradient(
+        ellipse 70% 55% at 15% 20%,
+        oklch(0.78 0.16 25 / 0.22),
+        transparent 65%
+      ),
+      radial-gradient(
+        ellipse 60% 50% at 85% 25%,
+        oklch(0.68 0.13 215 / 0.2),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 80% 60% at 50% 0%,
+        oklch(0.82 0.13 85 / 0.18),
+        transparent 70%
+      );
+  }
+}
+
+/* Spectrum wash and rainbow seam — declared OUTSIDE @layer utilities so
+   the Tailwind 4 CSS scanner does not tree-shake them. Stops are: coral,
+   gold, teal — echoing Newton's prism refraction. */
+.bg-spectrum {
+  background:
+    radial-gradient(
+      ellipse 55% 50% at 22% 18%,
+      oklch(0.78 0.16 25 / 0.22),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 50% 45% at 78% 26%,
+      oklch(0.68 0.13 215 / 0.2),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 50% 6%,
+      oklch(0.82 0.13 85 / 0.18),
+      transparent 70%
+    );
+}
+
+.dark .bg-spectrum {
+  background:
+    radial-gradient(
+      ellipse 55% 50% at 22% 18%,
+      oklch(0.74 0.17 25 / 0.14),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 50% 45% at 78% 26%,
+      oklch(0.7 0.13 215 / 0.14),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 50% 6%,
+      oklch(0.86 0.14 85 / 0.12),
+      transparent 70%
+    );
+}
+
+.bg-rainbow-strip {
+  background: linear-gradient(
+    90deg,
+    oklch(0.78 0.16 25) 0%,
+    oklch(0.82 0.13 85) 25%,
+    oklch(0.85 0.13 140) 50%,
+    oklch(0.7 0.13 215) 75%,
+    oklch(0.7 0.13 290) 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

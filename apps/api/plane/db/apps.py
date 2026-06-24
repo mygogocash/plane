@@ -7,3 +7,6 @@ from django.apps import AppConfig
 
 class DbConfig(AppConfig):
     name = "plane.db"
+
+    def ready(self):
+        import plane.db.signals.issue_embedding  # noqa: F401

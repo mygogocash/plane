@@ -44,6 +44,10 @@ pnpm-debug.log*
 # Vercel
 .vercel
 
+# Cloudflare Wrangler local state
+.wrangler/
+**/.wrangler/
+
 # Turborepo
 .turbo
 
@@ -100,8 +104,6 @@ dev-editor
 *.rdb.gz
 
 storybook-static
-
-CLAUDE.md
 
 build/
 .react-router/

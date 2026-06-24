@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "evidence_kind": "d1-import-validation-queries",
+  "schema_version": 1,
+  "generated_at": "2026-06-22T02:14:34.577Z",
+  "scope": "active-workspaces-projects-shadow-read",
+  "tables": [
+    {
+      "table": "workspaces",
+      "source_table": "workspaces",
+      "target_table": "workspaces",
+      "where": "deleted_at IS NULL"
+    },
+    {
+      "table": "projects",
+      "source_table": "projects",
+      "target_table": "projects",
+      "where": "deleted_at IS NULL"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "projects.workspace_id",
+      "source": "projects",
+      "target": "workspaces",
+      "source_key": "workspace_id",
+      "target_key": "id",
+      "source_where": "p.deleted_at IS NULL",
+      "target_where": "w.deleted_at IS NULL"
+    }
+  ],
+  "postgres_count_sql": "SELECT 'workspaces' AS table_name, COUNT(*)::bigint AS count\nFROM workspaces\nWHERE deleted_at IS NULL\nUNION ALL\nSELECT 'projects' AS table_name, COUNT(*)::bigint AS count\nFROM projects\nWHERE deleted_at IS NULL\nORDER BY table_name;\n",
+  "d1_count_sql": "SELECT 'workspaces' AS table_name, COUNT(*) AS count\nFROM workspaces\nWHERE deleted_at IS NULL\nUNION ALL\nSELECT 'projects' AS table_name, COUNT(*) AS count\nFROM projects\nWHERE deleted_at IS NULL\nORDER BY table_name;\n",
+  "d1_relationship_sql": "SELECT\n  'projects.workspace_id' AS name,\n  'projects' AS source,\n  'workspaces' AS target,\n  COUNT(*) AS orphan_count\nFROM projects p\nLEFT JOIN workspaces w\n  ON w.id = p.workspace_id\n  AND w.deleted_at IS NULL\nWHERE p.deleted_at IS NULL\n  AND w.id IS NULL\nORDER BY name;\n",
+  "files": null
+}

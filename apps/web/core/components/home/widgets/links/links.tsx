@@ -41,6 +41,7 @@ export const ProjectLinkList = observer(function ProjectLinkList(props: TProject
         containerClassName="box-border min-h-[30px] flex flex-col"
         fallback={<></>}
         buttonClassName="bg-surface-2/20"
+        disableOverflowOnMobile
       >
         <div className="mb-2 flex flex-1 flex-wrap gap-2">
           {links.map((linkId) => (

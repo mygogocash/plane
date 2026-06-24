@@ -945,8 +945,11 @@ class EpicDuplicateEndpoint(BaseAPIView):
                             remap_summary=remap_summary,
                         )
                         child_issue_ids.append(str(duplicated_child.id))
-        except ValueError as error:
-            return Response({"error": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response(
+                {"error": "Target project is missing a compatible issue type"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response(
             {

@@ -33,21 +33,25 @@ export function ModalCore(props: Props) {
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-30" onClose={() => handleClose && handleClose()}>
         <Transition.Child
-          as={Fragment}
+          as="div"
+          className="fixed inset-0 bg-backdrop transition-opacity"
           enter="ease-out duration-300"
           enterFrom="opacity-0"
           enterTo="opacity-100"
           leave="ease-in duration-200"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-backdrop transition-opacity" />
-        </Transition.Child>
+        />
 
         <div className="fixed inset-0 z-30 overflow-y-auto">
           <div className={position}>
             <Transition.Child
-              as={Fragment}
+              as={Dialog.Panel}
+              className={cn(
+                "relative w-full transform rounded-lg bg-surface-1 text-left shadow-raised-200 transition-all",
+                width,
+                className
+              )}
               enter="ease-out duration-300"
               enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
               enterTo="opacity-100 translate-y-0 sm:scale-100"
@@ -55,15 +59,7 @@ export function ModalCore(props: Props) {
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel
-                className={cn(
-                  "relative w-full transform rounded-lg bg-surface-1 text-left shadow-raised-200 transition-all",
-                  width,
-                  className
-                )}
-              >
-                {children}
-              </Dialog.Panel>
+              {children}
             </Transition.Child>
           </div>
         </div>

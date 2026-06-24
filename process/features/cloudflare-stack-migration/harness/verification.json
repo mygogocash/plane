@@ -1,0 +1,48 @@
+{
+  "feature": "cloudflare-stack-migration",
+  "generated_at": "2026-06-21T07:30:00.000Z",
+  "status": "local_foundation_verified",
+  "commands": [
+    {
+      "command": "pnpm --filter @manut/cloudflare check",
+      "status": "passed",
+      "evidence": "tsc --noEmit completed successfully"
+    },
+    {
+      "command": "pnpm --filter @manut/cloudflare test",
+      "status": "passed",
+      "evidence": "5 test files, 36 tests passed"
+    },
+    {
+      "command": "pnpm --filter @manut/cloudflare exec wrangler deploy --dry-run --env=\"\" --outdir /tmp/manut-cloudflare-dry-run-preview",
+      "status": "passed",
+      "evidence": "Worker bundled with D1, R2, KV, Queue, Durable Object, and preview vars"
+    },
+    {
+      "command": "node apps/cloudflare/tools/django-model-inventory.mjs --root apps/api/plane --json",
+      "status": "passed",
+      "evidence": "121 model classes, 114 concrete, 138 migration files"
+    },
+    {
+      "command": "node apps/cloudflare/tools/compare-row-counts.mjs <matching-source.json> <matching-target.json> --json",
+      "status": "passed",
+      "evidence": "exit 0 on matching counts"
+    },
+    {
+      "command": "node apps/cloudflare/tools/compare-row-counts.mjs <source.json> <mismatched-target.json> --json",
+      "status": "passed",
+      "evidence": "exit 1 on actual mismatch"
+    },
+    {
+      "command": "ruby -e 'require \"yaml\"; YAML.load_file(ARGV[0]); YAML.load_file(ARGV[1])' .github/workflows/ci-cd.yml .github/workflows/cloudflare-ci-cd.yml",
+      "status": "passed",
+      "evidence": "workflow YAML parsed"
+    }
+  ],
+  "known_gaps": [
+    "actionlint is not installed locally",
+    "root pnpm check still has unrelated pre-existing @plane/i18n formatting failure",
+    "authenticated browser smoke has not been run for Cloudflare preview",
+    "Cloudflare resource ids are placeholders until preview provisioning"
+  ]
+}

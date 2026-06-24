@@ -6,7 +6,7 @@
 
 // @ts-expect-error Due to live server dependencies
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/dist/cjs/entry-point/element/adapter.js";
-import React, { Fragment, useEffect, useMemo } from "react";
+import React, { Fragment, useEffect, useId, useMemo } from "react";
 import { Draggable } from "./draggable";
 
 type TEnhancedData<T> = T & { __uuid__?: string };
@@ -63,6 +63,8 @@ const moveItem = <T,>(
 };
 
 export function Sortable<T>({ data, render, onChange, keyExtractor, containerClassName, id }: Props<T>) {
+  const generatedId = useId();
+
   useEffect(() => {
     const unsubscribe = monitorForElements({
       // @ts-expect-error Due to live server dependencies
@@ -86,21 +88,21 @@ export function Sortable<T>({ data, render, onChange, keyExtractor, containerCla
   }, [data, keyExtractor, onChange]);
 
   const enhancedData = useMemo(() => {
-    const uuid = id ? id : Math.random().toString(36).substring(7);
+    const uuid = id ?? generatedId;
     return data.map((item) => ({ ...item, __uuid__: uuid }));
-  }, [data, id]);
+  }, [data, generatedId, id]);
 
   return (
     <>
-      {data.map((item, index) => (
-        <Draggable
-          key={keyExtractor(enhancedData[index], index)}
-          data={enhancedData[index]}
-          className={containerClassName}
-        >
-          <Fragment>{render(item, index)}</Fragment>
-        </Draggable>
-      ))}
+      {data.map((item, index) => {
+        const enhancedItem = enhancedData[index];
+        const itemKey = keyExtractor(enhancedItem, index);
+        return (
+          <Draggable key={itemKey} data={enhancedItem} className={containerClassName}>
+            <Fragment>{render(item, index)}</Fragment>
+          </Draggable>
+        );
+      })}
     </>
   );
 }

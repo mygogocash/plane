@@ -1,4 +1,4 @@
-name: Plane CI/CD
+name: Manut CI/CD
 
 on:
   workflow_dispatch:
@@ -37,8 +37,11 @@ env:
   GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY || 'affine' }}
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'affine-495114' }}
   GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
-  GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'plane-ce-gke' }}
-  GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'plane-ce' }}
+  GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'manut-ce-gke' }}
+  GKE_NAMESPACE: ${{ vars.GKE_NAMESPACE || 'manut-ce' }}
+  GKE_MIN_HTTP_REPLICAS: ${{ vars.GKE_MIN_HTTP_REPLICAS || '2' }}
+  GKE_SMOKE_DELAY_SECONDS: ${{ vars.GKE_SMOKE_DELAY_SECONDS || '60' }}
+  GKE_SMOKE_SAMPLES: ${{ vars.GKE_SMOKE_SAMPLES || '10' }}
   DOCKER_PLATFORMS: linux/amd64
   NODE_VERSION: "22.18.0"
 
@@ -79,6 +82,169 @@ jobs:
             echo "short_sha=$short_sha"
             echo "version_tag=${branch_tag}-${short_sha}"
           } >> "$GITHUB_OUTPUT"
+
+  changes:
+    name: Detect changed components
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      any: ${{ steps.matrix.outputs.any }}
+      frontend: ${{ steps.flags.outputs.frontend }}
+      space: ${{ steps.flags.outputs.space }}
+      admin: ${{ steps.flags.outputs.admin }}
+      live: ${{ steps.flags.outputs.live }}
+      backend: ${{ steps.flags.outputs.backend }}
+      proxy: ${{ steps.flags.outputs.proxy }}
+      migrations: ${{ steps.flags.outputs.migrations }}
+      cloudflare_only: ${{ steps.cloudflare_only.outputs.cloudflare_only }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect Cloudflare-only change set
+        id: cloudflare_only
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          before="${{ github.event.before }}"
+          after="${GITHUB_SHA}"
+          zero="0000000000000000000000000000000000000000"
+
+          if [ "$before" = "$zero" ] || ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            before="$(git rev-parse "${after}^" 2>/dev/null || true)"
+          fi
+
+          if [ -z "$before" ]; then
+            echo "cloudflare_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mapfile -t changed < <(git diff --name-only "$before" "$after")
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "cloudflare_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cloudflare_seen="false"
+          disallowed_seen="false"
+          for path in "${changed[@]}"; do
+            case "$path" in
+              apps/cloudflare/*|apps/cloudflare/**|process/features/cloudflare-stack-migration/*|process/features/cloudflare-stack-migration/**|docs/cloudflare-stack-migration.md|.github/ops/betterstack/*|.github/ops/betterstack/**|.github/workflows/cloudflare-ci-cd.yml|.github/workflows/betterstack-monitoring.yml)
+                cloudflare_seen="true"
+                ;;
+              *)
+                disallowed_seen="true"
+                ;;
+            esac
+          done
+
+          if [ "$cloudflare_seen" = "true" ] && [ "$disallowed_seen" = "false" ]; then
+            echo "cloudflare_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cloudflare_only=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Path filter
+        id: filter
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared: &shared
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+              - 'package.json'
+              - 'k8s/**'
+              - '.github/workflows/ci-cd.yml'
+            frontend:
+              - *shared
+              - 'apps/web/**'
+            space:
+              - *shared
+              - 'apps/space/**'
+            admin:
+              - *shared
+              - 'apps/admin/**'
+            live:
+              - *shared
+              - 'apps/live/**'
+            backend:
+              - 'apps/api/**'
+            proxy:
+              - 'apps/proxy/**'
+            migrations:
+              - 'apps/api/**/migrations/**'
+
+      - name: Compute component flags
+        id: flags
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          F_FRONTEND: ${{ steps.filter.outputs.frontend }}
+          F_SPACE: ${{ steps.filter.outputs.space }}
+          F_ADMIN: ${{ steps.filter.outputs.admin }}
+          F_LIVE: ${{ steps.filter.outputs.live }}
+          F_BACKEND: ${{ steps.filter.outputs.backend }}
+          F_PROXY: ${{ steps.filter.outputs.proxy }}
+          F_MIGRATIONS: ${{ steps.filter.outputs.migrations }}
+          CLOUDFLARE_ONLY: ${{ steps.cloudflare_only.outputs.cloudflare_only }}
+        run: |
+          set -euo pipefail
+          # workflow_dispatch has no diff base -> force every component (full rebuild escape hatch).
+          force="false"
+          [ "$EVENT" = "workflow_dispatch" ] && force="true"
+          emit() {
+            local name="$1" val="$2"
+            [ "$force" = "true" ] && val="true"
+            [ "${CLOUDFLARE_ONLY:-false}" = "true" ] && val="false"
+            [ -z "$val" ] && val="false"
+            echo "${name}=${val}" >> "$GITHUB_OUTPUT"
+          }
+          emit frontend   "${F_FRONTEND:-}"
+          emit space      "${F_SPACE:-}"
+          emit admin      "${F_ADMIN:-}"
+          emit live       "${F_LIVE:-}"
+          emit backend    "${F_BACKEND:-}"
+          emit proxy      "${F_PROXY:-}"
+          emit migrations "${F_MIGRATIONS:-}"
+
+      - name: Build image matrix
+        id: matrix
+        shell: bash
+        env:
+          S_FRONTEND: ${{ steps.flags.outputs.frontend }}
+          S_SPACE: ${{ steps.flags.outputs.space }}
+          S_ADMIN: ${{ steps.flags.outputs.admin }}
+          S_LIVE: ${{ steps.flags.outputs.live }}
+          S_BACKEND: ${{ steps.flags.outputs.backend }}
+          S_PROXY: ${{ steps.flags.outputs.proxy }}
+        run: |
+          set -euo pipefail
+          all='[
+            {"component":"frontend","image":"manut-frontend","context":".","dockerfile":"./apps/web/Dockerfile.web"},
+            {"component":"space","image":"manut-space","context":".","dockerfile":"./apps/space/Dockerfile.space"},
+            {"component":"admin","image":"manut-admin","context":".","dockerfile":"./apps/admin/Dockerfile.admin"},
+            {"component":"live","image":"manut-live","context":".","dockerfile":"./apps/live/Dockerfile.live"},
+            {"component":"backend","image":"manut-backend","context":"./apps/api","dockerfile":"./apps/api/Dockerfile.api"},
+            {"component":"proxy","image":"manut-proxy","context":"./apps/proxy","dockerfile":"./apps/proxy/Dockerfile.ce"}
+          ]'
+          sel="$(jq -nc \
+            --arg frontend "$S_FRONTEND" --arg space "$S_SPACE" --arg admin "$S_ADMIN" \
+            --arg live "$S_LIVE" --arg backend "$S_BACKEND" --arg proxy "$S_PROXY" \
+            '{frontend:$frontend,space:$space,admin:$admin,live:$live,backend:$backend,proxy:$proxy}')"
+          include="$(printf '%s' "$all" | jq -c --argjson sel "$sel" '[ .[] | select($sel[.component] == "true") ]')"
+          echo "matrix={\"include\":${include}}" >> "$GITHUB_OUTPUT"
+          if [ "$include" = "[]" ]; then
+            echo "any=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
 
   web-ci:
     name: Web checks
@@ -166,34 +332,15 @@ jobs:
     timeout-minutes: 60
     needs:
       - metadata
+      - changes
       - web-ci
-      - api-ci
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images) }}
+    if: ${{ needs.changes.outputs.any == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images)) }}
     permissions:
       contents: read
       id-token: write
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - image: plane-admin
-            context: .
-            dockerfile: ./apps/admin/Dockerfile.admin
-          - image: plane-backend
-            context: ./apps/api
-            dockerfile: ./apps/api/Dockerfile.api
-          - image: plane-frontend
-            context: .
-            dockerfile: ./apps/web/Dockerfile.web
-          - image: plane-live
-            context: .
-            dockerfile: ./apps/live/Dockerfile.live
-          - image: plane-proxy
-            context: ./apps/proxy
-            dockerfile: ./apps/proxy/Dockerfile.ce
-          - image: plane-space
-            context: .
-            dockerfile: ./apps/space/Dockerfile.space
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -229,20 +376,31 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: ${{ env.DOCKER_PLATFORMS }}
           push: true
+          build-args: |
+            TURBO_API=${{ vars.TURBO_API }}
+            TURBO_TEAM=${{ vars.TURBO_TEAM }}
+          secrets: |
+            turbo_token=${{ secrets.TURBO_TOKEN }}
           tags: |
             ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.metadata.outputs.branch_tag }}
             ${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.metadata.outputs.version_tag }}
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          cache-from: |
+            type=gha,scope=${{ matrix.image }}
+            type=registry,ref=${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.image }}
+            type=registry,mode=max,ref=${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/${{ matrix.image }}:buildcache
 
   deploy-gcp:
     name: Deploy to GKE
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     needs:
       - metadata
+      - changes
       - build-components
-    if: ${{ (github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_gcp) }}
+      - api-ci
+    if: ${{ needs.changes.outputs.any == 'true' && ((github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_gcp)) }}
     permissions:
       contents: read
       id-token: write
@@ -255,6 +413,9 @@ jobs:
         run: |
           echo "GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT repository variables are required for GKE deployment." >&2
           exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v6
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -275,13 +436,92 @@ jobs:
           location: ${{ env.GCP_REGION }}
           project_id: ${{ env.GCP_PROJECT_ID }}
 
-      - name: Run database migrations
+      - name: Reconcile GKE availability guardrails
         shell: bash
         run: |
           set -euo pipefail
 
-          backend_image="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/plane-backend:${{ needs.metadata.outputs.version_tag }}"
-          migrate_job="plane-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+          min_replicas="${GKE_MIN_HTTP_REPLICAS:-2}"
+          if ! [[ "$min_replicas" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::GKE_MIN_HTTP_REPLICAS must be a positive integer; got '${min_replicas}'."
+            exit 1
+          fi
+
+          pdb_file=""
+          case "${GKE_NAMESPACE}" in
+            plane-ce)
+              pdb_file="k8s/plane-fallback-pod-disruption-budgets.yaml"
+              ;;
+            manut-ce)
+              pdb_file="k8s/manut-pod-disruption-budgets.yaml"
+              ;;
+            *)
+              echo "::warning::No tracked PodDisruptionBudget manifest is mapped for namespace ${GKE_NAMESPACE}."
+              ;;
+          esac
+
+          if [ -n "$pdb_file" ]; then
+            kubectl apply -f "$pdb_file"
+          fi
+
+          scaled=()
+          scale_if_exists() {
+            local legacy_deployment="$1"
+            local manut_deployment="$2"
+            local deployment=""
+
+            if kubectl -n "${GKE_NAMESPACE}" get deployment "${manut_deployment}" >/dev/null 2>&1; then
+              deployment="${manut_deployment}"
+            elif kubectl -n "${GKE_NAMESPACE}" get deployment "${legacy_deployment}" >/dev/null 2>&1; then
+              deployment="${legacy_deployment}"
+            else
+              echo "::warning::Neither ${manut_deployment} nor ${legacy_deployment} exists in namespace ${GKE_NAMESPACE}; skipping scale guard."
+              return 0
+            fi
+
+            kubectl -n "${GKE_NAMESPACE}" scale "deployment/${deployment}" --replicas="${min_replicas}"
+            scaled+=("${deployment}")
+          }
+
+          scale_if_exists plane-app-api-wl manut-app-api-wl
+          scale_if_exists plane-app-web-wl manut-app-web-wl
+          scale_if_exists plane-app-admin-wl manut-app-admin-wl
+          scale_if_exists plane-app-space-wl manut-app-space-wl
+          scale_if_exists plane-app-live-wl manut-app-live-wl
+
+          for d in "${scaled[@]}"; do
+            kubectl -n "${GKE_NAMESPACE}" rollout status "deployment/${d}" --timeout=600s
+          done
+
+      - name: Run database migrations
+        if: ${{ needs.changes.outputs.migrations == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          backend_image="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}/manut-backend:${{ needs.metadata.outputs.version_tag }}"
+
+          if kubectl -n "${GKE_NAMESPACE}" get configmap manut-app-app-vars >/dev/null 2>&1; then
+            migrate_job="manut-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+            app_label="manut-ce-manut-app-api-migrate"
+            container_name="manut-app-api-migrate"
+            app_vars="manut-app-app-vars"
+            app_env="manut-app-env"
+            doc_store="manut-doc-store"
+            service_account="manut-app-srv-account"
+          elif kubectl -n "${GKE_NAMESPACE}" get configmap plane-app-app-vars >/dev/null 2>&1; then
+            echo "::warning::Manut runtime ConfigMap not found in ${GKE_NAMESPACE}; using legacy plane-app runtime resources for migration."
+            migrate_job="plane-app-api-migrate-${{ needs.metadata.outputs.short_sha }}"
+            app_label="plane-ce-plane-app-api-migrate"
+            container_name="plane-app-api-migrate"
+            app_vars="plane-app-app-vars"
+            app_env="plane-app-env"
+            doc_store="plane-doc-store"
+            service_account="plane-app-srv-account"
+          else
+            echo "::error::Neither Manut nor legacy Plane runtime ConfigMaps exist in namespace ${GKE_NAMESPACE}."
+            exit 1
+          fi
 
           kubectl -n "${GKE_NAMESPACE}" delete job "${migrate_job}" --ignore-not-found
 
@@ -291,29 +531,29 @@ jobs:
           metadata:
             name: ${migrate_job}
             labels:
-              app.name: plane-ce-plane-app-api-migrate
+              app.name: ${app_label}
           spec:
             backoffLimit: 3
             template:
               metadata:
                 labels:
-                  app.name: plane-ce-plane-app-api-migrate
+                  app.name: ${app_label}
               spec:
                 containers:
-                  - name: plane-app-api-migrate
+                  - name: ${container_name}
                     image: ${backend_image}
                     imagePullPolicy: Always
                     command:
                       - ./bin/docker-entrypoint-migrator.sh
                     envFrom:
                       - configMapRef:
-                          name: plane-app-app-vars
+                          name: ${app_vars}
                           optional: false
                       - secretRef:
-                          name: plane-app-env
+                          name: ${app_env}
                           optional: false
                       - secretRef:
-                          name: plane-doc-store
+                          name: ${doc_store}
                           optional: false
                     resources:
                       limits:
@@ -330,7 +570,7 @@ jobs:
                 securityContext:
                   seccompProfile:
                     type: RuntimeDefault
-                serviceAccountName: plane-app-srv-account
+                serviceAccountName: ${service_account}
                 tolerations:
                   - effect: NoSchedule
                     key: kubernetes.io/arch
@@ -346,39 +586,235 @@ jobs:
 
       - name: Roll out GKE images
         shell: bash
+        env:
+          C_FRONTEND: ${{ needs.changes.outputs.frontend }}
+          C_SPACE: ${{ needs.changes.outputs.space }}
+          C_ADMIN: ${{ needs.changes.outputs.admin }}
+          C_LIVE: ${{ needs.changes.outputs.live }}
+          C_BACKEND: ${{ needs.changes.outputs.backend }}
         run: |
           set -euo pipefail
 
           image_base="${{ needs.metadata.outputs.image_registry }}/${{ needs.metadata.outputs.image_namespace }}"
           tag="${{ needs.metadata.outputs.version_tag }}"
+          rolled=()
 
-          backend_image="${image_base}/plane-backend:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-api-wl plane-app-api="${backend_image}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-worker-wl plane-app-worker="${backend_image}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-beat-worker-wl plane-app-beat-worker="${backend_image}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-web-wl plane-app-web="${image_base}/plane-frontend:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-admin-wl plane-app-admin="${image_base}/plane-admin:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-live-wl plane-app-live="${image_base}/plane-live:${tag}"
-          kubectl -n "${GKE_NAMESPACE}" set image deployment/plane-app-space-wl plane-app-space="${image_base}/plane-space:${tag}"
+          roll_deployment() {
+            local component="$1"
+            local manut_deployment="$2"
+            local manut_container="$3"
+            local legacy_deployment="$4"
+            local legacy_container="$5"
+            local image="$6"
+            local deployment=""
+            local container=""
 
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-api-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-worker-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-beat-worker-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-web-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-admin-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-live-wl --timeout=600s
-          kubectl -n "${GKE_NAMESPACE}" rollout status deployment/plane-app-space-wl --timeout=600s
+            if kubectl -n "${GKE_NAMESPACE}" get deployment "${manut_deployment}" >/dev/null 2>&1; then
+              deployment="${manut_deployment}"
+              container="${manut_container}"
+            elif kubectl -n "${GKE_NAMESPACE}" get deployment "${legacy_deployment}" >/dev/null 2>&1; then
+              echo "::warning::Manut ${component} deployment ${manut_deployment} not found in ${GKE_NAMESPACE}; rolling legacy ${legacy_deployment} until the Manut Helm release is installed."
+              deployment="${legacy_deployment}"
+              container="${legacy_container}"
+            else
+              echo "::error::Neither ${manut_deployment} nor ${legacy_deployment} exists in namespace ${GKE_NAMESPACE}."
+              exit 1
+            fi
+
+            kubectl -n "${GKE_NAMESPACE}" set image "deployment/${deployment}" "${container}=${image}"
+            rolled+=("${deployment}")
+          }
+
+          # Only set images for components built this run; unchanged deployments keep
+          # their current image (their version_tag was never built, so we must not touch them).
+          if [ "${C_BACKEND}" = "true" ]; then
+            backend_image="${image_base}/manut-backend:${tag}"
+            roll_deployment backend-api manut-app-api-wl manut-app-api plane-app-api-wl plane-app-api "${backend_image}"
+            roll_deployment backend-worker manut-app-worker-wl manut-app-worker plane-app-worker-wl plane-app-worker "${backend_image}"
+            roll_deployment backend-beat-worker manut-app-beat-worker-wl manut-app-beat-worker plane-app-beat-worker-wl plane-app-beat-worker "${backend_image}"
+          fi
+          if [ "${C_FRONTEND}" = "true" ]; then
+            roll_deployment frontend manut-app-web-wl manut-app-web plane-app-web-wl plane-app-web "${image_base}/manut-frontend:${tag}"
+          fi
+          if [ "${C_ADMIN}" = "true" ]; then
+            roll_deployment admin manut-app-admin-wl manut-app-admin plane-app-admin-wl plane-app-admin "${image_base}/manut-admin:${tag}"
+          fi
+          if [ "${C_LIVE}" = "true" ]; then
+            roll_deployment live manut-app-live-wl manut-app-live plane-app-live-wl plane-app-live "${image_base}/manut-live:${tag}"
+          fi
+          if [ "${C_SPACE}" = "true" ]; then
+            roll_deployment space manut-app-space-wl manut-app-space plane-app-space-wl plane-app-space "${image_base}/manut-space:${tag}"
+          fi
+
+          if [ "${#rolled[@]}" -eq 0 ]; then
+            echo "No built components to roll out."
+            exit 0
+          fi
+
+          for d in "${rolled[@]}"; do
+            kubectl -n "${GKE_NAMESPACE}" rollout status "deployment/${d}" --timeout=600s
+          done
 
       - name: Smoke production endpoint
-        run: curl -fsS --retry 5 --retry-delay 5 "${GCP_APP_URL}/api/instances/" >/tmp/plane-instance.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          app_url="${GCP_APP_URL%/}"
+          api_url="${app_url}/api/instances/"
+          root_url="${app_url}/"
+          samples="${GKE_SMOKE_SAMPLES:-10}"
+          delay_seconds="${GKE_SMOKE_DELAY_SECONDS:-60}"
+
+          if ! [[ "$samples" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::GKE_SMOKE_SAMPLES must be a positive integer; got '${samples}'."
+            exit 1
+          fi
+          if ! [[ "$delay_seconds" =~ ^[0-9]+$ ]]; then
+            echo "::error::GKE_SMOKE_DELAY_SECONDS must be a non-negative integer; got '${delay_seconds}'."
+            exit 1
+          fi
+
+          probe() {
+            local name="$1"
+            local url="$2"
+            local output_path="$3"
+            local http_code
+
+            http_code="$(curl -sS --connect-timeout 10 --max-time 30 --retry 2 --retry-delay 3 -o "$output_path" -w "%{http_code}" "$url" || true)"
+            echo "${name}: HTTP ${http_code}"
+
+            if [[ "$http_code" != 2* ]]; then
+              echo "::error::${name} smoke failed for ${url} with HTTP ${http_code}."
+              head -c 1000 "$output_path" || true
+              echo ""
+              return 1
+            fi
+          }
+
+          if [ "$delay_seconds" -gt 0 ]; then
+            echo "Waiting ${delay_seconds}s before production smoke to allow edge and ingress readiness."
+            sleep "$delay_seconds"
+          fi
+
+          successful_samples=0
+          failed_samples=0
+          for attempt in $(seq 1 "$samples"); do
+            echo "Production smoke sample ${attempt}/${samples}"
+            sample_ok="true"
+            probe "app root" "$root_url" "/tmp/manut-root-${attempt}.html" || sample_ok="false"
+            probe "api instances" "$api_url" "/tmp/manut-instance-${attempt}.json" || sample_ok="false"
+
+            if [ "$sample_ok" = "true" ]; then
+              successful_samples=$((successful_samples + 1))
+            else
+              failed_samples=$((failed_samples + 1))
+            fi
+
+            if [ "$attempt" -lt "$samples" ]; then
+              sleep "$delay_seconds"
+            fi
+          done
+
+          echo "Production smoke successful samples: ${successful_samples}/${samples}"
+          if [ "$successful_samples" -eq 0 ]; then
+            echo "::error::Production smoke never passed after ${samples} samples."
+            exit 1
+          fi
+          if [ "$failed_samples" -gt 0 ]; then
+            echo "::error::Production smoke had ${failed_samples} failed sample(s) after rollout."
+            exit 1
+          fi
 
       - name: Write GCP deployment summary
         run: |
           {
-            echo "### GCP deployment"
+            echo "### Manut GKE deployment"
             echo ""
             echo "GKE cluster: \`${GKE_CLUSTER}\`"
             echo "Namespace: \`${GKE_NAMESPACE}\`"
             echo "Image tag: \`${{ needs.metadata.outputs.version_tag }}\`"
             echo "Smoke URL: \`${GCP_APP_URL}/api/instances/\`"
+            echo "Smoke samples: \`${GKE_SMOKE_SAMPLES}\`"
+            echo "Smoke delay seconds: \`${GKE_SMOKE_DELAY_SECONDS}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  betterstack-monitoring:
+    name: Sync Better Stack monitors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - deploy-gcp
+    if: ${{ needs.deploy-gcp.result == 'success' }}
+    permissions:
+      contents: read
+    env:
+      BETTERSTACK_API_TOKEN: ${{ secrets.BETTERSTACK_API_TOKEN }}
+      BETTERSTACK_API_BASE: ${{ vars.BETTERSTACK_API_BASE || 'https://uptime.betterstack.com/api/v2' }}
+      BETTERSTACK_APP_URL: ${{ vars.BETTERSTACK_APP_URL || vars.GCP_APP_URL || 'https://app.manut.xyz' }}
+      BETTERSTACK_SITE_URL: ${{ vars.BETTERSTACK_SITE_URL || 'https://manut.xyz' }}
+      BETTERSTACK_CHECK_FREQUENCY: ${{ vars.BETTERSTACK_CHECK_FREQUENCY || '180' }}
+      BETTERSTACK_REQUEST_TIMEOUT: ${{ vars.BETTERSTACK_REQUEST_TIMEOUT || '30' }}
+      BETTERSTACK_APP_MONITOR_NAME: ${{ vars.BETTERSTACK_APP_MONITOR_NAME || 'app.manut.xyz' }}
+      BETTERSTACK_SITE_MONITOR_NAME: ${{ vars.BETTERSTACK_SITE_MONITOR_NAME || 'manut.xyz' }}
+      BETTERSTACK_API_MONITOR_NAME: ${{ vars.BETTERSTACK_API_MONITOR_NAME || 'app.manut.xyz API instances' }}
+      BETTERSTACK_APP_KEYWORD: ${{ vars.BETTERSTACK_APP_KEYWORD || 'Manut' }}
+      BETTERSTACK_SITE_KEYWORD: ${{ vars.BETTERSTACK_SITE_KEYWORD || 'Manut' }}
+      BETTERSTACK_API_KEYWORD: ${{ vars.BETTERSTACK_API_KEYWORD || 'current_version' }}
+      BETTERSTACK_INCLUDE_API_MONITOR: ${{ vars.BETTERSTACK_INCLUDE_API_MONITOR || 'true' }}
+      BETTERSTACK_POLICY_ID: ${{ vars.BETTERSTACK_POLICY_ID }}
+      BETTERSTACK_MONITOR_GROUP_ID: ${{ vars.BETTERSTACK_MONITOR_GROUP_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Sync Better Stack uptime monitors
+        run: ./.github/ops/betterstack/sync-manut-monitors.sh
+
+      - name: Capture Better Stack cutover report
+        continue-on-error: true
+        run: |
+          node apps/cloudflare/tools/betterstack-cutover-report.mjs \
+            --json \
+            --soft-fail \
+            --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+
+      - name: Summarize Better Stack cutover report
+        if: ${{ always() }}
+        run: ./.github/ops/betterstack/summarize-cutover-report.sh "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+
+      - name: Upload Better Stack cutover report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-07-betterstack-cutover
+          path: ${{ runner.temp }}/phase-07-betterstack-cutover_21-06-26.json
+          if-no-files-found: warn
+
+      - name: Require Better Stack cutover report to pass
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_path="$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+          if [ ! -s "$report_path" ]; then
+            echo "::error::Better Stack cutover report was not generated."
+            exit 1
+          fi
+          if ! jq -e '.ok == true' "$report_path" >/dev/null; then
+            jq '{ok, monitor_summary, endpoint_summary, monitor_checks: [.monitor_checks[]? | {id, ok, status, monitor_id, remediation}]}' "$report_path"
+            echo "::error::Better Stack cutover report is not green."
+            exit 1
+          fi
+
+      - name: Write Better Stack summary
+        run: |
+          {
+            echo "### Better Stack monitoring"
+            echo ""
+            echo "App URL: \`${BETTERSTACK_APP_URL}\`"
+            echo "Site URL: \`${BETTERSTACK_SITE_URL}\`"
+            echo "Monitors: \`${BETTERSTACK_APP_MONITOR_NAME}\`, \`${BETTERSTACK_SITE_MONITOR_NAME}\`, and \`${BETTERSTACK_API_MONITOR_NAME}\`"
+            echo "API monitor enabled: \`${BETTERSTACK_INCLUDE_API_MONITOR}\`"
+            echo "Cutover report artifact: \`phase-07-betterstack-cutover\`"
           } >> "$GITHUB_STEP_SUMMARY"

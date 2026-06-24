@@ -1,0 +1,391 @@
+name: Cloudflare CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_live_baseline:
+        description: "Run live baseline checks against manut.xyz and app.manut.xyz"
+        required: true
+        default: false
+        type: boolean
+      deploy_target:
+        description: "Optional Cloudflare Worker deploy target"
+        required: true
+        default: "none"
+        type: choice
+        options:
+          - "none"
+          - "preview"
+          - "production"
+      apply_d1_migrations:
+        description: "Apply D1 migrations for the selected deploy target"
+        required: true
+        default: false
+        type: boolean
+      run_r2_manifest_validation:
+        description: "Run synthetic R2 manifest validation"
+        required: true
+        default: true
+        type: boolean
+      cloudflare_preview_url:
+        description: "Optional deployed preview Worker URL for smoke checks"
+        required: false
+        default: ""
+        type: string
+  pull_request:
+    branches:
+      - "preview"
+    paths:
+      - "apps/cloudflare/**"
+      - ".github/workflows/cloudflare-ci-cd.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "process/features/cloudflare-stack-migration/**"
+      - "docs/cloudflare-stack-migration.md"
+  push:
+    branches:
+      - "preview"
+    paths:
+      - "apps/cloudflare/**"
+      - ".github/workflows/cloudflare-ci-cd.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "process/features/cloudflare-stack-migration/**"
+      - "docs/cloudflare-stack-migration.md"
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22.18.0"
+
+jobs:
+  validate-cloudflare-foundation:
+    name: Validate Cloudflare foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack and pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check Cloudflare Worker
+        run: pnpm --filter @manut/cloudflare check
+
+      - name: Test Cloudflare Worker
+        run: pnpm --filter @manut/cloudflare test
+
+      - name: Dry-run Cloudflare Worker bundle
+        run: pnpm --filter @manut/cloudflare exec wrangler deploy --dry-run --env="" --outdir /tmp/manut-cloudflare-worker-dry-run
+
+      - name: Run synthetic D1 row-count validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          cat > "$tmp_dir/postgres-counts.json" <<'JSON'
+          {"counts":{"workspaces":1,"projects":2}}
+          JSON
+          cat > "$tmp_dir/d1-counts.json" <<'JSON'
+          [{"table":"workspaces","count":1},{"table":"projects","rows":"2"}]
+          JSON
+          cat > "$tmp_dir/relationships.json" <<'JSON'
+          {"checks":[{"name":"projects.workspace_id","source":"projects","target":"workspaces","orphanCount":0}]}
+          JSON
+          pnpm --filter @manut/cloudflare d1:validate-import -- "$tmp_dir/postgres-counts.json" "$tmp_dir/d1-counts.json" --relationships "$tmp_dir/relationships.json" --json --out "$tmp_dir/d1-import-validation.json"
+
+      - name: Run synthetic R2 manifest validation
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_r2_manifest_validation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          cat > "$tmp_dir/gcs-manifest.json" <<'JSON'
+          [{"key":"workspace/logo.png","size":12,"crc32c":"abc"}]
+          JSON
+          cat > "$tmp_dir/r2-manifest.json" <<'JSON'
+          {"objects":[{"name":"workspace/logo.png","metadata":{"size":"12","crc32c":"abc"}}]}
+          JSON
+          pnpm --filter @manut/cloudflare uploads:validate -- "$tmp_dir/gcs-manifest.json" "$tmp_dir/r2-manifest.json" --json --out "$tmp_dir/r2-manifest-validation.json"
+
+      - name: Run live baseline
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live_baseline }}
+        run: pnpm --filter @manut/cloudflare baseline
+
+      - name: Write Cloudflare summary
+        run: |
+          {
+            echo "### Cloudflare CI/CD foundation"
+            echo ""
+            echo "- Worker package: \`@manut/cloudflare\`"
+            echo "- Production traffic moved: \`false\`"
+            echo "- Worker dry-run: \`passed\`"
+            echo "- D1 synthetic row-count validation: \`passed\`"
+            echo "- R2 synthetic manifest validation: \`${{ github.event_name != 'workflow_dispatch' || inputs.run_r2_manifest_validation }}\`"
+            echo "- Required deploy secret for future phases: \`CLOUDFLARE_API_TOKEN\`"
+            echo "- Required deploy variable: \`CLOUDFLARE_ACCOUNT_ID\`"
+            echo "- Required future DNS/cutover variable: \`CLOUDFLARE_ZONE_ID\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-cloudflare-worker:
+    name: Deploy Cloudflare Worker (${{ inputs.deploy_target }})
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_target != 'none' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - validate-cloudflare-foundation
+    permissions:
+      contents: read
+    environment: ${{ inputs.deploy_target == 'production' && 'cloudflare-production' || 'cloudflare-preview' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack and pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate required Cloudflare deploy credentials
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+
+      - name: Apply preview D1 migrations
+        if: ${{ inputs.deploy_target == 'preview' && inputs.apply_d1_migrations }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare db:migrate:preview
+
+      - name: Apply production D1 migrations
+        if: ${{ inputs.deploy_target == 'production' && inputs.apply_d1_migrations }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare db:migrate:production
+
+      - name: Deploy preview Worker
+        if: ${{ inputs.deploy_target == 'preview' }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare deploy:preview
+
+      - name: Deploy production Worker
+        if: ${{ inputs.deploy_target == 'production' }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm --filter @manut/cloudflare deploy:production
+
+      - name: Resolve deployed Worker version
+        id: worker_version
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          function asArray(value) {
+            return Array.isArray(value) ? value : [];
+          }
+
+          function readDeployments(result) {
+            if (Array.isArray(result)) {
+              return result;
+            }
+            if (result && typeof result === "object") {
+              return asArray(result.deployments).concat(asArray(result.items));
+            }
+            return [];
+          }
+
+          function readActiveVersion(deployments) {
+            for (const deployment of deployments) {
+              const versions = asArray(deployment?.versions);
+              const fullTrafficVersion = versions.find((version) => Number(version?.percentage) === 100);
+              if (fullTrafficVersion) {
+                return fullTrafficVersion.version_id || fullTrafficVersion.id;
+              }
+              const firstVersion = versions[0];
+              if (firstVersion) {
+                return firstVersion.version_id || firstVersion.id;
+              }
+              if (typeof deployment?.version_id === "string") {
+                return deployment.version_id;
+              }
+            }
+            return "";
+          }
+
+          (async () => {
+            const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+            const token = process.env.CLOUDFLARE_API_TOKEN;
+            const workerName = process.env.DEPLOY_TARGET === "production" ? "manut-app" : "manut-app-preview";
+            const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${encodeURIComponent(workerName)}/deployments`;
+            const response = await fetch(endpoint, {
+              headers: {
+                authorization: `Bearer ${token}`,
+                accept: "application/json",
+              },
+            });
+            const body = await response.text();
+            if (!response.ok) {
+              throw new Error(`Cloudflare deployments API returned HTTP ${response.status}: ${body.slice(0, 240)}`);
+            }
+            const json = body ? JSON.parse(body) : {};
+            if (json.success === false) {
+              throw new Error(`Cloudflare deployments API returned success=false: ${body.slice(0, 240)}`);
+            }
+            const versionId = readActiveVersion(readDeployments(json.result));
+            if (!versionId || /^[a-f0-9]{40}$/i.test(versionId)) {
+              throw new Error("Cloudflare deployments API did not return a provider-backed Worker version_id.");
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `version_id=${versionId}\n`);
+          })().catch((error) => {
+            console.error(error.message);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Resolve Worker smoke URL
+        id: smoke
+        env:
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          INPUT_SMOKE_URL: ${{ inputs.cloudflare_preview_url }}
+          PREVIEW_WORKER_URL: ${{ vars.CLOUDFLARE_PREVIEW_WORKER_URL || 'https://manut-app-preview.bettergogocash.workers.dev' }}
+          PRODUCTION_WORKER_URL: ${{ vars.CLOUDFLARE_PRODUCTION_WORKER_URL || 'https://manut-app.bettergogocash.workers.dev' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_SMOKE_URL" ]; then
+            smoke_url="$INPUT_SMOKE_URL"
+          elif [ "$DEPLOY_TARGET" = "production" ]; then
+            smoke_url="$PRODUCTION_WORKER_URL"
+          else
+            smoke_url="$PREVIEW_WORKER_URL"
+          fi
+          smoke_url="${smoke_url%/}"
+          {
+            echo "url=$smoke_url"
+            echo "deploy_report=$RUNNER_TEMP/cloudflare-${{ inputs.deploy_target }}-deploy.json"
+            echo "smoke_report=$RUNNER_TEMP/cloudflare-${{ inputs.deploy_target }}-smoke.json"
+            echo "live_shadow_report=$RUNNER_TEMP/cloudflare-${{ inputs.deploy_target }}-live-shadow.json"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Smoke deployed Worker
+        env:
+          MANUT_DIAGNOSTIC_TOKEN: ${{ secrets.MANUT_DIAGNOSTIC_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @manut/cloudflare smoke:worker -- "${{ steps.smoke.outputs.url }}" --json --out "${{ steps.smoke.outputs.smoke_report }}"
+
+      - name: Run live shadow validation
+        env:
+          MANUT_DIAGNOSTIC_TOKEN: ${{ secrets.MANUT_DIAGNOSTIC_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @manut/cloudflare live:shadow -- "${{ steps.smoke.outputs.url }}" --json --out "${{ steps.smoke.outputs.live_shadow_report }}"
+
+      - name: Write deploy evidence report
+        env:
+          APPLY_D1_MIGRATIONS: ${{ inputs.apply_d1_migrations }}
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          DEPLOY_REPORT: ${{ steps.smoke.outputs.deploy_report }}
+          LIVE_SHADOW_REPORT: ${{ steps.smoke.outputs.live_shadow_report }}
+          SMOKE_REPORT: ${{ steps.smoke.outputs.smoke_report }}
+          SMOKE_URL: ${{ steps.smoke.outputs.url }}
+          WORKER_VERSION_ID: ${{ steps.worker_version.outputs.version_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const smoke = JSON.parse(fs.readFileSync(process.env.SMOKE_REPORT, "utf8"));
+          const liveShadow = JSON.parse(fs.readFileSync(process.env.LIVE_SHADOW_REPORT, "utf8"));
+          const deployTarget = process.env.DEPLOY_TARGET;
+          const checks = {
+            worker_deploy: true,
+            worker_smoke: smoke.ok === true,
+            live_shadow: liveShadow.ok === true,
+            remote_d1_migrations: deployTarget !== "production" || process.env.APPLY_D1_MIGRATIONS === "true",
+          };
+          const report = {
+            generated_at: new Date().toISOString(),
+            evidence_kind: deployTarget === "production" ? "cloudflare-production-deploy" : "cloudflare-preview-deploy",
+            ok: Object.values(checks).every(Boolean),
+            environment: deployTarget,
+            dns_changed: false,
+            worker: {
+              name: deployTarget === "production" ? "manut-app" : "manut-app-preview",
+              url: process.env.SMOKE_URL,
+              version_id: process.env.WORKER_VERSION_ID,
+              git_sha: process.env.GITHUB_SHA,
+            },
+            checks,
+            evidence: {
+              smoke_report: path.basename(process.env.SMOKE_REPORT),
+              live_shadow_report: path.basename(process.env.LIVE_SHADOW_REPORT),
+            },
+            notes: [
+              "This deploy published the Cloudflare Worker to workers.dev.",
+              "app.manut.xyz DNS is not changed by this workflow.",
+              "GKE rollback remains retained until the explicit cutover gate is approved.",
+            ],
+          };
+          fs.writeFileSync(process.env.DEPLOY_REPORT, `${JSON.stringify(report, null, 2)}\n`);
+          NODE
+
+      - name: Upload Cloudflare deploy evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-${{ inputs.deploy_target }}-evidence
+          path: |
+            ${{ runner.temp }}/cloudflare-${{ inputs.deploy_target }}-deploy.json
+            ${{ runner.temp }}/cloudflare-${{ inputs.deploy_target }}-smoke.json
+            ${{ runner.temp }}/cloudflare-${{ inputs.deploy_target }}-live-shadow.json
+
+      - name: Write deploy summary
+        run: |
+          {
+            echo "### Cloudflare deploy"
+            echo ""
+            echo "- Target: \`${{ inputs.deploy_target }}\`"
+            echo "- Worker smoke URL: \`${{ steps.smoke.outputs.url }}\`"
+            echo "- D1 migrations requested: \`${{ inputs.apply_d1_migrations }}\`"
+            echo "- Production DNS changed: \`false\`"
+            echo "- GKE rollback retained: \`true\`"
+            echo "- Deploy evidence: \`cloudflare-${{ inputs.deploy_target }}-evidence\`"
+          } >> "$GITHUB_STEP_SUMMARY"

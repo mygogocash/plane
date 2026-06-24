@@ -1,0 +1,48 @@
+{
+  "name": "@manut/cloudflare",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "baseline": "node tools/capture-baseline.mjs",
+    "check": "tsc --noEmit",
+    "d1:compare": "node tools/compare-row-counts.mjs",
+    "d1:validate-import": "node tools/validate-d1-import.mjs",
+    "d1:source-counts": "node tools/postgres-source-counts-report.mjs",
+    "d1:validation-queries": "node tools/d1-import-validation-queries.mjs",
+    "d1:target-evidence": "node tools/collect-d1-target-evidence.mjs",
+    "d1:inventory": "node tools/django-model-inventory.mjs",
+    "gcp:source-inventory": "node tools/gcp-source-inventory.mjs",
+    "uploads:compare": "node tools/compare-upload-manifests.mjs",
+    "uploads:validate": "node tools/compare-upload-manifests.mjs --require-checksum",
+    "auth:smoke-report": "node tools/authenticated-smoke-report.mjs",
+    "betterstack:cutover-report": "node tools/betterstack-cutover-report.mjs",
+    "operator:approval-report": "node tools/operator-approval-report.mjs",
+    "seven-green-days:report": "node tools/seven-green-days-report.mjs",
+    "cutover:evidence": "node tools/collect-cutover-evidence.mjs",
+    "cutover:readiness": "node tools/cutover-readiness.mjs",
+    "live:shadow": "node tools/live-shadow-validation.mjs",
+    "smoke:worker": "node tools/smoke-worker.mjs",
+    "smoke:workers-ai": "node tools/workers-ai-smoke.mjs",
+    "deploy:preview": "wrangler deploy --env=\"\"",
+    "deploy:production": "wrangler deploy --env production",
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply manut-preview --local",
+    "db:migrate:preview": "wrangler d1 migrations apply manut-preview --remote",
+    "db:migrate:production": "wrangler d1 migrations apply manut-prod --env production --remote"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "hono": "4.12.26"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260621.1",
+    "drizzle-kit": "0.31.10",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "4.103.0"
+  }
+}

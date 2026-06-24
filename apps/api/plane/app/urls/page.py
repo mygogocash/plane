@@ -11,6 +11,9 @@ from plane.app.views import (
     PagesDescriptionViewSet,
     PageVersionEndpoint,
     PageDuplicateEndpoint,
+    PageBacklinksEndpoint,
+    PageTemplateApplyEndpoint,
+    PageTemplateEndpoint,
 )
 
 urlpatterns = [
@@ -57,6 +60,26 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/description/",
         PagesDescriptionViewSet.as_view({"get": "retrieve", "patch": "partial_update"}),
         name="page-description",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/backlinks/",
+        PageBacklinksEndpoint.as_view(),
+        name="page-backlinks",
+    ),
+    path(
+        "workspaces/<str:slug>/page-templates/",
+        PageTemplateEndpoint.as_view(),
+        name="page-templates",
+    ),
+    path(
+        "workspaces/<str:slug>/page-templates/<uuid:template_id>/",
+        PageTemplateEndpoint.as_view(),
+        name="page-template-detail",
+    ),
+    path(
+        "workspaces/<str:slug>/page-templates/<uuid:template_id>/apply/",
+        PageTemplateApplyEndpoint.as_view(),
+        name="page-template-apply",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/pages/<uuid:page_id>/versions/",

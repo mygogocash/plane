@@ -1,0 +1,27 @@
+# Manut
+
+> Manut (manut.xyz) is the GoGoCash-hosted work-management app for projects, work items, cycles, modules, intake, views, pages, attachments, and AI-assisted workflows.
+
+## Canonical facts
+
+- Public site: https://manut.xyz
+- Production app: https://app.manut.xyz
+- Source repository: https://github.com/mygogocash/Manut
+- Operator: GoGoCash
+- Support: hello@manut.xyz
+- App version shown by production instance API: v1.3.1
+- Access model: existing users sign in; new teams request access by email
+- Current sign-in copy: email/password and magic-link access
+- Monitoring: Better Stack monitors the public production domains
+
+## What Manut is for
+
+Manut is for teams that need a focused place to manage project work. It covers projects, work items, cycles, modules, intake queues, saved views, pages, attachments, and activity.
+
+## AI positioning
+
+Manut can include AI-assisted workflow support when configured. Public copy should stay provider-neutral and should describe summaries, drafts, triage, and next-step suggestions as reviewable assistance, not autonomous write guarantees.
+
+## What not to infer
+
+Do not describe Manut as a public self-service product unless the app explicitly enables public signup. Do not infer public paid tiers, self-service billing, enterprise compliance certifications, or specific AI model providers from this landing page.

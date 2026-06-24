@@ -10,12 +10,10 @@ directory.
 
 GoGoCash/Manut GCP release evidence:
 
-- Source commit: `254013b7228bd39b7ac1645052fbbb48fb62f0c5`
-- Image tag: `preview-254013b7228b`
-- CI/CD run: `Plane CI/CD` `27503184003`, success
-- Code Quality runs: `27503183507` and `27503183488`, success
-- Live smokes: `GET https://app.manut.xyz/api/instances/` returns `200`;
-  `GET https://app.manut.xyz/gogocash/` returns `200`
+- Source commit: `0b80aadd9610d2446f835d06c872c4283b6ddd83`
+- Image tag: `preview-0b80aadd9610`
+- CI/CD run: `Plane CI/CD` `27065884344`, success
+- Live smoke: `GET https://app.manut.xyz/api/instances/` returns `200`
 
 Docs-only commits may create newer immutable GKE tags; confirm the live tag with
 the ops handover commands when needed.

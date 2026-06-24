@@ -45,7 +45,12 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store CI=true pnpm install --o
 
 ENV TURBO_TELEMETRY_DISABLED=1
 
-RUN pnpm turbo run build --filter=live
+ARG TURBO_API=""
+ARG TURBO_TEAM=""
+RUN --mount=type=secret,id=turbo_token \
+  TURBO_API="$TURBO_API" TURBO_TEAM="$TURBO_TEAM" \
+  TURBO_TOKEN="$(cat /run/secrets/turbo_token 2>/dev/null || true)" \
+  pnpm turbo run build --filter=live
 
 # *****************************************************************************
 # STAGE 3: Run the project

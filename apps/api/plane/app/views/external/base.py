@@ -71,6 +71,13 @@ class GeminiProvider(LLMProvider):
     default_model = "gemini-pro"
 
 
+class CloudflareProvider(LLMProvider):
+    name = "Cloudflare Workers AI"
+    default_model = "@cf/zai-org/glm-5.2"
+    supported_models = ["@cf/zai-org/glm-5.2"]
+    requires_api_key = True
+
+
 class GoogleVertexAIProvider(LLMProvider):
     name = "Google Vertex AI"
     models = [
@@ -96,6 +103,9 @@ SUPPORTED_PROVIDERS = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
     "gemini": GeminiProvider,
+    "cloudflare": CloudflareProvider,
+    "workers-ai": CloudflareProvider,
+    "workers_ai": CloudflareProvider,
     "vertex": GoogleVertexAIProvider,
     "vertexai": GoogleVertexAIProvider,
     "google-vertex": GoogleVertexAIProvider,
@@ -105,6 +115,43 @@ SUPPORTED_PROVIDERS = {
 
 def is_vertex_provider(provider: str | None) -> bool:
     return (provider or "").lower() in {"vertex", "vertexai", "google-vertex", "google_vertex"}
+
+
+def is_cloudflare_provider(provider: str | None) -> bool:
+    return (provider or "").lower() in {"cloudflare", "workers-ai", "workers_ai"}
+
+
+def get_cloudflare_workers_ai_response(task, prompt, api_key, model):
+    account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+    auth_token = (api_key or os.environ.get("CLOUDFLARE_API_TOKEN", "")).strip()
+    if not account_id or not auth_token:
+        return None, "Cloudflare Workers AI account ID and API token are required"
+
+    response = requests.post(
+        f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "messages": [
+                {"role": "system", "content": str(prompt or "")},
+                {"role": "user", "content": str(task or "")},
+            ]
+        },
+        timeout=30,
+    )
+    response.raise_for_status()
+    result = response.json().get("result", {})
+    choices = result.get("choices") or []
+    if choices:
+        message = choices[0].get("message") or {}
+        content = message.get("content")
+        if content:
+            return content, None
+
+    content = result.get("response")
+    if content:
+        return content, None
+
+    return None, "Cloudflare Workers AI returned no response"
 
 
 def get_vertex_ai_config() -> Tuple[str | None, str | None]:
@@ -130,6 +177,13 @@ def get_vertex_ai_config() -> Tuple[str | None, str | None]:
 
 
 def is_llm_configured(api_key: str | None, model: str | None, provider: str | None) -> bool:
+    if is_cloudflare_provider(provider):
+        return bool(
+            model
+            and os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+            and (api_key or os.environ.get("CLOUDFLARE_API_TOKEN", "").strip())
+        )
+
     if not model or not provider:
         return False
 
@@ -157,16 +211,16 @@ def get_llm_config() -> Tuple[str | None, str | None, str | None]:
             },
             {
                 "key": "LLM_PROVIDER",
-                "default": os.environ.get("LLM_PROVIDER", "vertexai"),
+                "default": os.environ.get("LLM_PROVIDER", "cloudflare"),
             },
             {
                 "key": "LLM_MODEL",
-                "default": os.environ.get("LLM_MODEL", None),
+                "default": os.environ.get("LLM_MODEL", CloudflareProvider.default_model),
             },
         ]
     )
 
-    provider_key = (provider_key or "openai").lower()
+    provider_key = (provider_key or "cloudflare").lower()
     provider = SUPPORTED_PROVIDERS.get(provider_key)
     if not provider:
         log_exception(ValueError(f"Unsupported provider: {provider_key}"))
@@ -196,6 +250,9 @@ def get_llm_response(task, prompt, api_key: str, model: str, provider: str) -> T
     """Helper to get LLM completion response"""
     final_text = task + "\n" + prompt
     try:
+        if is_cloudflare_provider(provider):
+            return get_cloudflare_workers_ai_response(task, prompt, api_key, model)
+
         if is_vertex_provider(provider):
             return _get_vertex_llm_response(final_text, model)
 

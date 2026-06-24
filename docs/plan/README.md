@@ -5,13 +5,11 @@ on. Each feature has a **PRD** (the scope + gap source of truth, one level up in
 and a four-part build breakdown here under `docs/plan/<feature>/`.
 
 > **Live build status:** [`PROGRESS.md`](PROGRESS.md) is the single source of truth for what
-> has shipped locally. As of the latest update: **Workflows & Approvals are done
-> through WF-T13; Work Items & Types custom properties, templates, recurring work,
-> and similar-item linking are implemented; Epics & Initiatives are locally complete
-> through TASK-27; Wiki and broad Plane AI expansion remain open**. Production
-> `origin/preview` is currently verified at `254013b7228bd39b7ac1645052fbbb48fb62f0c5`
-> / `preview-254013b7228b`, but local `main` still diverges from production and must
-> be reconciled before promotion.
+> has shipped. As of the latest update: **Workflows & Approvals backend is feature-complete
+> (WF-T1–T9), frontend store/service/types (WF-T10), CE enforcement components (WF-T11),
+> settings workflow builder (WF-T12), and detail approval/suggestion surfaces (WF-T13) are done**.
+> All dependency upgrades (Django 5.2, React 19,
+> Zod 4, Headless UI 2) are landed. The other four feature families are not yet started.
 
 > Source of truth for _what's already in the fork vs. missing_:
 > [`../self-host-feature-parity-matrix-2026-06-06.md`](../self-host-feature-parity-matrix-2026-06-06.md)
@@ -31,10 +29,10 @@ and a four-part build breakdown here under `docs/plan/<feature>/`.
 | Feature               | PRD                                             | Epics                                 | Stories                                   | Design                                  | Tasks                                 | Overall gap                                                                       |
 | --------------------- | ----------------------------------------------- | ------------------------------------- | ----------------------------------------- | --------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------- |
 | Workflows & Approvals | [PRD](../prd-workflows-approvals-2026-06-07.md) | [epics](workflows-approvals/epics.md) | [stories](workflows-approvals/stories.md) | [design](workflows-approvals/design.md) | [tasks](workflows-approvals/tasks.md) | 🟢 Done (WF-T1–T13: backend + frontend store/enforcement/builder/detail surfaces) |
-| Epics & Initiatives   | [PRD](../prd-epics-initiatives-2026-06-07.md)   | [epics](epics-initiatives/epics.md)   | [stories](epics-initiatives/stories.md)   | [design](epics-initiatives/design.md)   | [tasks](epics-initiatives/tasks.md)   | 🟢 Local complete through TASK-27; production reconciliation pending              |
+| Epics & Initiatives   | [PRD](../prd-epics-initiatives-2026-06-07.md)   | [epics](epics-initiatives/epics.md)   | [stories](epics-initiatives/stories.md)   | [design](epics-initiatives/design.md)   | [tasks](epics-initiatives/tasks.md)   | 🟡 Partial (epics via IssueType; initiatives missing)                             |
 | Work Items & Types    | [PRD](../prd-work-items-2026-06-07.md)          | [epics](work-items/epics.md)          | [stories](work-items/stories.md)          | [design](work-items/design.md)          | [tasks](work-items/tasks.md)          | 🟢 Mostly present (types/props/templates/recurring)                               |
 | Wiki & Pages          | [PRD](../prd-wiki-2026-06-07.md)                | [epics](wiki/epics.md)                | [stories](wiki/stories.md)                | [design](wiki/design.md)                | [tasks](wiki/tasks.md)                | 🟡 Partial (templates, comments, export, content search, AI)                      |
-| Plane AI              | [PRD](../prd-ai-2026-06-07.md)                  | [epics](ai/epics.md)                  | [stories](ai/stories.md)                  | [design](ai/design.md)                  | [tasks](ai/tasks.md)                  | 🟡 Partial (scoped NLQ/Ask AI landed locally; Build mode/connectors/actions open) |
+| Plane AI              | [PRD](../prd-ai-2026-06-07.md)                  | [epics](ai/epics.md)                  | [stories](ai/stories.md)                  | [design](ai/design.md)                  | [tasks](ai/tasks.md)                  | 🟡 Partial (Build mode, connectors, semantic actions)                             |
 
 ID prefixes: `WF` (workflows/approvals), `INIT`/`EPIC` (epics & initiatives), `WIT` (work items/types),
 `WIKI`, `AI`.

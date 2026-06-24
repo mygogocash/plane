@@ -56,11 +56,12 @@ export const ExtendedSidebarItem = observer(function ExtendedSidebarItem(props: 
   const { workspaceSlug } = useParams();
   // store hooks
   const { toggleExtendedSidebar } = useAppTheme();
-  const { data } = useUser();
+  const { data: currentUser } = useUser();
   const { allowPermissions } = useUserPermissions();
   const { preferences: workspacePreferences, toggleWorkspaceItem } = useWorkspaceNavigationPreferences();
 
   // derived values
+  const workspaceSlugValue = workspaceSlug?.toString();
   const isPinned = workspacePreferences.items[item.key]?.is_pinned ?? false;
 
   const handleLinkClick = () => toggleExtendedSidebar(true);
@@ -88,13 +89,13 @@ export const ExtendedSidebarItem = observer(function ExtendedSidebarItem(props: 
         element,
         canDrop: ({ source }) =>
           !disableDrop && source?.data?.id !== item.key && source?.data?.dragInstanceId === "NAVIGATION",
-        getData: ({ input, element }) => {
-          const data = { id: item.key };
+        getData: ({ input, element: targetElement }) => {
+          const itemData = { id: item.key };
 
           // attach instruction for last in list
-          return attachInstruction(data, {
+          return attachInstruction(itemData, {
             input,
-            element,
+            element: targetElement,
             currentLevel: 0,
             indentPerLevel: 0,
             mode: isLastChild ? "last-in-group" : "standard",
@@ -135,9 +136,9 @@ export const ExtendedSidebarItem = observer(function ExtendedSidebarItem(props: 
   }, [isLastChild, handleOnNavigationItemDrop, disableDrag, disableDrop, item.key]);
 
   const itemHref =
-    item.key === "your_work"
-      ? `/${workspaceSlug.toString()}${item.href}${data?.id}`
-      : `/${workspaceSlug.toString()}${item.href}`;
+    workspaceSlugValue && item.key === "your_work"
+      ? `/${workspaceSlugValue}${item.href}${currentUser?.id}`
+      : `/${workspaceSlugValue ?? ""}${item.href}`;
   const isActive = itemHref === pathname;
 
   const pinNavigationItem = (key: string) => {
@@ -150,7 +151,10 @@ export const ExtendedSidebarItem = observer(function ExtendedSidebarItem(props: 
 
   const icon = getSidebarNavigationItemIcon(item.key);
 
-  if (!allowPermissions(item.access as any, EUserPermissionsLevel.WORKSPACE, workspaceSlug.toString())) {
+  if (
+    !workspaceSlugValue ||
+    !allowPermissions(item.access as any, EUserPermissionsLevel.WORKSPACE, workspaceSlugValue)
+  ) {
     return null;
   }
 

@@ -1,0 +1,95 @@
+name = "manut-app-preview"
+main = "src/index.ts"
+compatibility_date = "2026-06-21"
+compatibility_flags = ["nodejs_compat"]
+account_id = "187ab61ed9dbc6e616cb23e6b95aa8f1"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
+[vars]
+APP_ENV = "preview"
+APP_ORIGIN = "https://app.manut.xyz"
+INSTANCE_VERSION = "cloudflare-preview"
+# Set LEGACY_GKE_ORIGIN outside checked-in config to a distinct GKE origin
+# before enabling legacy proxy smoke. Do not point it at APP_ORIGIN.
+
+[[d1_databases]]
+binding = "MANUT_DB"
+database_name = "manut-preview"
+database_id = "28b4db1a-005d-4814-b607-0f82900ce4bd"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "manut-uploads-preview"
+
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "fb075b2d3c8e459eb07cd7e82e741b48"
+
+[[queues.producers]]
+binding = "JOBS"
+queue = "manut-jobs-preview"
+
+[[queues.consumers]]
+queue = "manut-jobs-preview"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[[durable_objects.bindings]]
+name = "LIVE_ROOMS"
+class_name = "LiveRoomDurableObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveRoomDurableObject"]
+
+[env.production]
+name = "manut-app"
+
+[env.production.vars]
+APP_ENV = "production"
+APP_ORIGIN = "https://app.manut.xyz"
+INSTANCE_VERSION = "cloudflare-production"
+# Set LEGACY_GKE_ORIGIN outside checked-in config to a distinct GKE origin
+# before enabling legacy proxy smoke. Do not point it at APP_ORIGIN.
+
+[[env.production.d1_databases]]
+binding = "MANUT_DB"
+database_name = "manut-prod"
+database_id = "a29a2712-f899-45ee-8ab9-f64afded7e1c"
+migrations_dir = "migrations"
+
+[[env.production.r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "manut-uploads-prod"
+
+[[env.production.kv_namespaces]]
+binding = "CONFIG"
+id = "e3fdd6cf29dc4f03a9a240830814c629"
+
+[[env.production.queues.producers]]
+binding = "JOBS"
+queue = "manut-jobs-prod"
+
+[[env.production.queues.consumers]]
+queue = "manut-jobs-prod"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[[env.production.durable_objects.bindings]]
+name = "LIVE_ROOMS"
+class_name = "LiveRoomDurableObject"
