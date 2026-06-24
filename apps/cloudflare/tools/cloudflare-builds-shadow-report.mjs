@@ -94,6 +94,10 @@ function validCommitSha(value) {
   return typeof value === "string" && /^[a-f0-9]{7,40}$/i.test(value);
 }
 
+function validUuid(value) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 function validNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -160,6 +164,8 @@ export function buildTemplate() {
       github_check_conclusion: "success",
       is_production_branch: false,
       worker_version_uploaded: true,
+      worker_version_id: "<worker-version-id>",
+      active_production_version_id_after: "<active-production-version-id>",
       production_traffic_changed: false,
       production_deploy_reviewed: false,
     },
@@ -268,6 +274,23 @@ export function validateCloudflareBuildsShadowInput(input) {
 
     if (input.run.worker_version_uploaded !== true) {
       errors.push("worker_version_not_uploaded");
+    }
+
+    if (!validUuid(input.run.worker_version_id)) {
+      errors.push("worker_version_id_invalid");
+    }
+
+    if (!validUuid(input.run.active_production_version_id_after)) {
+      errors.push("active_production_version_id_after_invalid");
+    }
+
+    if (
+      !isProductionBranch &&
+      validUuid(input.run.worker_version_id) &&
+      validUuid(input.run.active_production_version_id_after) &&
+      input.run.worker_version_id === input.run.active_production_version_id_after
+    ) {
+      errors.push("non_production_version_is_active");
     }
 
     if (!isProductionBranch && input.run.production_traffic_changed !== false) {

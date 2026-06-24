@@ -24,6 +24,8 @@ function validInput(overrides: Record<string, unknown> = {}) {
       build_command_observed: true,
       deploy_command_observed: true,
       github_check_conclusion: "success",
+      worker_version_id: "703b72f7-d075-4dc2-96aa-95d42fea5d0c",
+      active_production_version_id_after: "f9aff236-d7b8-44a2-8d1f-d51bc67ad82b",
     },
     ...overrides,
   };
@@ -53,6 +55,20 @@ describe("Cloudflare Builds shadow report", () => {
     expect(validateCloudflareBuildsShadowInput(input)).toMatchObject({
       ok: false,
       errors: expect.arrayContaining(["non_production_traffic_changed"]),
+    });
+  });
+
+  it("rejects non-production evidence when the uploaded version is active in production", () => {
+    const input = validInput({
+      run: {
+        ...validInput().run,
+        active_production_version_id_after: "703b72f7-d075-4dc2-96aa-95d42fea5d0c",
+      },
+    });
+
+    expect(validateCloudflareBuildsShadowInput(input)).toMatchObject({
+      ok: false,
+      errors: expect.arrayContaining(["non_production_version_is_active"]),
     });
   });
 

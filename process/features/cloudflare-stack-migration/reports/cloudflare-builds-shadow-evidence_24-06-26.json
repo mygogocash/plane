@@ -1,6 +1,6 @@
 {
   "kind": "cloudflare-builds-shadow-report",
-  "generated_at": "2026-06-24T13:12:00.861Z",
+  "generated_at": "2026-06-24T13:19:30.826Z",
   "ok": false,
   "worker_name": "manut-app",
   "repository": "mygogocash/plane",
@@ -17,6 +17,8 @@
     "github_check_conclusion": "success",
     "is_production_branch": false,
     "worker_version_uploaded": true,
+    "worker_version_id": "703b72f7-d075-4dc2-96aa-95d42fea5d0c",
+    "active_production_version_id_after": "f9aff236-d7b8-44a2-8d1f-d51bc67ad82b",
     "production_traffic_changed": false,
     "production_deploy_reviewed": false
   },
