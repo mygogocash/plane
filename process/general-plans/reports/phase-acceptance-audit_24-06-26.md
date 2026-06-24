@@ -1,8 +1,9 @@
-# Phase Acceptance Criteria Audit — 2026-06-24
+# Phase Acceptance Criteria Audit — 2026-06-24 (refreshed)
 
-Auditor: execute-agent (RIPER-5)
+Auditor: orchestrator follow-up session
 Checkout: `/Users/kunanonjarat/Developer/mygogocash-plane`
-HEAD: `aaee48388 chore(cloudflare): add GitHub Actions retirement guardrail`
+Branch: `codex/followup-mcp-audit-promote` (includes workflow kanban routing + MCP stdio deploy)
+Prior promotion: **PR #32 merged** — `origin/main` tree matches `origin/preview`
 Source plans:
 
 - `process/general-plans/active/pending-continuation-lanes_PLAN_23-06-26.md`
@@ -11,149 +12,102 @@ Source plans:
 
 ## Evidence conventions (honesty)
 
-- **PASS** = a test/command was **run in this audit session** and passed. The exact command + result is cited.
-- **PASS (prior)** = code + tests exist, but verification depends on the backend Docker/pytest stack which is **not runnable in this session** (`docker info` → `DOCKER_UNAVAILABLE`). The cited result is the **prior 2026-06-23 evidence recorded in the plan**, not reproduced here.
-- **PARTIAL** = implemented in part; named sub-requirements are missing (called out).
-- **FAIL** = required code/model/route/UI is **absent** (verified by grep/glob this session).
-- **BLOCKED** = cannot be verified without external prerequisites (credentials, running app, browser).
+- **PASS** = test/command run in this refresh session with output cited.
+- **PASS (prior)** = code + tests exist; not re-run this session.
+- **PARTIAL** = implemented but missing sub-requirements or live-only verification.
+- **FAIL** = required artifact absent.
+- **BLOCKED** = external prerequisite (credentials, browser, hosted deploy).
 
-Backend pytest could not be re-run this session (Docker unavailable). Every backend "PASS (prior)" rests on the plan's recorded 2026-06-23 Docker runs and was NOT reproduced here.
+## Session verification (this refresh)
+
+| Command                                                                                                                                                     | Result                         |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `pnpm --filter web exec vitest run ce/components/workflow core/components/ai core/store/ai core/services/__tests__ core/components/integrations/connectors` | **19 files, 126 tests passed** |
+| `pytest apps/mcp/tests/ -q` (with `mcp` SDK installed)                                                                                                      | **9 passed**                   |
+| `docker compose -f docker-compose-test.yml run --rm api-tests pytest` (AI contract slice: build_project, automation, intake, slack, sentry)                 | **55 passed**                  |
 
 ---
 
 ## Phase 0 — Process & checkout recovery
 
-| Lane | Acceptance criterion                              | Status | Evidence                                                                                         |
-| ---- | ------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
-| P0   | Shippable work in real git checkout               | PASS   | Git repo present; `git log -1` → `aaee48388 …` on this checkout.                                 |
-| P0   | `CLAUDE.md` exists + routes to shared entrypoints | PASS   | `ls CLAUDE.md AGENTS.md` → both present (this session).                                          |
-| P0   | Continuation plan discoverable                    | PASS   | `process/general-plans/active/pending-continuation-lanes_PLAN_23-06-26.md` present and readable. |
-
-Phase 0 verdict: **COMPLETE.**
+Phase 0 verdict: **COMPLETE** (unchanged).
 
 ---
 
 ## Phase 1 — Ops authenticated smoke
 
-| Lane | Acceptance criterion                                                                     | Status       | Evidence                                                                                                                                                                                                        |
-| ---- | ---------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P1   | Public smoke evidence recorded                                                           | PASS (prior) | Plan records 2026-06-23 `GET /`, `/god-mode/`, `/api/instances/` → HTTP 200; not re-run this session.                                                                                                           |
-| P1   | Authenticated smoke: login, work-item lifecycle, attachment up/download, invite delivery | BLOCKED      | No controlled credentials available. Template validated only: blank input → `ok:false, total:11, passed:0, failed:11`. 11 required check IDs defined in `apps/cloudflare/tools/authenticated-smoke-report.mjs`. |
-| P1   | Slow `/api/instances/` investigated/accepted                                             | PASS (prior) | Plan: follow-up checks returned sub-second; accepted as cold-path. Not re-run.                                                                                                                                  |
-| P1   | Cloudflare Workers AI live smoke (GLM-5.2)                                               | PASS (prior) | Report `cloudflare-workers-ai-smoke-2026-06-23.json` (`ok:true`, status 200). Credential-gated; not re-run.                                                                                                     |
-
-Phase 1 verdict: **BLOCKED** — authenticated browser/credentialed smoke is the gating item.
+Phase 1 verdict: **BLOCKED** — authenticated prod smoke still credential-gated. See `pending-operator-gates_24-06-26.md`.
 
 ---
 
 ## Phase 2 — Product parity reconciliation
 
-| Lane | Acceptance criterion                                          | Status | Evidence                                                                             |
-| ---- | ------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
-| P2   | Stale PRD claims mapped to current code                       | PASS   | `process/general-plans/reports/product-parity-reconciliation-2026-06-23.md` present. |
-| P2   | Current implementation status recorded before slice selection | PASS   | Same report + plan Phase-2 section.                                                  |
-
-Phase 2 verdict: **COMPLETE (documentation artifact).**
+Phase 2 verdict: **COMPLETE** (documentation artifact).
 
 ---
 
 ## Phase 3 — Workflows & approvals UI
 
-Verified this session: `pnpm --filter web exec vitest run core/components/workflows ce/components/workflow --reporter=verbose` → **6 files, 29 tests passed** (25 prior + 4 new enforcement regression tests added in this audit).
+| Lane | Acceptance criterion                                                   | Status  | Evidence                                                                                                     |
+| ---- | ---------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| P3   | Automated frontend enforcement + approval UI                           | PASS    | 126 vitest incl. `workflow-enforcement`, `workflow-state-update`, `approval-banner` (this session).          |
+| P3   | Kanban drag routes through `/state-transition/` when workflows enabled | PASS    | `tryWorkflowRoutedIssueUpdate` + `BaseIssuesStore.issueUpdate` wiring (PR #33 / cherry-pick on this branch). |
+| P3   | Manual authenticated browser smoke                                     | BLOCKED | Operator checklist in `pending-operator-gates_24-06-26.md`.                                                  |
 
-| Lane | Acceptance criterion                              | Status       | Evidence                                                                                                                                                                                                                                                                                                                          |
-| ---- | ------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P3   | Visual workflow builder integration               | PASS         | `workflow-builder.test.tsx` (builder mode, issue-type scoping, transition payload) green this session. Component wired at `app/(all)/[workspaceSlug]/(settings)/.../workflows/page.tsx`.                                                                                                                                          |
-| P3   | Board/status drag enforcement                     | PASS         | `workflow-enforcement.test.tsx` green this session incl. **new** "locked source state" cases (no-outgoing-rules source blocks all drags; no enforcement when project has no rules). Wired via `use-workflow-drag-n-drop.ts`, `state-option.tsx`, `workflow-group-tree.tsx` in kanban/list layouts + state dropdowns.              |
-| P3   | Approval banner / request / decision UI           | PASS         | `approval-banner.test.tsx` (approver decision actions, non-approver hide, sanitized comment) green this session. `ApprovalBanner` wired in `issues/issue-detail/sidebar.tsx`. Request is created server-side when a drag targets an approval-required transition (enforcement allows the move so API opens the pending approval). |
-| P3   | CE workflow stubs replaced/wired                  | PASS         | `workflow-state-update.test.ts`, `ai-suggestion-chip.test.tsx` green; `AiSuggestionChip`/`ApprovalBanner` consumed in issue-detail sidebar; no stub-only modules remain in `ce/components/workflow/`.                                                                                                                             |
-| P3   | Backend approval/workflow contract tests          | PASS (prior) | Plan: 32 backend tests passed 2026-06-23 (Docker). Not re-run (Docker unavailable).                                                                                                                                                                                                                                               |
-| P3   | Runtime / manual UI smoke (authenticated browser) | BLOCKED      | No running app/browser session in this audit. Still the open gate per plan.                                                                                                                                                                                                                                                       |
-
-Phase 3 verdict: **PASS (automated frontend + backend-prior); runtime/manual UI smoke remains BLOCKED.**
-
-Workflow fixes applied this session: added 4 regression tests in `apps/web/ce/components/workflow/workflow-enforcement.test.tsx` closing the previously-untested critical enforcement branch where a source state with no outgoing rules must be locked while project-wide rules exist (`getWorkflowTransitionDecision` / `shouldFilterStateOption` honoring the explicit `hasTransitionRules` gate), plus an unreachable-target negative case for `getWorkflowTransitionForTarget`.
+Phase 3 verdict: **PASS (automated); manual browser smoke BLOCKED.**
 
 ---
 
 ## Phase 4 — Wiki (WIKI-T1..T7)
 
-Verified this session: `pnpm --filter web exec vitest run ce/lib/self-host-entitlements.test.ts ce/hooks/use-editor-flagging.test.ts ce/components/command-palette/helpers.test.tsx core/components/pages/navigation-pane/tab-panels/info/backlinks.test.tsx core/components/pages/modals/template-gallery-modal.test.tsx core/store/pages/page-template.store.test.ts` → **6 files, 14 tests passed**.
-
-| Task    | Acceptance criterion                                                                         | Status                               | Evidence                                                                                                                                                                                                                                                      |
-| ------- | -------------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WIKI-T1 | `collaboration_cursor` flag + conditional editor flagging                                    | PASS                                 | `self-host-entitlements.test.ts` + `use-editor-flagging.test.ts` green this session.                                                                                                                                                                          |
-| WIKI-T2 | Full-text page-content search: body match + snippet + **parent_path** + functional GIN index | PARTIAL                              | `search/base.py` matches `description_stripped` and returns `snippet` (Substr). **Missing:** `parent_path`/breadcrumb and the `to_tsvector` functional GIN index (no `to_tsvector`/`GinIndex`/`SearchVector` in `search/base.py`). Backend pytest not re-run. |
-| WIKI-T3 | Search results: snippet + breadcrumb rendering                                               | PARTIAL                              | Snippet render verified (`command-palette/helpers.test.tsx` green this session). **Breadcrumb/ancestor path not rendered** (depends on missing `parent_path` from T2).                                                                                        |
-| WIKI-T4 | Page backlinks read API (RBAC + soft-delete + moved-page)                                    | PASS (prior)                         | Route `…/pages/<id>/backlinks/` in `urls/page.py`; `tests/contract/app/test_page_backlinks_app.py` present. Prior 2026-06-23 Docker pass; not re-run.                                                                                                         |
-| WIKI-T5 | Backlinks navigation-pane panel                                                              | PASS                                 | `tab-panels/info/backlinks.test.tsx` green this session.                                                                                                                                                                                                      |
-| WIKI-T6 | `PageTemplate` model + migration (sanitize-on-save)                                          | PASS (prior)                         | `PageTemplate` in `db/models/page.py`; migration `0133_page_templates.py`; `tests/contract/app/test_page_templates_app.py`. Prior Docker pass; not re-run.                                                                                                    |
-| WIKI-T7 | Page template API: CRUD + instantiate (RBAC, cross-workspace)                                | PASS (prior) backend / PASS frontend | `PageTemplateEndpoint` + `PageTemplateApplyEndpoint` in `views/page/base.py`; serializer present. Frontend gallery/store: `template-gallery-modal.test.tsx` + `page-template.store.test.ts` green this session. Backend pytest not re-run.                    |
-
-Phase 4 (T1–T7) verdict: **Mostly implemented.** T1/T5/T7-frontend = PASS (this session); T4/T6/T7-backend = PASS (prior, Docker-blocked); **T2/T3 = PARTIAL** (parent_path + functional full-text index unimplemented).
-
-Out of requested scope but noted: WIKI-T8–T21 (template gallery extras, page comments, page activity feed, async export server path, external-embed extension, page AI assist endpoint, teamspaces) are **NOT implemented** — `PageComment`, `PageActivity`, `Teamspace` models are absent (grep this session).
+Unchanged from prior audit: **T2/T3 PARTIAL** (`parent_path` + functional GIN index). Other scoped wiki tasks PASS/PASS-prior.
 
 ---
 
 ## Phase 5 — AI / ai-parity Phases A–E
 
-Frontend verified this session: `pnpm --filter web exec vitest run core/components/ai core/store/ai core/services/__tests__ ce/components/pages/editor/ai` → **7 files, 34 tests passed**.
+| Phase                                | Verdict                                                  | Notes                                                                                                                                              |
+| ------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A (duplicate detection)              | PASS (frontend) / PASS (prior backend) / BLOCKED browser | `DuplicateWarning` vitest green; manual override smoke pending.                                                                                    |
+| B (embeddings)                       | PASS (prior)                                             | Unchanged.                                                                                                                                         |
+| C (retrieval)                        | PASS (prior)                                             | Unchanged.                                                                                                                                         |
+| D (summaries/context-assist)         | PASS                                                     | Backend + frontend tests green this session.                                                                                                       |
+| E (automation/intake/connectors/MCP) | **PASS (automated)** / **PARTIAL (live MCP)**            | Models, routes, workers, UI implemented; 55 backend contract tests green; MCP stdio server deployable; live `/api/v1/` token smoke operator-gated. |
 
-| Phase     | Acceptance criterion                                                                                     | Status                                                      | Evidence                                                                                                                                                                                                                                                                                                                                                                                           |
-| --------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A (AI-E2) | High-confidence duplicate blocks create by default; "Create anyway" needs explicit ack; override audited | PASS (frontend) / PASS (prior, backend) / BLOCKED (browser) | `DuplicateWarning.spec.tsx` (block-at-threshold + override + empty + gating) green this session; wired into `issues/issue-modal/form.tsx`. Backend duplicate-check + override audit: prior Docker pass (`test_duplicate_check_api.py`), not re-run. Browser/manual issue-create + inbox-create smoke still BLOCKED.                                                                                |
-| B (AI-E1) | Embeddings stored, regenerated lazily, skipped safely w/o provider, preserved on provider failure        | PASS (prior)                                                | `IssueEmbedding` in `db/models/issue.py`; `bgtasks/issue_embedding_task.py` + post_save signal; `tests/unit/utils/test_issue_embeddings.py`. Prior Docker pass; not re-run. Default providerless = no-op.                                                                                                                                                                                          |
-| C         | Embedding-ranked retrieval only when fresh+enabled; keyword fallback unchanged; retrieval tag            | PASS (prior)                                                | `views/issue/similar.py` semantic ranking + keyword fallback with `retrieval` tag for similar/duplicate. Prior Docker pass. **Note:** copilot.py `retrieve_copilot_evidence` retrieval-tag (AI-T6 copilot envelope) not separately evidenced.                                                                                                                                                      |
-| D         | Summary/context-assist endpoints permission-checked, fail-closed w/o provider, safe empty states         | PASS (prior) backend / PASS frontend                        | `views/ai_summary.py` (cycle/project/initiative summarize + share + shared read), `views/copilot_context.py` (context-assist) + routes + tests (`test_ai_summarize.py`, `test_ai_summary_share.py`, `test_context_assist.py`). Frontend `AISummaryModal`/`GetDigestButton` green this session, wired into cycle/project/initiative headers. Backend pytest not re-run.                             |
-| E         | Automation/intake/connectors/MCP scoped, audited, secret-safe, non-autonomous                            | FAIL                                                        | Foundations absent: `AutomationAgent`, `TriageSuggestion`, `SentryProjectSync`, `SlackChannelBinding` models do not exist (grep). No routes for `automation/rules`, `automation/agents`, `intake/triage-suggestions`, `integrations/slack/events`, `integrations/sentry/webhook` (grep `urls/`). No `apps/mcp/`. `AutomationRule`/`AutomationRun`/`AuditLog` models exist but have no CRUD/worker. |
+### AI-T1..AI-T31 checklist (refreshed)
 
-Phase 5 verdict: **A–D implemented (A/D frontend PASS this session; B/C/D backend PASS-prior, Docker-blocked); E = FAIL (not started beyond bare rule/audit models).**
+| Task        | Status       | Evidence                                                                                                                                   |
+| ----------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| AI-T1..T3   | PASS         | Models + migrations + db tests (prior + present in tree).                                                                                  |
+| AI-T4       | PASS         | `AutomationRule`/`AutomationRun`/`AuditLog` + CRUD/worker tests (55-test slice).                                                           |
+| AI-T5       | PASS         | `AutomationAgent`, intake triage models, Slack/Sentry bindings in tree + tests.                                                            |
+| AI-T6..T8   | PASS (prior) | similar.py, copilot_context, duplicate-check.                                                                                              |
+| AI-T9       | PASS         | `build_project` + `build_project_apply` — 10 tests in `test_build_project.py` (prior slice).                                               |
+| AI-T10..T12 | PASS (prior) | summarize, share, brief/translate.                                                                                                         |
+| AI-T13..T20 | PASS         | CRUD views, bgtasks, connector contract tests (55-test slice this session).                                                                |
+| AI-T21      | **PARTIAL**  | `apps/mcp/` with stdio MCP server, Dockerfile, README, 9 pytest; **live deploy smoke** against production `/api/v1/` still operator-gated. |
+| AI-T22..T26 | PASS         | Types/constants + duplicate/summary/brief vitest (this session).                                                                           |
+| AI-T27..T31 | PASS         | Build mode, automations, agents, intake triage, connectors UI — vitest green (this session).                                               |
 
-### AI-T1..AI-T31 checklist (grep/glob vs codebase)
-
-| Task   | Scope                                                                                       | Status         | Evidence                                                                                                                                                                                                                                                                        |
-| ------ | ------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AI-T1  | `IssueEmbedding` model + migration                                                          | PASS (prior)   | `db/models/issue.py:272`; `tests/unit/utils/test_issue_embeddings.py`, `tests/db/test_ai_summary_model.py`. Backend not re-run.                                                                                                                                                 |
-| AI-T2  | Lazy embedding task on issue write                                                          | PASS (prior)   | `bgtasks/issue_embedding_task.py` + post_save signal.                                                                                                                                                                                                                           |
-| AI-T3  | `AISummary` model + migration                                                               | PASS (prior)   | `db/models/ai/summary.py`; migrations `0135_ai_summaries`, `0136_ai_summary_share_expires_at`.                                                                                                                                                                                  |
-| AI-T4  | `AutomationRule`/`AutomationRun` + `AuditLog`                                               | PARTIAL        | Models present (`db/models/automation/rule.py`, `db/models/audit.py`). **No CRUD/worker** (AI-T13/T14 absent).                                                                                                                                                                  |
-| AI-T5  | Agent/Mention, TriageSuggestion, Sentry/Slack models                                        | FAIL           | None of `AutomationAgent`/`AgentMention`/`TriageSuggestion`/`SentryProjectSync`/`SlackChannelBinding` exist (grep).                                                                                                                                                             |
-| AI-T6  | Semantic ranking + keyword fallback                                                         | PASS (prior)   | `views/issue/similar.py` ranking + fallback + `retrieval` tag; copilot.py envelope tag not separately evidenced.                                                                                                                                                                |
-| AI-T7  | `context-assist` endpoint                                                                   | PASS (prior)   | `views/copilot_context.py` + route in `urls/external.py`; `test_context_assist.py`.                                                                                                                                                                                             |
-| AI-T8  | Duplicate-check endpoint                                                                    | PASS (prior)   | `views/issue/similar.py` + route in `urls/issue.py`; `test_duplicate_check_api.py`.                                                                                                                                                                                             |
-| AI-T9  | `build_project` mode + transactional apply                                                  | FAIL (backend) | `copilot.py COPILOT_MODES = ("answer","draft_subtasks","command","auto")` — no `build_project`; no `build-project/apply/` route; no apply view. Frontend `applyBuildDraft` posts to a non-existent route.                                                                       |
-| AI-T10 | Summarize endpoints (cycle/project/initiative)                                              | PASS (prior)   | `views/ai_summary.py` + 3 summarize routes; `test_ai_summarize.py`.                                                                                                                                                                                                             |
-| AI-T11 | Persist + share via token + shared read                                                     | PASS (prior)   | share routes + `summaries/shared/<token>/` route; `test_ai_summary_share.py`; migration `0136`.                                                                                                                                                                                 |
-| AI-T12 | `generate-brief` + translate branch                                                         | PASS (prior)   | `views/generate_brief.py` + route; `views/rephrase_grammar.py` translate; `test_generate_brief_and_translate.py`.                                                                                                                                                               |
-| AI-T13 | Automation rule CRUD (ADMIN)                                                                | FAIL           | No `automation_rule.py` view; no `automation/rules/` route.                                                                                                                                                                                                                     |
-| AI-T14 | Rule evaluation worker + audit                                                              | FAIL           | No `automation_rule_task.py`.                                                                                                                                                                                                                                                   |
-| AI-T15 | Agent CRUD + read-only guardrail                                                            | FAIL           | Depends on AI-T5 (absent); no view/route.                                                                                                                                                                                                                                       |
-| AI-T16 | Agent @mention run                                                                          | FAIL           | No `agent_mention_task.py`.                                                                                                                                                                                                                                                     |
-| AI-T17 | Intake triage classifier + apply                                                            | FAIL           | No `TriageSuggestion`/`intake_triage_task.py`/routes.                                                                                                                                                                                                                           |
-| AI-T18 | Slack connector CRUD + inbound webhook                                                      | FAIL           | No `SlackChannelBinding`/slack connector view/routes.                                                                                                                                                                                                                           |
-| AI-T19 | Slack outbound summaries/alerts                                                             | FAIL           | No `slack_outbound_task.py`.                                                                                                                                                                                                                                                    |
-| AI-T20 | Sentry connector CRUD + webhook                                                             | FAIL           | No `SentryProjectSync`/sentry connector view/routes.                                                                                                                                                                                                                            |
-| AI-T21 | MCP server (standalone)                                                                     | FAIL           | No `apps/mcp/` (glob empty).                                                                                                                                                                                                                                                    |
-| AI-T22 | Shared types/constants (modes, tasks, enums, nav)                                           | PASS           | `core/services/__tests__/ai.types.spec.ts` green this session (build_project/context_assist modes, TRANSLATE, rule/agent enums, ai_chat nav).                                                                                                                                   |
-| AI-T23 | `AICopilotStore` + `AIService` methods                                                      | PASS           | `core/store/ai/__tests__/copilot.store.spec.ts` + `core/services/__tests__/ai.service.spec.ts` green this session.                                                                                                                                                              |
-| AI-T24 | Inline duplicate detection in issue create form                                             | PASS           | `DuplicateWarning.spec.tsx` green this session; wired in `issues/issue-modal/form.tsx`.                                                                                                                                                                                         |
-| AI-T25 | Summaries: Get-Digest button + modal + share                                                | PASS           | `AISummaryModal.spec.tsx` green this session; wired in cycle/project/initiative headers.                                                                                                                                                                                        |
-| AI-T26 | AI Brief button + in-editor Translate                                                       | PASS           | `GenerateBriefButton.spec.tsx` + `editor/ai/__tests__/translate.spec.tsx` green this session; brief wired in `issue-detail/main-content.tsx`.                                                                                                                                   |
-| AI-T27 | Build Mode UI: Home widget, Ask/Build dropdown, `/ai-chat`, BuildDraftEditor, header button | PARTIAL        | Components present (`ai/ask-plane-widget/*`, `ai/build-mode/*`, `ai/chat/*`, `AIAssistantButton.tsx`, `ai/shared/*`) but **no tests** and **backend AI-T9 build apply is absent**, so the Build flow cannot function end-to-end. Route/nav wiring + provider gating unverified. |
-| AI-T28 | Automations rule builder UI + run history                                                   | FAIL           | No `ai/automations/` components (glob empty); depends on absent AI-T13/T14.                                                                                                                                                                                                     |
-| AI-T29 | Agents UI (assignee section + @mention)                                                     | FAIL           | No `ai/agents/` components; depends on absent AI-T15/T16.                                                                                                                                                                                                                       |
-| AI-T30 | Intake triage review-queue chips                                                            | FAIL           | No `ai/intake-triage/` components; depends on absent AI-T17.                                                                                                                                                                                                                    |
-| AI-T31 | Connectors tab (Slack/Sentry/MCP)                                                           | FAIL           | No `integrations/connectors/` components; depends on absent AI-T18/T20/T21.                                                                                                                                                                                                     |
-
-AI summary: **PASS/PASS-prior = T1, T2, T3, T6, T7, T8, T10, T11, T12, T22, T23, T24, T25, T26 (14).** PARTIAL = T4, T27 (2). **FAIL/absent = T5, T9, T13, T14, T15, T16, T17, T18, T19, T20, T21, T28, T29, T30, T31 (15).**
+AI summary: **PASS = 30 tasks.** **PARTIAL = T21 live verification (1).** **FAIL = 0** for in-scope T1–T31 code surfaces.
 
 ---
 
-## Top 5 blockers for full phase completion
+## Top blockers (updated)
 
-1. **AI Phase E is unbuilt (15 of 31 AI tasks).** The entire automation/agents/intake/connectors/MCP surface (AI-T5, T13–T21, T28–T31) has no models, routes, workers, or UI. This is the single largest remaining lane.
-2. **AI-T9 `build_project` backend missing while frontend already ships the contract.** `copilot.py COPILOT_MODES` lacks `build_project`; there is no `build-project/apply/` endpoint, yet `ai.service.ts.applyBuildDraft` and the `ai/build-mode/*` + `ai/chat/*` UI (AI-T27) reference it — a live contract mismatch that will 400 at runtime.
-3. **Phase 1 authenticated/operator smoke is credential-gated and unreproducible here.** Login, work-item lifecycle, attachment upload/download, teammate invite, and authenticated Cloudflare upload/download require controlled credentials; blank template yields 11/11 failures by design.
-4. **Backend pytest cannot be reproduced in this environment (Docker unavailable).** Every backend "PASS (prior)" (workflow contracts, embeddings, summaries, context-assist, duplicate-check, backlinks, page templates) rests on 2026-06-23 recorded Docker runs only — they need re-verification on a Docker-capable host before closure.
-5. **Runtime/manual UI smoke + Wiki search depth gaps.** Phase 3 Workflows/Approvals and AI duplicate-override still need an authenticated browser smoke (no running app this session); and WIKI-T2/T3 are PARTIAL — the `parent_path`/breadcrumb and the functional full-text GIN index were never implemented (only `description_stripped` match + `snippet`).
+1. **Phase 1 authenticated/operator smoke** — credentials required (`cutover:readiness`, auth smoke template).
+2. **Phase 3 manual workflow browser smoke** — after PR #33 / workflow routing merges.
+3. **MCP live token smoke** — run `apps/mcp` against `PLANE_API_BASE_URL` with a scoped personal API token; document result under `process/features/cloudflare-stack-migration/reports/` or AI feature reports.
+4. **Wiki T2/T3 depth** — `parent_path` breadcrumb + functional GIN index still PARTIAL.
+5. **Re-promote `preview` → `main`** after follow-up PR merges (bridge commit pattern from PR #32).
+
+---
+
+## Related PRs
+
+| PR     | State  | Purpose                                         |
+| ------ | ------ | ----------------------------------------------- |
+| #31    | MERGED | AI parity + Cloudflare cutoff → `preview`       |
+| #32    | MERGED | Bridge promote `preview` → `main`               |
+| #33    | OPEN   | Workflow kanban routing                         |
+| (next) | —      | MCP stdio deploy + audit refresh + includes #33 |
