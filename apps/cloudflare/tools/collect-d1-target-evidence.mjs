@@ -202,15 +202,16 @@ export function buildD1TargetEvidence({
   const failedRelationships = relationshipChecks.filter((check) => !check.ok);
   const validationInputReady =
     missingTables.length === 0 && missingRelationships.length === 0 && failedRelationships.length === 0;
+  const finalImportReady = validationInputReady && requiredTotalRows > 0;
 
   return {
     generated_at: generatedAt,
     evidence_kind: "d1-target-snapshot",
     schema_version: 1,
-    ok: validationInputReady,
+    ok: finalImportReady,
     database,
     mode: local ? "local" : "remote",
-    final_import_ready: validationInputReady && requiredTotalRows > 0,
+    final_import_ready: finalImportReady,
     final_import_blocked:
       !validationInputReady || requiredTotalRows <= 0
         ? {
