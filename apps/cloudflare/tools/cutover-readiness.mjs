@@ -726,6 +726,38 @@ function validateBetterStackCutoverReport(report) {
     }
   }
 
+  if (!["betterstack-api", "monitor-state-file"].includes(report.monitor_source)) {
+    return {
+      ok: false,
+      message: "Better Stack cutover report must include monitor_source betterstack-api or monitor-state-file.",
+    };
+  }
+
+  if (report.monitor_source === "monitor-state-file") {
+    if (typeof report.monitor_state_path !== "string" || report.monitor_state_path.trim() === "") {
+      return { ok: false, message: "Better Stack monitor-state evidence must include monitor_state_path." };
+    }
+
+    const generatedAt = Date.parse(report.generated_at);
+    if (!Number.isFinite(generatedAt)) {
+      return { ok: false, message: "Better Stack monitor-state evidence must include a valid generated_at timestamp." };
+    }
+
+    const maxMonitorStateAgeMs = 24 * 60 * 60 * 1000;
+    const maxFutureSkewMs = 5 * 60 * 1000;
+    for (const requiredId of REQUIRED_BETTERSTACK_MONITOR_IDS) {
+      const check = report.monitor_checks.find((candidate) => candidate.id === requiredId);
+      const observedAt = check?.last_checked_at ?? check?.updated_at ?? check?.observed_at;
+      const observedTime = Date.parse(observedAt);
+      if (!Number.isFinite(observedTime)) {
+        return { ok: false, message: `Better Stack monitor-state check ${requiredId} must include last_checked_at.` };
+      }
+      if (observedTime > generatedAt + maxFutureSkewMs || generatedAt - observedTime > maxMonitorStateAgeMs) {
+        return { ok: false, message: `Better Stack monitor-state check ${requiredId} is stale.` };
+      }
+    }
+  }
+
   return { ok: true };
 }
 

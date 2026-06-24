@@ -75,6 +75,14 @@ describe("D1 target evidence collection", () => {
         },
       },
     });
+    expect(report.operator_runbook).toMatchObject({
+      readiness_blocker_id: "d1-import-validation",
+      canonical_report:
+        "process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json",
+    });
+    expect(report.operator_next_steps).toEqual(
+      expect.arrayContaining([expect.stringContaining("operator-approved D1 import")])
+    );
   });
 
   it("marks target evidence ready when required D1 counts and relationships are populated", () => {
@@ -104,5 +112,8 @@ describe("D1 target evidence collection", () => {
         relationship_checks_failed: 0,
       },
     });
+    expect(report.operator_next_steps).toEqual(
+      expect.arrayContaining([expect.stringContaining("canonical D1 import validation report")])
+    );
   });
 });

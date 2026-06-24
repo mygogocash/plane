@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { normalizeCounts } from "./compare-row-counts.mjs";
+import { buildD1ImportValidationNextSteps, buildD1ImportValidationRunbook } from "./d1-import-validation-contract.mjs";
 import { D1_VALIDATION_TABLES } from "./d1-import-validation-queries.mjs";
 import { resolveRepoPath } from "./path-utils.mjs";
 
@@ -120,8 +121,10 @@ export function buildPostgresSourceCountReport(counts, { generatedAt, source }) 
     validationErrors.push("Postgres source counts require non-empty required table counts.");
   }
 
+  const ok = validationErrors.length === 0;
+
   return {
-    ok: validationErrors.length === 0,
+    ok,
     evidence_kind: "postgres-source-counts",
     schema_version: 1,
     generated_at: generatedAt,
@@ -135,6 +138,12 @@ export function buildPostgresSourceCountReport(counts, { generatedAt, source }) 
       required_tables_present: REQUIRED_COUNT_TABLES.length - missingTables.length,
       required_scope_source_rows: sourceRows,
     },
+    operator_runbook: buildD1ImportValidationRunbook(),
+    operator_next_steps: buildD1ImportValidationNextSteps({
+      sourceRows,
+      missingTables,
+      ok: false,
+    }),
     validation_errors: validationErrors,
   };
 }

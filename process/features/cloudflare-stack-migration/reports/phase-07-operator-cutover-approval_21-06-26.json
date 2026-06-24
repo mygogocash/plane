@@ -1,0 +1,393 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-06-24T08:42:12.348Z",
+  "evidence_kind": "operator-approval",
+  "ok": false,
+  "cutover_approved": false,
+  "decision_complete": false,
+  "target_origin": "https://app.manut.xyz",
+  "approved_by": "",
+  "approved_at": "",
+  "maintenance_window": {
+    "start_at": "",
+    "end_at": ""
+  },
+  "operator_inputs": {
+    "maintenance_window": {
+      "announcement_url": "",
+      "owner": ""
+    },
+    "rollback_checkpoint": {
+      "rollback_target": "",
+      "rollback_command": "",
+      "checkpoint_evidence_path": "",
+      "owner": ""
+    },
+    "dns_routing": {
+      "change_ticket_url": "",
+      "current_origin": "",
+      "cutover_origin": "",
+      "routing_owner": ""
+    },
+    "write_freeze": {
+      "start_at": "",
+      "end_at": "",
+      "announcement_url": "",
+      "coordinator": ""
+    },
+    "smoke_readiness": {
+      "public_smoke_command": "",
+      "authenticated_smoke_command": "",
+      "evidence_path": "",
+      "owner": ""
+    }
+  },
+  "summary": {
+    "total": 5,
+    "passed": 0,
+    "failed": 5,
+    "remaining_operator_inputs": 20
+  },
+  "required_check_ids": [
+    "maintenance-window-announced",
+    "rollback-checkpoint-confirmed",
+    "dns-change-approved",
+    "write-freeze-confirmed",
+    "smoke-plan-ready"
+  ],
+  "remaining_operator_inputs": [
+    {
+      "check_id": "maintenance-window-announced",
+      "path": "maintenance_window.start_at",
+      "label": "Maintenance window start timestamp"
+    },
+    {
+      "check_id": "maintenance-window-announced",
+      "path": "maintenance_window.end_at",
+      "label": "Maintenance window end timestamp"
+    },
+    {
+      "check_id": "maintenance-window-announced",
+      "path": "operator_inputs.maintenance_window.announcement_url",
+      "label": "Maintenance announcement or calendar URL"
+    },
+    {
+      "check_id": "maintenance-window-announced",
+      "path": "operator_inputs.maintenance_window.owner",
+      "label": "Maintenance-window operator owner"
+    },
+    {
+      "check_id": "rollback-checkpoint-confirmed",
+      "path": "operator_inputs.rollback_checkpoint.rollback_target",
+      "label": "Rollback target or checkpoint"
+    },
+    {
+      "check_id": "rollback-checkpoint-confirmed",
+      "path": "operator_inputs.rollback_checkpoint.rollback_command",
+      "label": "Rollback command or runbook step"
+    },
+    {
+      "check_id": "rollback-checkpoint-confirmed",
+      "path": "operator_inputs.rollback_checkpoint.checkpoint_evidence_path",
+      "label": "Rollback checkpoint evidence path"
+    },
+    {
+      "check_id": "rollback-checkpoint-confirmed",
+      "path": "operator_inputs.rollback_checkpoint.owner",
+      "label": "Rollback owner"
+    },
+    {
+      "check_id": "dns-change-approved",
+      "path": "operator_inputs.dns_routing.change_ticket_url",
+      "label": "DNS or routing change ticket URL"
+    },
+    {
+      "check_id": "dns-change-approved",
+      "path": "operator_inputs.dns_routing.current_origin",
+      "label": "Current production origin before cutoff"
+    },
+    {
+      "check_id": "dns-change-approved",
+      "path": "operator_inputs.dns_routing.cutover_origin",
+      "label": "Approved Cloudflare cutover origin"
+    },
+    {
+      "check_id": "dns-change-approved",
+      "path": "operator_inputs.dns_routing.routing_owner",
+      "label": "DNS or routing owner"
+    },
+    {
+      "check_id": "write-freeze-confirmed",
+      "path": "operator_inputs.write_freeze.start_at",
+      "label": "Write-freeze start timestamp"
+    },
+    {
+      "check_id": "write-freeze-confirmed",
+      "path": "operator_inputs.write_freeze.end_at",
+      "label": "Write-freeze end timestamp"
+    },
+    {
+      "check_id": "write-freeze-confirmed",
+      "path": "operator_inputs.write_freeze.announcement_url",
+      "label": "Write-freeze announcement URL"
+    },
+    {
+      "check_id": "write-freeze-confirmed",
+      "path": "operator_inputs.write_freeze.coordinator",
+      "label": "Write-freeze coordinator"
+    },
+    {
+      "check_id": "smoke-plan-ready",
+      "path": "operator_inputs.smoke_readiness.public_smoke_command",
+      "label": "Public smoke command"
+    },
+    {
+      "check_id": "smoke-plan-ready",
+      "path": "operator_inputs.smoke_readiness.authenticated_smoke_command",
+      "label": "Authenticated smoke command"
+    },
+    {
+      "check_id": "smoke-plan-ready",
+      "path": "operator_inputs.smoke_readiness.evidence_path",
+      "label": "Smoke evidence output path"
+    },
+    {
+      "check_id": "smoke-plan-ready",
+      "path": "operator_inputs.smoke_readiness.owner",
+      "label": "Smoke executor owner"
+    }
+  ],
+  "checks": [
+    {
+      "id": "maintenance-window-announced",
+      "label": "Maintenance window is announced and scheduled.",
+      "ok": false,
+      "status": "fail",
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "maintenance_window.start_at",
+          "label": "Maintenance window start timestamp"
+        },
+        {
+          "path": "maintenance_window.end_at",
+          "label": "Maintenance window end timestamp"
+        },
+        {
+          "path": "operator_inputs.maintenance_window.announcement_url",
+          "label": "Maintenance announcement or calendar URL"
+        },
+        {
+          "path": "operator_inputs.maintenance_window.owner",
+          "label": "Maintenance-window operator owner"
+        }
+      ],
+      "missing_inputs": [
+        {
+          "path": "maintenance_window.start_at",
+          "label": "Maintenance window start timestamp"
+        },
+        {
+          "path": "maintenance_window.end_at",
+          "label": "Maintenance window end timestamp"
+        },
+        {
+          "path": "operator_inputs.maintenance_window.announcement_url",
+          "label": "Maintenance announcement or calendar URL"
+        },
+        {
+          "path": "operator_inputs.maintenance_window.owner",
+          "label": "Maintenance-window operator owner"
+        }
+      ]
+    },
+    {
+      "id": "rollback-checkpoint-confirmed",
+      "label": "Rollback target, commands, and evidence capture path are confirmed.",
+      "ok": false,
+      "status": "fail",
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.rollback_checkpoint.rollback_target",
+          "label": "Rollback target or checkpoint"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.rollback_command",
+          "label": "Rollback command or runbook step"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.checkpoint_evidence_path",
+          "label": "Rollback checkpoint evidence path"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.owner",
+          "label": "Rollback owner"
+        }
+      ],
+      "missing_inputs": [
+        {
+          "path": "operator_inputs.rollback_checkpoint.rollback_target",
+          "label": "Rollback target or checkpoint"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.rollback_command",
+          "label": "Rollback command or runbook step"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.checkpoint_evidence_path",
+          "label": "Rollback checkpoint evidence path"
+        },
+        {
+          "path": "operator_inputs.rollback_checkpoint.owner",
+          "label": "Rollback owner"
+        }
+      ]
+    },
+    {
+      "id": "dns-change-approved",
+      "label": "The app.manut.xyz routing or DNS change is explicitly approved.",
+      "ok": false,
+      "status": "fail",
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.dns_routing.change_ticket_url",
+          "label": "DNS or routing change ticket URL"
+        },
+        {
+          "path": "operator_inputs.dns_routing.current_origin",
+          "label": "Current production origin before cutoff"
+        },
+        {
+          "path": "operator_inputs.dns_routing.cutover_origin",
+          "label": "Approved Cloudflare cutover origin"
+        },
+        {
+          "path": "operator_inputs.dns_routing.routing_owner",
+          "label": "DNS or routing owner"
+        }
+      ],
+      "missing_inputs": [
+        {
+          "path": "operator_inputs.dns_routing.change_ticket_url",
+          "label": "DNS or routing change ticket URL"
+        },
+        {
+          "path": "operator_inputs.dns_routing.current_origin",
+          "label": "Current production origin before cutoff"
+        },
+        {
+          "path": "operator_inputs.dns_routing.cutover_origin",
+          "label": "Approved Cloudflare cutover origin"
+        },
+        {
+          "path": "operator_inputs.dns_routing.routing_owner",
+          "label": "DNS or routing owner"
+        }
+      ]
+    },
+    {
+      "id": "write-freeze-confirmed",
+      "label": "Write freeze or maintenance coordination is confirmed for final delta import.",
+      "ok": false,
+      "status": "fail",
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.write_freeze.start_at",
+          "label": "Write-freeze start timestamp"
+        },
+        {
+          "path": "operator_inputs.write_freeze.end_at",
+          "label": "Write-freeze end timestamp"
+        },
+        {
+          "path": "operator_inputs.write_freeze.announcement_url",
+          "label": "Write-freeze announcement URL"
+        },
+        {
+          "path": "operator_inputs.write_freeze.coordinator",
+          "label": "Write-freeze coordinator"
+        }
+      ],
+      "missing_inputs": [
+        {
+          "path": "operator_inputs.write_freeze.start_at",
+          "label": "Write-freeze start timestamp"
+        },
+        {
+          "path": "operator_inputs.write_freeze.end_at",
+          "label": "Write-freeze end timestamp"
+        },
+        {
+          "path": "operator_inputs.write_freeze.announcement_url",
+          "label": "Write-freeze announcement URL"
+        },
+        {
+          "path": "operator_inputs.write_freeze.coordinator",
+          "label": "Write-freeze coordinator"
+        }
+      ]
+    },
+    {
+      "id": "smoke-plan-ready",
+      "label": "Public and authenticated smoke checklist is ready for immediate execution.",
+      "ok": false,
+      "status": "fail",
+      "evidence": "",
+      "observed_at": "",
+      "url": "",
+      "note": "",
+      "required_inputs": [
+        {
+          "path": "operator_inputs.smoke_readiness.public_smoke_command",
+          "label": "Public smoke command"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.authenticated_smoke_command",
+          "label": "Authenticated smoke command"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.evidence_path",
+          "label": "Smoke evidence output path"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.owner",
+          "label": "Smoke executor owner"
+        }
+      ],
+      "missing_inputs": [
+        {
+          "path": "operator_inputs.smoke_readiness.public_smoke_command",
+          "label": "Public smoke command"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.authenticated_smoke_command",
+          "label": "Authenticated smoke command"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.evidence_path",
+          "label": "Smoke evidence output path"
+        },
+        {
+          "path": "operator_inputs.smoke_readiness.owner",
+          "label": "Smoke executor owner"
+        }
+      ]
+    }
+  ],
+  "validation_error": "Operator approval check maintenance-window-announced is not passing."
+}

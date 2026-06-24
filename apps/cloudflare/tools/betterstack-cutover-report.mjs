@@ -1,11 +1,11 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { resolveRepoPath } from "./path-utils.mjs";
 
 function usage() {
-  return `Usage: node apps/cloudflare/tools/betterstack-cutover-report.mjs [--json] [--out <report.json>] [--require-endpoint-probes] [--soft-fail]
+  return `Usage: node apps/cloudflare/tools/betterstack-cutover-report.mjs [--json] [--out <report.json>] [--monitor-state <state.json>] [--require-endpoint-probes] [--soft-fail]
 
 Captures Phase 7 Better Stack cutover evidence for manut.xyz, app.manut.xyz,
 and app.manut.xyz/api/instances/. The command also records live endpoint probes
@@ -16,6 +16,7 @@ readiness gate.
 Environment:
   BETTERSTACK_API_TOKEN       required for ok:true monitor evidence
   BETTERSTACK_API_BASE        default https://uptime.betterstack.com/api/v2
+  BETTERSTACK_MONITOR_STATE_PATH optional local/operator monitor evidence JSON when API token is unavailable
   BETTERSTACK_SITE_URL        default https://manut.xyz
   BETTERSTACK_SITE_FALLBACK_URL default https://manut.pages.dev when site URL is https://manut.xyz
   BETTERSTACK_APP_URL         default https://app.manut.xyz
@@ -32,6 +33,7 @@ Exit codes:
 function parseArgs(argv) {
   const options = {
     json: false,
+    monitorStatePath: null,
     outPath: null,
     requireEndpointProbes: false,
     softFail: false,
@@ -70,6 +72,16 @@ function parseArgs(argv) {
         throw new Error("--out requires a path");
       }
       options.outPath = outPath;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--monitor-state") {
+      const monitorStatePath = argv[index + 1];
+      if (!monitorStatePath) {
+        throw new Error("--monitor-state requires a path");
+      }
+      options.monitorStatePath = monitorStatePath;
       index += 1;
       continue;
     }
@@ -264,6 +276,66 @@ export function buildBlockedMonitorReport(definitions = requiredMonitorDefinitio
   };
 }
 
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function coerceMonitorEntry(entry) {
+  if (!isRecord(entry)) {
+    return entry;
+  }
+
+  const attributes = isRecord(entry.attributes) ? entry.attributes : {};
+  return {
+    ...entry,
+    id: entry.id ?? entry.monitor_id ?? null,
+    attributes: {
+      ...attributes,
+      pronounceable_name:
+        attributes.pronounceable_name ??
+        entry.pronounceable_name ??
+        entry.name ??
+        entry.monitor_name ??
+        entry.expected_name,
+      url: attributes.url ?? entry.url ?? entry.expected_url,
+      status: attributes.status ?? entry.status,
+      last_checked_at: attributes.last_checked_at ?? entry.last_checked_at,
+      updated_at: attributes.updated_at ?? entry.updated_at,
+      required_keyword: attributes.required_keyword ?? entry.required_keyword,
+    },
+  };
+}
+
+function monitorEntriesFromState(state) {
+  if (Array.isArray(state)) {
+    return state;
+  }
+  if (!isRecord(state)) {
+    throw new Error("Better Stack monitor state must be a JSON object or array.");
+  }
+  if (Array.isArray(state.monitors)) {
+    return state.monitors;
+  }
+  if (Array.isArray(state.data)) {
+    return state.data;
+  }
+  if (Array.isArray(state.monitor_checks)) {
+    return state.monitor_checks;
+  }
+  throw new Error("Better Stack monitor state must include monitors, data, or monitor_checks.");
+}
+
+export function buildMonitorReportFromState(state, definitions = requiredMonitorDefinitions()) {
+  const monitors = monitorEntriesFromState(state).map(coerceMonitorEntry);
+  return buildMonitorReport(monitors, definitions);
+}
+
+export async function buildMonitorReportFromStateFile(statePath, definitions = requiredMonitorDefinitions()) {
+  const absoluteStatePath = resolveRepoPath(statePath);
+  const state = JSON.parse(await readFile(absoluteStatePath, "utf8"));
+  return buildMonitorReportFromState(state, definitions);
+}
+
 async function fetchJson(url, token) {
   const response = await fetch(url, {
     headers: {
@@ -380,7 +452,14 @@ async function writeReport(outPath, report) {
   await writeFile(absoluteOutPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
-export function buildCutoverReport({ apiBase, betterStackApiError, endpointChecks, monitorReport }) {
+export function buildCutoverReport({
+  apiBase,
+  betterStackApiError,
+  endpointChecks,
+  monitorReport,
+  monitorSource = "betterstack-api",
+  monitorStatePath = null,
+}) {
   const failedEndpointChecks = endpointChecks.filter((check) => !check.ok);
 
   return {
@@ -389,6 +468,8 @@ export function buildCutoverReport({ apiBase, betterStackApiError, endpointCheck
     ok: monitorReport.ok && failedEndpointChecks.length === 0,
     api_base: apiBase,
     betterstack_api_error: betterStackApiError,
+    monitor_source: monitorSource,
+    monitor_state_path: monitorStatePath,
     endpoint_probes_required: true,
     monitor_summary: monitorReport.summary,
     endpoint_summary: {
@@ -439,17 +520,31 @@ async function main() {
     "BETTERSTACK_API_TOKEN is required to verify monitor state."
   );
   let betterStackApiError = null;
+  let monitorSource = "missing-token";
 
   const token = process.env.BETTERSTACK_API_TOKEN;
   const apiBase = process.env.BETTERSTACK_API_BASE || "https://uptime.betterstack.com/api/v2";
+  const monitorStatePath = options.monitorStatePath || process.env.BETTERSTACK_MONITOR_STATE_PATH || null;
 
   if (token) {
+    monitorSource = "betterstack-api";
     try {
       const monitors = await listBetterStackMonitors(apiBase, token);
       monitorReport = buildMonitorReport(monitors, definitions);
     } catch (error) {
       betterStackApiError = error.message;
       monitorReport = buildBlockedMonitorReport(definitions, `Better Stack API request failed: ${error.message}`);
+    }
+  } else if (monitorStatePath) {
+    monitorSource = "monitor-state-file";
+    try {
+      monitorReport = await buildMonitorReportFromStateFile(monitorStatePath, definitions);
+    } catch (error) {
+      betterStackApiError = error.message;
+      monitorReport = buildBlockedMonitorReport(
+        definitions,
+        `Better Stack monitor state file could not be used: ${error.message}`
+      );
     }
   }
 
@@ -458,6 +553,8 @@ async function main() {
     betterStackApiError,
     endpointChecks,
     monitorReport,
+    monitorSource,
+    monitorStatePath: monitorSource === "monitor-state-file" ? monitorStatePath : null,
   });
 
   if (options.outPath) {

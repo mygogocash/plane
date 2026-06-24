@@ -1,27 +1,49 @@
 {
   "feature": "cloudflare-stack-migration",
-  "generated_at": "2026-06-21T07:30:00.000Z",
-  "decision": "approve_local_foundation_only",
+  "generated_at": "2026-06-24T10:50:40.000Z",
+  "decision": "open_pr",
   "production_decision": "do_not_cut_over",
-  "review_inputs": [
-    "parallel code-reviewer findings from agent Franklin",
-    "live https://app.manut.xyz/api/instances/ contract sample",
-    "local Worker typecheck and test results",
-    "Wrangler preview dry-run",
-    "GKE workflow side-effect review"
+  "review_scope": [
+    "apps/cloudflare/tools/authenticated-smoke-report.mjs",
+    "apps/cloudflare/tools/betterstack-cutover-report.mjs",
+    "apps/cloudflare/tools/operator-approval-report.mjs",
+    "apps/cloudflare/tools/seven-green-days-report.mjs",
+    "apps/cloudflare/tools/validate-d1-import.mjs",
+    "apps/cloudflare/tools/collect-d1-target-evidence.mjs",
+    "apps/cloudflare/tools/postgres-source-counts-report.mjs",
+    "apps/cloudflare/tools/d1-import-validation-contract.mjs",
+    "apps/cloudflare/tools/cutover-readiness.mjs",
+    "apps/cloudflare/src/* cutoff readiness tests",
+    "process/features/cloudflare-stack-migration reports/references/templates/runbooks"
   ],
-  "accepted_fixes": [
-    "converted /api/instances/ Worker payload to nested config plus instance shape",
-    "removed default same-origin LEGACY_GKE_ORIGIN from Wrangler vars",
-    "removed public legacy_origin disclosure from migration status",
-    "kept /uploads/* on legacy proxy path until R2 cutover is explicitly enabled",
-    "made Manut CI/CD detect Cloudflare-only push sets and suppress GKE component flags"
+  "blocking_findings": [],
+  "residual_risks": [
+    "Production cutover remains blocked until real D1 import validation, authenticated smoke, Better Stack monitor evidence, operator approval, and seven-green-days evidence exist.",
+    "Manual monitor-state files are accepted only with explicit source, path, and fresh per-monitor timestamps; Better Stack API evidence remains preferred.",
+    "This PR prepares evidence capture and validation only. It does not authorize DNS, GCP, D1 import, or decommission actions."
   ],
-  "remaining_blockers": [
-    "distinct legacy upstream hostname is still required before attaching Worker to app.manut.xyz",
-    "real Cloudflare D1 and KV ids must replace placeholders before deploy",
-    "D1/R2 migration validation has not run against production exports",
-    "Better Stack monitor sync for Cloudflare preview is not implemented",
-    "actionlint must run in an environment where it is installed"
-  ]
+  "verification": {
+    "tests": {
+      "command": "pnpm --filter @manut/cloudflare test; pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json",
+      "result": "pass",
+      "details": "Final rerun passed: lint and format clean, @manut/cloudflare test passed with 26 files and 230 tests, readiness stayed blocked at 14/19 with the five operator gates."
+    },
+    "manual_reproductions": [
+      {
+        "scenario": "Legacy authenticated smoke input without operator evidence",
+        "result": "fixed",
+        "details": "buildAuthenticatedSmokeReport and validateEvidenceJson now reject missing operator session evidence."
+      },
+      {
+        "scenario": "Legacy operator approval input without schema v2 operator inputs",
+        "result": "fixed",
+        "details": "validateEvidenceJson now rejects missing or pre-v2 operator approval schema before readiness can pass."
+      },
+      {
+        "scenario": "Better Stack monitor-state file without freshness provenance",
+        "result": "fixed",
+        "details": "cutover readiness now requires monitor_source, monitor_state_path, and fresh per-monitor timestamps for monitor-state evidence."
+      }
+    ]
+  }
 }

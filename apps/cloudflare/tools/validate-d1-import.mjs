@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { compareCounts, loadCounts } from "./compare-row-counts.mjs";
+import { buildD1ImportValidationNextSteps, buildD1ImportValidationRunbook } from "./d1-import-validation-contract.mjs";
 import { D1_VALIDATION_RELATIONSHIPS, D1_VALIDATION_TABLES } from "./d1-import-validation-queries.mjs";
 import { resolveRepoPath } from "./path-utils.mjs";
 
@@ -215,7 +216,15 @@ function requiredScopeTotals(sourceCounts, targetCounts) {
   );
 }
 
-function buildValidationReport(sourcePath, targetPath, countReport, relationshipChecks, sourceCounts, targetCounts) {
+function buildValidationReport(
+  sourcePath,
+  targetPath,
+  relationshipsPath,
+  countReport,
+  relationshipChecks,
+  sourceCounts,
+  targetCounts
+) {
   const failedRelationshipChecks = relationshipChecks.filter((check) => !check.ok);
   const missingCountTables = findMissingCountTables(sourceCounts, targetCounts);
   const missingRelationships = findMissingRelationships(relationshipChecks);
@@ -244,6 +253,10 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
   }
 
   validationErrors.push(...relationshipContractErrors);
+  const ok = countReport.ok && failedRelationshipChecks.length === 0 && validationErrors.length === 0;
+  const normalizedSourcePath = path.normalize(sourcePath);
+  const normalizedTargetPath = path.normalize(targetPath);
+  const normalizedRelationshipsPath = relationshipsPath ? path.normalize(relationshipsPath) : null;
 
   return {
     generated_at: new Date().toISOString(),
@@ -252,9 +265,10 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
       count_tables: REQUIRED_COUNT_TABLES,
       relationships: REQUIRED_RELATIONSHIPS,
     },
-    ok: countReport.ok && failedRelationshipChecks.length === 0 && validationErrors.length === 0,
-    source_counts: path.normalize(sourcePath),
-    target_counts: path.normalize(targetPath),
+    ok,
+    source_counts: normalizedSourcePath,
+    target_counts: normalizedTargetPath,
+    relationship_checks_source: normalizedRelationshipsPath,
     summary: {
       count_tables_matched: countReport.matchedTableCount,
       count_tables_mismatched: countReport.mismatchedTableCount,
@@ -263,6 +277,19 @@ function buildValidationReport(sourcePath, targetPath, countReport, relationship
       relationship_checks_total: relationshipChecks.length,
       relationship_checks_failed: failedRelationshipChecks.length,
     },
+    operator_runbook: buildD1ImportValidationRunbook({
+      sourceCounts: normalizedSourcePath,
+      targetCounts: normalizedTargetPath,
+      relationships: normalizedRelationshipsPath,
+    }),
+    operator_next_steps: buildD1ImportValidationNextSteps({
+      sourceRows: scopeTotals.source,
+      targetRows: scopeTotals.target,
+      missingTables: missingCountTables,
+      missingRelationships,
+      hasRelationshipFailures: failedRelationshipChecks.length > 0,
+      ok,
+    }),
     validation_errors: validationErrors,
     count_report: countReport,
     relationship_checks: relationshipChecks,
@@ -281,10 +308,17 @@ function printHumanReport(report) {
   console.log(`Mismatched count tables: ${report.summary.count_tables_mismatched}`);
   console.log(`Relationship checks: ${report.summary.relationship_checks_total}`);
   console.log(`Failed relationship checks: ${report.summary.relationship_checks_failed}`);
+  console.log(`Canonical report: ${report.operator_runbook.canonical_report}`);
   if (report.validation_errors.length > 0) {
     console.log("Validation errors:");
     for (const error of report.validation_errors) {
       console.log(`- ${error}`);
+    }
+  }
+  if (report.operator_next_steps.length > 0) {
+    console.log("Operator next steps:");
+    for (const step of report.operator_next_steps) {
+      console.log(`- ${step}`);
     }
   }
 }
@@ -306,6 +340,7 @@ async function main() {
   const report = buildValidationReport(
     sourcePath,
     targetPath,
+    relationshipsPath,
     countReport,
     relationshipChecks,
     sourceCounts,
