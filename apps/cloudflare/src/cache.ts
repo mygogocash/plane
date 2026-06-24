@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { CloudflareBindings } from "./types";
 
 type CacheMissReason = "CACHE_MISS" | "KV_BINDING_MISSING" | "CACHE_PARSE_FAILED";

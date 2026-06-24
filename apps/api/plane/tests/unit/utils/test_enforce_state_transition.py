@@ -84,7 +84,9 @@ def _enable(project):
 @pytest.mark.unit
 class TestEnforceStateTransition:
     @pytest.mark.django_db
-    def test_workflow_disabled__allows_regardless_of_rules(self, project, state_a, state_b, issue_a, member, member_user):
+    def test_workflow_disabled__allows_regardless_of_rules(
+        self, project, state_a, state_b, issue_a, member, member_user
+    ):
         # workflow_status defaults to "disabled"
         WorkflowTransition.objects.create(project=project, from_state=state_a, to_state=state_b, allowed_roles=[15])
 

@@ -94,7 +94,9 @@ def test_upsert_issue_embedding__given_same_content_hash__then_reuses_ready_embe
 
 
 @pytest.mark.django_db
-def test_upsert_issue_embedding__given_provider_failure__then_preserves_existing_embedding(monkeypatch, embedding_issue):
+def test_upsert_issue_embedding__given_provider_failure__then_preserves_existing_embedding(
+    monkeypatch, embedding_issue
+):
     monkeypatch.setenv("WORKSPACE_AI_EMBEDDINGS_ENABLED", "1")
     existing = upsert_issue_embedding(embedding_issue, provider=lambda _: [1.0, 2.0], model_name="test-embedding-model")
     embedding_issue.name = "Checkout payment fails after retry"
@@ -126,7 +128,9 @@ def test_rank_issue_embeddings__given_disabled_flag__then_returns_none(monkeypat
 
 
 @pytest.mark.django_db
-def test_rank_issue_embeddings__given_ready_embeddings__then_ranks_by_cosine(monkeypatch, embedding_issue, embedding_project, embedding_state, create_user):
+def test_rank_issue_embeddings__given_ready_embeddings__then_ranks_by_cosine(
+    monkeypatch, embedding_issue, embedding_project, embedding_state, create_user
+):
     monkeypatch.setenv("WORKSPACE_AI_EMBEDDINGS_ENABLED", "1")
     other_issue = Issue.objects.create(
         project=embedding_project,
