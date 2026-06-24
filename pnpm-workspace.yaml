@@ -227,7 +227,7 @@ overrides:
   serialize-javascript: 7.0.5
   "ajv@6": 6.14.0
   "ajv@8": 8.18.0
-  "undici@7": 7.24.0
+  "undici@7": 7.28.0
   flatted: 3.4.2
   picomatch: 2.3.2
   "yaml@1": 1.10.3
