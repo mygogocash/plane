@@ -1,0 +1,114 @@
+name: Better Stack Monitoring
+
+on:
+  push:
+    branches:
+      - "preview"
+    paths:
+      - ".github/ops/betterstack/**"
+      - ".github/workflows/betterstack-monitoring.yml"
+      - "apps/cloudflare/tools/betterstack-cutover-report.mjs"
+      - "apps/cloudflare/tools/collect-cutover-evidence.mjs"
+      - "apps/cloudflare/tools/cutover-readiness.mjs"
+      - "apps/cloudflare/src/betterstack-*.test.ts"
+      - "apps/cloudflare/src/cutover-evidence-bundle.test.ts"
+      - "apps/cloudflare/src/cutover-readiness.test.ts"
+      - "process/features/cloudflare-stack-migration/**"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print monitor payloads without calling Better Stack"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  BETTERSTACK_API_BASE: ${{ vars.BETTERSTACK_API_BASE || 'https://uptime.betterstack.com/api/v2' }}
+  BETTERSTACK_APP_URL: ${{ vars.BETTERSTACK_APP_URL || vars.GCP_APP_URL || 'https://app.manut.xyz' }}
+  BETTERSTACK_SITE_URL: ${{ vars.BETTERSTACK_SITE_URL || 'https://manut.xyz' }}
+  BETTERSTACK_SITE_FALLBACK_URL: ${{ vars.BETTERSTACK_SITE_FALLBACK_URL || 'https://manut.pages.dev' }}
+  BETTERSTACK_CHECK_FREQUENCY: ${{ vars.BETTERSTACK_CHECK_FREQUENCY || '180' }}
+  BETTERSTACK_REQUEST_TIMEOUT: ${{ vars.BETTERSTACK_REQUEST_TIMEOUT || '30' }}
+  BETTERSTACK_APP_MONITOR_NAME: ${{ vars.BETTERSTACK_APP_MONITOR_NAME || 'app.manut.xyz' }}
+  BETTERSTACK_SITE_MONITOR_NAME: ${{ vars.BETTERSTACK_SITE_MONITOR_NAME || 'manut.xyz' }}
+  BETTERSTACK_API_MONITOR_NAME: ${{ vars.BETTERSTACK_API_MONITOR_NAME || 'app.manut.xyz API instances' }}
+  BETTERSTACK_APP_KEYWORD: ${{ vars.BETTERSTACK_APP_KEYWORD || 'Manut' }}
+  BETTERSTACK_SITE_KEYWORD: ${{ vars.BETTERSTACK_SITE_KEYWORD || 'Manut' }}
+  BETTERSTACK_API_KEYWORD: ${{ vars.BETTERSTACK_API_KEYWORD || 'current_version' }}
+  BETTERSTACK_INCLUDE_API_MONITOR: ${{ vars.BETTERSTACK_INCLUDE_API_MONITOR || 'true' }}
+  BETTERSTACK_POLICY_ID: ${{ vars.BETTERSTACK_POLICY_ID }}
+  BETTERSTACK_MONITOR_GROUP_ID: ${{ vars.BETTERSTACK_MONITOR_GROUP_ID }}
+
+jobs:
+  sync:
+    name: Sync Manut uptime monitors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BETTERSTACK_API_TOKEN: ${{ secrets.BETTERSTACK_API_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Sync Better Stack monitors
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          ./.github/ops/betterstack/sync-manut-monitors.sh "${args[@]}"
+
+      - name: Capture Better Stack cutover report
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run == false }}
+        continue-on-error: true
+        run: |
+          node apps/cloudflare/tools/betterstack-cutover-report.mjs \
+            --json \
+            --soft-fail \
+            --out "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+
+      - name: Summarize Better Stack cutover report
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.dry_run == false) }}
+        run: ./.github/ops/betterstack/summarize-cutover-report.sh "$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+
+      - name: Upload Better Stack cutover report
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.dry_run == false) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-07-betterstack-cutover
+          path: ${{ runner.temp }}/phase-07-betterstack-cutover_21-06-26.json
+          if-no-files-found: warn
+
+      - name: Require Better Stack cutover report to pass
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.dry_run == false) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_path="$RUNNER_TEMP/phase-07-betterstack-cutover_21-06-26.json"
+          if [ ! -s "$report_path" ]; then
+            echo "::error::Better Stack cutover report was not generated."
+            exit 1
+          fi
+          if ! jq -e '.ok == true' "$report_path" >/dev/null; then
+            jq '{ok, monitor_summary, endpoint_summary, monitor_checks: [.monitor_checks[]? | {id, ok, status, monitor_id, remediation}]}' "$report_path"
+            echo "::error::Better Stack cutover report is not green."
+            exit 1
+          fi
+
+      - name: Write monitoring summary
+        run: |
+          {
+            echo "### Better Stack monitoring"
+            echo ""
+            echo "App URL: \`${BETTERSTACK_APP_URL}\`"
+            echo "Site URL: \`${BETTERSTACK_SITE_URL}\`"
+            echo "Check frequency: \`${BETTERSTACK_CHECK_FREQUENCY}s\`"
+            echo "Monitors: \`${BETTERSTACK_APP_MONITOR_NAME}\`, \`${BETTERSTACK_SITE_MONITOR_NAME}\`, and \`${BETTERSTACK_API_MONITOR_NAME}\`"
+            echo "API monitor enabled: \`${BETTERSTACK_INCLUDE_API_MONITOR}\`"
+            echo "Cutover report artifact: \`phase-07-betterstack-cutover\`"
+          } >> "$GITHUB_STEP_SUMMARY"

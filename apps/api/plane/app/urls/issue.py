@@ -30,12 +30,11 @@ from plane.app.views import (
     IssueVersionEndpoint,
     WorkItemDescriptionVersionEndpoint,
     IssueMetaEndpoint,
-    AgentRunCancelEndpoint,
-    AgentRunEndpoint,
     IssueDetailIdentifierEndpoint,
     IssuePropertyOptionViewSet,
     IssuePropertyViewSet,
     RecurringWorkItemViewSet,
+    DuplicateCheckEndpoint,
     SimilarIssuesEndpoint,
     WorkItemTemplateViewSet,
 )
@@ -55,6 +54,11 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/similar/",
         SimilarIssuesEndpoint.as_view(),
         name="project-similar-issues",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/duplicate-check/",
+        DuplicateCheckEndpoint.as_view(),
+        name="project-issue-duplicate-check",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues-detail/",
@@ -137,21 +141,6 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/recurring-work-items/<uuid:pk>/runs/",
         RecurringWorkItemViewSet.as_view({"get": "runs"}),
         name="recurring-work-item-runs",
-    ),
-    path(
-        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/agent-runs/",
-        AgentRunEndpoint.as_view(),
-        name="issue-agent-runs",
-    ),
-    path(
-        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/agent-runs/<uuid:pk>/",
-        AgentRunEndpoint.as_view(),
-        name="issue-agent-run-detail",
-    ),
-    path(
-        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/agent-runs/<uuid:pk>/cancel/",
-        AgentRunCancelEndpoint.as_view(),
-        name="issue-agent-run-cancel",
     ),
     path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issue-labels/",

@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: plane-app-manut-xyz-ingress
-  namespace: plane-ce
+  name: manut-app-manut-xyz-ingress
+  namespace: manut-ce
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "20m"
 spec:
@@ -19,50 +19,50 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: plane-app-web
+                name: manut-app-web
                 port:
                   number: 3000
           - path: /api
             pathType: Prefix
             backend:
               service:
-                name: plane-app-api
+                name: manut-app-api
                 port:
                   number: 8000
           - path: /auth
             pathType: Prefix
             backend:
               service:
-                name: plane-app-api
+                name: manut-app-api
                 port:
                   number: 8000
           - path: /live/
             pathType: Prefix
             backend:
               service:
-                name: plane-app-live
+                name: manut-app-live
                 port:
                   number: 3000
           - path: /spaces
             pathType: Prefix
             backend:
               service:
-                name: plane-app-space
+                name: manut-app-space
                 port:
                   number: 3000
           - path: /god-mode
             pathType: Prefix
             backend:
               service:
-                name: plane-app-admin
+                name: manut-app-admin
                 port:
                   number: 3000
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: plane-uploads-manut-xyz-ingress
-  namespace: plane-ce
+  name: manut-uploads-manut-xyz-ingress
+  namespace: manut-ce
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/rewrite-target: /plane-affine-495114-uploads/uploads/$2
@@ -82,6 +82,6 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: plane-gcs-uploads
+                name: manut-gcs-uploads
                 port:
                   number: 443

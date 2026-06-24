@@ -168,10 +168,9 @@ from .issue.label import LabelViewSet, BulkCreateIssueLabelsEndpoint
 
 from .issue.link import IssueLinkViewSet
 
-from .issue.agent_run import AgentRunCancelEndpoint, AgentRunEndpoint
 from .issue.property import IssuePropertyOptionViewSet, IssuePropertyViewSet
 from .issue.recurring import RecurringWorkItemViewSet
-from .issue.similar import SimilarIssuesEndpoint
+from .issue.similar import DuplicateCheckEndpoint, SimilarIssuesEndpoint
 from .issue.template import WorkItemTemplateViewSet
 
 from .issue.relation import IssueRelationViewSet
@@ -196,12 +195,16 @@ from .module.issue import ModuleIssueViewSet
 from .module.archive import ModuleArchiveUnarchiveEndpoint
 
 from .api import ApiTokenEndpoint
+from .client_error import ClientErrorReportEndpoint
 
 from .page.base import (
     PageViewSet,
     PageFavoriteViewSet,
     PagesDescriptionViewSet,
     PageDuplicateEndpoint,
+    PageBacklinksEndpoint,
+    PageTemplateApplyEndpoint,
+    PageTemplateEndpoint,
 )
 from .page.version import PageVersionEndpoint
 

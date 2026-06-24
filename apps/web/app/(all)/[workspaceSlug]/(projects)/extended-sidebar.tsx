@@ -9,7 +9,6 @@ import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 // plane imports
 import { WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS, EUserPermissionsLevel } from "@plane/constants";
-import type { EUserWorkspaceRoles } from "@plane/types";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -17,6 +16,40 @@ import { useWorkspaceNavigationPreferences } from "@/hooks/use-navigation-prefer
 // plane-web imports
 import { ExtendedSidebarItem } from "@/plane-web/components/workspace/sidebar/extended-sidebar-item";
 import { ExtendedSidebarWrapper } from "./extended-sidebar-wrapper";
+
+type TSortableWorkspaceNavigationItem = (typeof WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS)[number] & {
+  sort_order: number;
+  is_pinned: boolean;
+};
+
+const orderNavigationItem = (
+  sourceIndex: number,
+  destinationIndex: number,
+  navigationList: TSortableWorkspaceNavigationItem[]
+): number | undefined => {
+  if (sourceIndex < 0 || destinationIndex < 0 || navigationList.length <= 0) return undefined;
+
+  let updatedSortOrder: number | undefined = undefined;
+  const sortOrderDefaultValue = 10000;
+
+  if (destinationIndex === 0) {
+    // updating project at the top of the project
+    const currentSortOrder = navigationList[destinationIndex].sort_order || 0;
+    updatedSortOrder = currentSortOrder - sortOrderDefaultValue;
+  } else if (destinationIndex === navigationList.length) {
+    // updating project at the bottom of the project
+    const currentSortOrder = navigationList[destinationIndex - 1].sort_order || 0;
+    updatedSortOrder = currentSortOrder + sortOrderDefaultValue;
+  } else {
+    // updating project in the middle of the project
+    const destinationTopProjectSortOrder = navigationList[destinationIndex - 1].sort_order || 0;
+    const destinationBottomProjectSortOrder = navigationList[destinationIndex].sort_order || 0;
+    const updatedValue = (destinationTopProjectSortOrder + destinationBottomProjectSortOrder) / 2;
+    updatedSortOrder = updatedValue;
+  }
+
+  return updatedSortOrder;
+};
 
 export const ExtendedAppSidebar = observer(function ExtendedAppSidebar() {
   // refs
@@ -29,78 +62,49 @@ export const ExtendedAppSidebar = observer(function ExtendedAppSidebar() {
   const { preferences: workspacePreferences, updateWorkspaceItemSortOrder } = useWorkspaceNavigationPreferences();
 
   // derived values
+  const workspaceSlugValue = workspaceSlug?.toString();
   const currentWorkspaceNavigationPreferences = workspacePreferences.items;
 
   const sortedNavigationItems = useMemo(() => {
-    const slug = workspaceSlug.toString();
+    if (!workspaceSlugValue) return [];
 
-    return WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS.filter((item) => {
+    const sortedItems: TSortableWorkspaceNavigationItem[] = [];
+
+    for (const item of WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS) {
       // Permission check
-      const hasPermission = allowPermissions(item.access, EUserPermissionsLevel.WORKSPACE, slug);
+      if (!allowPermissions(item.access, EUserPermissionsLevel.WORKSPACE, workspaceSlugValue)) continue;
 
-      return hasPermission;
-    })
-      .map((item) => {
-        const preference = currentWorkspaceNavigationPreferences?.[item.key];
-        return {
-          ...item,
-          sort_order: preference?.sort_order ?? 0,
-          is_pinned: preference?.is_pinned ?? false,
-        };
-      })
-      .sort((a, b) => {
-        // First sort by pinned status (pinned items first)
-        if (a.is_pinned !== b.is_pinned) {
-          return b.is_pinned ? 1 : -1;
-        }
-        // Then sort by sort_order within each group
-        return a.sort_order - b.sort_order;
+      const preference = currentWorkspaceNavigationPreferences?.[item.key];
+      const navigationItem = Object.assign({}, item, {
+        sort_order: preference?.sort_order ?? 0,
+        is_pinned: preference?.is_pinned ?? false,
       });
-  }, [workspaceSlug, currentWorkspaceNavigationPreferences, allowPermissions]);
+      const insertIndex = sortedItems.findIndex((sortedItem) => {
+        if (navigationItem.is_pinned !== sortedItem.is_pinned) {
+          return navigationItem.is_pinned && !sortedItem.is_pinned;
+        }
 
-  const sortedNavigationItemsKeys = sortedNavigationItems.map((item) => item.key);
+        return navigationItem.sort_order < sortedItem.sort_order;
+      });
 
-  const orderNavigationItem = (
-    sourceIndex: number,
-    destinationIndex: number,
-    navigationList: {
-      sort_order: number;
-      key: string;
-      labelTranslationKey: string;
-      href: string;
-      access: EUserWorkspaceRoles[];
-    }[]
-  ): number | undefined => {
-    if (sourceIndex < 0 || destinationIndex < 0 || navigationList.length <= 0) return undefined;
-
-    let updatedSortOrder: number | undefined = undefined;
-    const sortOrderDefaultValue = 10000;
-
-    if (destinationIndex === 0) {
-      // updating project at the top of the project
-      const currentSortOrder = navigationList[destinationIndex].sort_order || 0;
-      updatedSortOrder = currentSortOrder - sortOrderDefaultValue;
-    } else if (destinationIndex === navigationList.length) {
-      // updating project at the bottom of the project
-      const currentSortOrder = navigationList[destinationIndex - 1].sort_order || 0;
-      updatedSortOrder = currentSortOrder + sortOrderDefaultValue;
-    } else {
-      // updating project in the middle of the project
-      const destinationTopProjectSortOrder = navigationList[destinationIndex - 1].sort_order || 0;
-      const destinationBottomProjectSortOrder = navigationList[destinationIndex].sort_order || 0;
-      const updatedValue = (destinationTopProjectSortOrder + destinationBottomProjectSortOrder) / 2;
-      updatedSortOrder = updatedValue;
+      if (insertIndex === -1) {
+        sortedItems.push(navigationItem);
+      } else {
+        sortedItems.splice(insertIndex, 0, navigationItem);
+      }
     }
 
-    return updatedSortOrder;
-  };
+    return sortedItems;
+  }, [workspaceSlugValue, currentWorkspaceNavigationPreferences, allowPermissions]);
+
+  const sortedNavigationItemsKeys = sortedNavigationItems.map((item) => item.key);
 
   const handleOnNavigationItemDrop = (
     sourceId: string | undefined,
     destinationId: string | undefined,
     shouldDropAtEnd: boolean
   ) => {
-    if (!sourceId || !destinationId || !workspaceSlug) return;
+    if (!sourceId || !destinationId || !workspaceSlugValue) return;
     if (sourceId === destinationId) return;
 
     const sourceIndex = sortedNavigationItemsKeys.indexOf(sourceId);
@@ -114,6 +118,8 @@ export const ExtendedAppSidebar = observer(function ExtendedAppSidebar() {
   };
 
   const handleClose = useCallback(() => toggleExtendedSidebar(false), [toggleExtendedSidebar]);
+
+  if (!workspaceSlugValue) return null;
 
   return (
     <ExtendedSidebarWrapper

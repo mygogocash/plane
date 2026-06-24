@@ -47,11 +47,11 @@ export const DashboardQuickLinks = observer(function DashboardQuickLinks(props: 
         preloadedData={linkData}
       />
       <div className="mb-2">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <div className="text-14 font-semibold text-tertiary">{t("home.quick_links.title_plural")}</div>
           <button
             onClick={handleCreateLinkModal}
-            className="my-auto flex gap-1 text-13 font-medium text-accent-primary"
+            className="my-auto flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-13 font-medium text-accent-primary transition-colors hover:bg-accent-primary/10 sm:min-h-0 sm:px-0 sm:hover:bg-transparent"
           >
             <PlusIcon className="my-auto size-4" /> <span>{t("home.quick_links.add")}</span>
           </button>

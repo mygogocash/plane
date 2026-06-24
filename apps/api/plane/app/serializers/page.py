@@ -18,6 +18,7 @@ from plane.db.models import (
     Label,
     ProjectPage,
     Project,
+    PageTemplate,
     PageVersion,
 )
 
@@ -133,6 +134,34 @@ class PageDetailSerializer(PageSerializer):
 
     class Meta(PageSerializer.Meta):
         fields = PageSerializer.Meta.fields + ["description_html"]
+
+
+class PageTemplateSerializer(BaseSerializer):
+    class Meta:
+        model = PageTemplate
+        fields = [
+            "id",
+            "name",
+            "description_json",
+            "description_html",
+            "description_stripped",
+            "logo_props",
+            "template_type",
+            "access",
+            "workspace",
+            "project",
+            "owned_by",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["workspace", "owned_by", "description_stripped"]
+
+    def validate_project(self, value):
+        workspace = self.context.get("workspace")
+        if value is not None and workspace is not None and value.workspace_id != workspace.id:
+            raise serializers.ValidationError("project_not_in_workspace")
+        return value
 
 
 class PageVersionSerializer(BaseSerializer):

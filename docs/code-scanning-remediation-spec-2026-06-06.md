@@ -8,13 +8,12 @@ missing GitHub Actions workflow permissions.
 
 # Current Validation Evidence
 
-- GitHub currently reports `0` open code-scanning alerts.
-- Code Quality runs `27503183507` and `27503183488` completed successfully on
-  deployed commit `254013b7228bd39b7ac1645052fbbb48fb62f0c5`.
-- `Plane CI/CD` run `27503184003` completed successfully and verified
-  `preview-254013b7228b` through production smoke.
-- Original remediation baseline: CodeQL run `27065883913`, `Plane CI/CD` run
-  `27065884344`, and commit `0b80aadd9610d2446f835d06c872c4283b6ddd83`.
+- CodeQL run `27065883913` completed successfully for JavaScript/TypeScript,
+  GitHub Actions, and Python after the GCP CI/CD workflow update.
+- The current workflow name is `Manut CI/CD`; this evidence was captured before
+  the rename, when `Plane CI/CD` run `27065884344` completed successfully and
+  verified commit `0b80aadd9610d2446f835d06c872c4283b6ddd83` through production
+  smoke.
 - The active CI/CD workflow has no Railway deploy hook, Railway AIO build, GHCR
   production registry, or broad package publish permission.
 

@@ -209,7 +209,7 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
                     style={styles.popper}
                     {...attributes.popper}
                   >
-                    {Object.entries(ROLE_DETAILS).map(([key, value]) => (
+                    {Object.entries(ROLE_DETAILS).map(([key, roleDetail]) => (
                       <Listbox.Option
                         as="div"
                         key={key}
@@ -223,8 +223,8 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
                         {({ selected }) => (
                           <div className="flex items-center gap-2 p-1 text-wrap">
                             <div className="flex flex-col">
-                              <div className="text-13 font-medium">{t(value.i18n_title)}</div>
-                              <div className="flex text-11 text-tertiary">{t(value.i18n_description)}</div>
+                              <div className="text-13 font-medium">{t(roleDetail.i18n_title)}</div>
+                              <div className="flex text-11 text-tertiary">{t(roleDetail.i18n_description)}</div>
                             </div>
                             {selected && <CheckIcon className="h-4 w-4 shrink-0" />}
                           </div>
@@ -304,6 +304,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
           message: "Invitations sent successfully.",
         });
         await nextStep();
+        return undefined;
       })
       .catch((err) => {
         setToast({
@@ -343,7 +344,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
     >
       <CommonOnboardingHeader
         title="Invite your teammates"
-        description="Work in plane happens best with your team. Invite them now to use Plane to its potential."
+        description="Work in Manut happens best with your team. Invite them now to use Manut to its potential."
       />
       <div className="w-full py-4 text-13">
         <div className="group relative mx-8 grid grid-cols-10 gap-4 py-2">

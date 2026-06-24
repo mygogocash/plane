@@ -1,0 +1,27 @@
+{
+  "feature": "cloudflare-stack-migration",
+  "generated_at": "2026-06-21T07:30:00.000Z",
+  "decision": "approve_local_foundation_only",
+  "production_decision": "do_not_cut_over",
+  "review_inputs": [
+    "parallel code-reviewer findings from agent Franklin",
+    "live https://app.manut.xyz/api/instances/ contract sample",
+    "local Worker typecheck and test results",
+    "Wrangler preview dry-run",
+    "GKE workflow side-effect review"
+  ],
+  "accepted_fixes": [
+    "converted /api/instances/ Worker payload to nested config plus instance shape",
+    "removed default same-origin LEGACY_GKE_ORIGIN from Wrangler vars",
+    "removed public legacy_origin disclosure from migration status",
+    "kept /uploads/* on legacy proxy path until R2 cutover is explicitly enabled",
+    "made Manut CI/CD detect Cloudflare-only push sets and suppress GKE component flags"
+  ],
+  "remaining_blockers": [
+    "distinct legacy upstream hostname is still required before attaching Worker to app.manut.xyz",
+    "real Cloudflare D1 and KV ids must replace placeholders before deploy",
+    "D1/R2 migration validation has not run against production exports",
+    "Better Stack monitor sync for Cloudflare preview is not implemented",
+    "actionlint must run in an environment where it is installed"
+  ]
+}

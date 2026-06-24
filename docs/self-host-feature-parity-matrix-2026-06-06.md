@@ -2,25 +2,18 @@
 
 Date: 2026-06-06
 
-Last production evidence refresh: 2026-06-14
-
 Target: GoGoCash/Manut self-hosted Plane on `mygogocash/plane` `preview`.
 
-Latest verified production tag: `preview-254013b7228b`
+Verified feature rollout tag: `preview-0b80aadd9610`
 
-Latest verified production rollout: `Plane CI/CD` run `27503184003`, Code
-Quality runs `27503183507` and `27503183488`, open code-scanning alerts `0`,
-live `GET https://app.manut.xyz/api/instances/ 200`, and live
-`GET https://app.manut.xyz/gogocash/ 200`.
-
-Historical feature rollout baseline: `preview-0b80aadd9610` from `Plane CI/CD`
-run `27065884344`. Keep this baseline for June 6 feature evidence, not current
-production state.
+Last verified rollout evidence was captured before the workflow rename:
+historical `Plane CI/CD` run `27065884344`, CodeQL run `27065883913`, and live
+`GET https://app.manut.xyz/api/instances/ 200`. The current workflow name is
+`Manut CI/CD`.
 
 ## Legend
 
-- `Live`: functional in the verified production deployment or in the named
-  local implementation tracker.
+- `Live`: functional in the current fork/deployment.
 - `Present gated`: code exists and should be exposed through self-host
   entitlement.
 - `Partial`: some models/routes/UI exist, but the end-to-end feature is not

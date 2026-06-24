@@ -68,6 +68,20 @@ class ApprovalNotAllowed(ApprovalError):
     """The acting user may not decide on this approval (maps to HTTP 403)."""
 
 
+def workflow_error_message(error: Exception) -> str:
+    """Return a stable, client-safe workflow error message."""
+
+    if isinstance(error, IllegalTransition):
+        return "Transition is not permitted"
+    if isinstance(error, ActorNotAllowed):
+        return "You are not permitted to perform this transition"
+    if isinstance(error, ApprovalNotAllowed):
+        return "You are not permitted to decide on this approval"
+    if isinstance(error, ApprovalError):
+        return "Approval request could not be completed"
+    return "Workflow request could not be completed"
+
+
 @dataclass
 class TransitionDecision:
     allowed: bool

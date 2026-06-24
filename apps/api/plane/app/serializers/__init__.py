@@ -112,6 +112,7 @@ from .importer import ImporterSerializer
 from .page import (
     PageSerializer,
     PageDetailSerializer,
+    PageTemplateSerializer,
     PageVersionSerializer,
     PageBinaryUpdateSerializer,
     PageVersionDetailSerializer,

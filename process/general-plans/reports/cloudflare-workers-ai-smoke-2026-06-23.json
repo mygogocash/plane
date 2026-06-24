@@ -1,0 +1,21 @@
+{
+  "type": "cloudflare-workers-ai-smoke",
+  "timestamp": "2026-06-23T14:15:21.152Z",
+  "model": "@cf/zai-org/glm-5.2",
+  "ok": true,
+  "checks": [
+    {
+      "id": "credentials",
+      "ok": true,
+      "evidence": "CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are present."
+    },
+    {
+      "id": "workers-ai-run",
+      "ok": true,
+      "status": 200,
+      "duration_ms": 20993,
+      "response_excerpt": "Cloudflare Workers AI is reachable for Manut.",
+      "evidence": "Workers AI request returned a response."
+    }
+  ]
+}

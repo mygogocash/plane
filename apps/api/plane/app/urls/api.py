@@ -3,9 +3,14 @@
 # See the LICENSE file for details.
 
 from django.urls import path
-from plane.app.views import ApiTokenEndpoint
+from plane.app.views import ApiTokenEndpoint, ClientErrorReportEndpoint
 
 urlpatterns = [
+    path(
+        "client-errors/",
+        ClientErrorReportEndpoint.as_view(),
+        name="client-error-report",
+    ),
     # API Tokens
     path(
         "users/api-tokens/",

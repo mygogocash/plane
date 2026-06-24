@@ -57,6 +57,7 @@ const InstanceGitlabAuthenticationPage = observer(function InstanceGitlabAuthent
     await updateConfigPromise
       .then(() => {
         setIsSubmitting(false);
+        return undefined;
       })
       .catch((err) => {
         console.error(err);
@@ -68,7 +69,7 @@ const InstanceGitlabAuthenticationPage = observer(function InstanceGitlabAuthent
       customHeader={
         <AuthenticationMethodCard
           name="GitLab"
-          description="Allow members to login or sign up to plane with their GitLab accounts."
+          description="Allow members to login or sign up to Manut with their GitLab accounts."
           icon={<img src={GitlabLogo} height={24} width={24} alt="GitLab Logo" />}
           config={
             <ToggleSwitch

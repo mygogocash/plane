@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
 // plane utils
 import { calculateTimeAgo, cn, getIconForLink } from "@plane/utils";
 // plane ui
@@ -24,20 +23,25 @@ export function LinkItemBlock(props: TLinkItemBlockProps) {
   const { title, url, createdAt, menuItems, onClick } = props;
   // icons
   const Icon = getIconForLink(url);
+
   return (
-    <div
-      onClick={onClick}
-      className="group flex h-[56px] w-[230px] cursor-pointer items-center gap-4 rounded-md border-[0.5px] border-subtle bg-surface-1 px-4"
-    >
-      <div className="grid size-8 flex-shrink-0 place-items-center rounded-sm bg-surface-2 p-2">
-        <Icon className="size-4 stroke-2 text-tertiary group-hover:text-primary" />
-      </div>
-      <div className="flex-1 truncate">
-        <div className="truncate text-13 font-medium">{title}</div>
-        {createdAt && <div className="text-11 font-medium text-placeholder">{calculateTimeAgo(createdAt)}</div>}
-      </div>
+    <div className="group flex min-h-14 w-full items-center gap-4 rounded-md border-[0.5px] border-subtle bg-surface-1 px-4 sm:h-[56px] sm:w-[230px]">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!onClick}
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-4 text-left disabled:cursor-default"
+      >
+        <div className="grid size-8 flex-shrink-0 place-items-center rounded-sm bg-surface-2 p-2">
+          <Icon className="size-4 stroke-2 text-tertiary group-hover:text-primary" />
+        </div>
+        <div className="flex-1 truncate">
+          <div className="truncate text-13 font-medium">{title}</div>
+          {createdAt && <div className="text-11 font-medium text-placeholder">{calculateTimeAgo(createdAt)}</div>}
+        </div>
+      </button>
       {menuItems && (
-        <div className="hidden group-hover:block">
+        <div className="block shrink-0 sm:hidden sm:group-hover:block">
           <CustomMenu placement="bottom-end" menuItemsClassName="z-20" closeOnSelect verticalEllipsis>
             {menuItems.map((item) => (
               <CustomMenu.MenuItem

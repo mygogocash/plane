@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-06-21T11:34:34.000Z",
+  "evidence_kind": "cloudflare-production-deploy",
+  "ok": true,
+  "environment": "production",
+  "dns_changed": false,
+  "worker": {
+    "name": "manut-app",
+    "url": "https://manut-app.bettergogocash.workers.dev",
+    "version_id": "053b5b6c-4a64-41ed-ab68-9c2eabe9f924"
+  },
+  "resources": {
+    "d1": {
+      "name": "manut-prod",
+      "database_id": "a29a2712-f899-45ee-8ab9-f64afded7e1c",
+      "migrations_applied": ["0001_foundation.sql", "0002_shadow_core.sql"]
+    },
+    "r2": {
+      "bucket": "manut-uploads-prod"
+    },
+    "kv": {
+      "namespace": "manut-config-prod",
+      "id": "e3fdd6cf29dc4f03a9a240830814c629"
+    },
+    "queue": {
+      "name": "manut-jobs-prod",
+      "consumer_script": "manut-app",
+      "consumer_id": "b3887f5cee1c4f45917aef4f49c42958"
+    },
+    "durable_object": {
+      "binding": "LIVE_ROOMS",
+      "class_name": "LiveRoomDurableObject"
+    }
+  },
+  "checks": {
+    "dry_run_bundle": true,
+    "remote_d1_migrations": true,
+    "worker_deploy": true,
+    "queue_consumer": true,
+    "production_smoke": true
+  },
+  "evidence": {
+    "smoke_report": "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json",
+    "live_shadow_report": "process/features/cloudflare-stack-migration/reports/phase-07-live-shadow-validation_21-06-26.json"
+  },
+  "blocked_cutover_gates_remaining": [
+    "d1-import-validation",
+    "r2-manifest-validation",
+    "authenticated-smoke",
+    "betterstack-cutover-green",
+    "operator-cutover-approval"
+  ],
+  "notes": [
+    "This deploy published the Cloudflare production Worker to workers.dev only.",
+    "app.manut.xyz DNS still points to the current GKE/GCP stack for rollback.",
+    "Production D1 is schema-only; production application data has not been imported."
+  ]
+}

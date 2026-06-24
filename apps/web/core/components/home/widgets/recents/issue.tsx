@@ -42,6 +42,7 @@ export const RecentIssue = observer(function RecentIssue(props: BlockProps) {
   if (!issueDetails) return <></>;
 
   const state = getStateById(issueDetails?.state);
+  const visitedAt = calculateTimeAgo(activity.visited_at);
 
   const workItemLink = generateWorkItemLink({
     workspaceSlug: workspaceSlug?.toString(),
@@ -94,50 +95,55 @@ export const RecentIssue = observer(function RecentIssue(props: BlockProps) {
         </div>
       }
       appendTitleElement={
-        <div className="flex-shrink-0 text-11 font-medium text-placeholder">
-          {calculateTimeAgo(activity.visited_at)}
-        </div>
+        <div className="hidden flex-shrink-0 text-11 font-medium text-placeholder sm:block">{visitedAt}</div>
       }
       quickActionElement={
-        <div className="flex gap-4">
-          <Tooltip tooltipHeading="State" tooltipContent={state?.name ?? "State"}>
-            <div>
-              <StateGroupIcon
-                stateGroup={state?.group ?? "backlog"}
-                color={state?.color}
-                className="my-auto h-4 w-4"
-                percentage={state?.order}
-              />
-            </div>
-          </Tooltip>
-          <Tooltip tooltipHeading="Priority" tooltipContent={issueDetails?.priority ?? "Priority"}>
-            <div>
-              <PriorityIcon priority={issueDetails?.priority} withContainer size={12} />
-            </div>
-          </Tooltip>
-          {issueDetails?.assignees?.length > 0 && (
-            <div className="h-5">
-              <MemberDropdown
-                projectId={issueDetails?.project_id}
-                value={issueDetails?.assignees}
-                onChange={() => {}}
-                disabled
-                multiple
-                buttonVariant={issueDetails?.assignees?.length > 0 ? "transparent-without-text" : "border-without-text"}
-                buttonClassName={issueDetails?.assignees?.length > 0 ? "hover:bg-transparent px-0" : ""}
-                showTooltip={issueDetails?.assignees?.length === 0}
-                placeholder="Assignees"
-                optionsClassName="z-10"
-                tooltipContent=""
-              />
-            </div>
-          )}
+        <div className="flex w-full items-center justify-between gap-3 text-placeholder sm:w-auto sm:justify-start sm:gap-4">
+          <span className="text-11 font-medium sm:hidden">{visitedAt}</span>
+          <div className="flex items-center gap-4">
+            <Tooltip tooltipHeading="State" tooltipContent={state?.name ?? "State"}>
+              <div>
+                <StateGroupIcon
+                  stateGroup={state?.group ?? "backlog"}
+                  color={state?.color}
+                  className="my-auto h-4 w-4"
+                  percentage={state?.order}
+                />
+              </div>
+            </Tooltip>
+            <Tooltip tooltipHeading="Priority" tooltipContent={issueDetails?.priority ?? "Priority"}>
+              <div>
+                <PriorityIcon priority={issueDetails?.priority} withContainer size={12} />
+              </div>
+            </Tooltip>
+            {issueDetails?.assignees?.length > 0 && (
+              <div className="h-5">
+                <MemberDropdown
+                  projectId={issueDetails?.project_id}
+                  value={issueDetails?.assignees}
+                  onChange={() => {}}
+                  disabled
+                  multiple
+                  buttonVariant={
+                    issueDetails?.assignees?.length > 0 ? "transparent-without-text" : "border-without-text"
+                  }
+                  buttonClassName={issueDetails?.assignees?.length > 0 ? "hover:bg-transparent px-0" : ""}
+                  showTooltip={issueDetails?.assignees?.length === 0}
+                  placeholder="Assignees"
+                  optionsClassName="z-10"
+                  tooltipContent=""
+                />
+              </div>
+            )}
+          </div>
         </div>
       }
       parentRef={ref}
       disableLink={false}
-      className="my-auto border-none !px-2 py-3"
-      itemClassName="my-auto"
+      isMobile
+      className="shadow-sm my-auto rounded-lg !border border-subtle bg-layer-1 !px-3 py-3 sm:rounded-none sm:!border-none sm:bg-layer-transparent sm:!px-2 sm:shadow-none"
+      itemClassName="my-auto flex-col !items-start gap-2 sm:flex-row sm:items-center sm:gap-3"
+      leftElementClassName="min-w-0 flex-1"
       onItemClick={handlePeekOverview}
       preventDefaultProgress
     />

@@ -1,3 +1,7 @@
+// Copyright (c) 2023-present Plane Software, Inc. and contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+// See the LICENSE file for details.
+
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -26,6 +30,11 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web imports
 import { DeDupeButtonRoot } from "@/plane-web/components/de-dupe/de-dupe-button";
 import { DuplicateModalRoot } from "@/plane-web/components/de-dupe/duplicate-modal";
+import {
+  buildDuplicateOverridePayload,
+  DuplicateOverrideWarning,
+  shouldRequireDuplicateOverride,
+} from "@/plane-web/components/de-dupe/duplicate-override-warning";
 import { useDebouncedDuplicateIssues } from "@/plane-web/hooks/use-debounced-duplicate-issues";
 // services
 import { FileService } from "@/services/file.service";
@@ -94,7 +103,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
   const { getIndex } = getTabIndex(ETabIndices.INTAKE_ISSUE_FORM, isMobile);
 
   // debounced duplicate issues swr
-  const { duplicateIssues } = useDebouncedDuplicateIssues(
+  const { duplicateIssues, duplicateCheck, hasHighConfidenceDuplicate } = useDebouncedDuplicateIssues(
     workspaceSlug,
     projectDetails?.workspace.toString(),
     projectId,
@@ -148,10 +157,18 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
       return;
     }
 
+    const duplicateOverridePayload = buildDuplicateOverridePayload(
+      duplicateIssues,
+      hasAcknowledgedDuplicateOverride,
+      hasHighConfidenceDuplicate,
+      duplicateCheck?.threshold
+    );
+
     const payload: Partial<TIssue> = {
       name: formData.name || "",
       description_html: formData.description_html || "<p></p>",
       priority: formData.priority || "none",
+      ...(duplicateOverridePayload ? { duplicate_override: duplicateOverridePayload } : {}),
       state_id: formData.state_id || "",
       label_ids: formData.label_ids || [],
       assignee_ids: formData.assignee_ids || [],
@@ -179,6 +196,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
           title: `Success!`,
           message: "Work item created successfully.",
         });
+        return undefined;
       })
       .catch((error) => {
         console.error(error);
@@ -193,7 +211,16 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
 
   const isTitleLengthMoreThan255Character = formData?.name ? formData.name.length > 255 : false;
 
+  const [hasAcknowledgedDuplicateOverride, setHasAcknowledgedDuplicateOverride] = useState(false);
+  const isDuplicateOverrideRequired = shouldRequireDuplicateOverride(
+    hasHighConfidenceDuplicate,
+    hasAcknowledgedDuplicateOverride
+  );
   const shouldRenderDuplicateModal = isDuplicateModalOpen && duplicateIssues?.length > 0;
+
+  useEffect(() => {
+    setHasAcknowledgedDuplicateOverride(false);
+  }, [duplicateIssues]);
 
   if (!workspaceSlug || !projectId || !workspaceId) return <></>;
   return (
@@ -204,12 +231,20 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-18 font-medium text-secondary">{t("inbox_issue.modal.title")}</h3>
               {duplicateIssues?.length > 0 && (
-                <DeDupeButtonRoot
-                  workspaceSlug={workspaceSlug}
-                  isDuplicateModalOpen={isDuplicateModalOpen}
-                  label={`${duplicateIssues.length} duplicate issue${duplicateIssues.length > 1 ? "s" : ""} found!`}
-                  handleOnClick={() => handleDuplicateIssueModal(!isDuplicateModalOpen)}
-                />
+                <>
+                  <DeDupeButtonRoot
+                    workspaceSlug={workspaceSlug}
+                    isDuplicateModalOpen={isDuplicateModalOpen}
+                    label={`${duplicateIssues.length} duplicate issue${duplicateIssues.length > 1 ? "s" : ""} found!`}
+                    handleOnClick={() => handleDuplicateIssueModal(!isDuplicateModalOpen)}
+                  />
+                  {hasHighConfidenceDuplicate && (
+                    <DuplicateOverrideWarning
+                      checked={hasAcknowledgedDuplicateOverride}
+                      onCheckedChange={setHasAcknowledgedDuplicateOverride}
+                    />
+                  )}
+                </>
               )}
             </div>
             <div className="space-y-3">
@@ -233,15 +268,15 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
             </div>
           </div>
           <div className="flex items-center justify-between gap-2 rounded-b-lg border-t-[0.5px] border-subtle bg-surface-1 px-5 py-4">
-            <div
-              className="inline-flex cursor-pointer items-center gap-1.5"
+            <button
+              className="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0"
               onClick={() => setCreateMore((prevData) => !prevData)}
-              role="button"
               tabIndex={getIndex("create_more")}
+              type="button"
             >
               <ToggleSwitch value={createMore} onChange={() => {}} size="sm" />
               <span className="text-11">{t("create_more")}</span>
-            </div>
+            </button>
             <div className="flex items-center gap-3">
               <Button
                 variant="secondary"
@@ -267,7 +302,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
                 ref={submitBtnRef}
                 type="submit"
                 loading={formSubmitting}
-                disabled={isTitleLengthMoreThan255Character}
+                disabled={isTitleLengthMoreThan255Character || isDuplicateOverrideRequired}
                 tabIndex={getIndex("submit_button")}
                 size="lg"
               >

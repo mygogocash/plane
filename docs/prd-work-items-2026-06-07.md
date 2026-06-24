@@ -76,7 +76,7 @@ All models inherit `ProjectBaseModel` (project-scoped) or `BaseModel` (workspace
   - `IssuePropertyValue(ProjectBaseModel)`: FK `issue`, FK `property`, `value` (JSONField). Unique `(issue, property)` when not deleted.
 - **`workflow.py`**
   - `WorkflowTransition(ProjectBaseModel)`: `issue_type` (FK, null), `from_state` (FK `db.State`, null = "any"), `to_state` (FK `db.State`), `requires_approval` (bool default False). Unique `(project, issue_type, from_state, to_state)` when not deleted.
-  - `ApprovalPolicy(ProjectBaseModel)`: FK `transition`, `approvers` (M2M user). 
+  - `ApprovalPolicy(ProjectBaseModel)`: FK `transition`, `approvers` (M2M user).
   - `ApprovalDecision(ProjectBaseModel)`: FK `issue`, FK `transition`, `actor` (FK user), `decision` (TextChoices approved/rejected/pending), `note`, `decided_at`.
 - **AI / agent (Milestone 6, conservative)**
   - Reuse `CopilotMessage` for create/draft/summary actions (add modes; no new table needed).
@@ -92,7 +92,7 @@ Session-authenticated web routes under `/api/` (registered in `apps/api/plane/ap
   - `GET/POST /api/workspaces/<slug>/projects/<project_id>/work-item-templates/`
   - `GET/PATCH/DELETE /.../work-item-templates/<template_id>/`
   - `POST /.../issues/?template_id=<id>` reuses existing create; server hydrates from `template_data`. (Frontend already passes `templateId`.)
-- **Recurring** 
+- **Recurring**
   - `GET/POST /.../recurring-work-items/`, `GET/PATCH/DELETE /.../recurring-work-items/<id>/`
   - `GET /.../recurring-work-items/<id>/runs/` (read-only history).
 - **Custom properties**

@@ -217,6 +217,30 @@ class TestEpicDuplicate:
         assert {entry["field"] for entry in response.data["remap_summary"]} == {"state", "label", "assignee"}
 
     @pytest.mark.django_db
+    def test_duplicate_cross_workspace_without_compatible_issue_type_returns_safe_error(
+        self, member_client, workspace, project, epic, member_user, create_user
+    ):
+        target_workspace, target_project, _ = _create_target_project(
+            create_user,
+            member_user,
+            slug="target-duplicate-workspace-no-issue-type",
+        )
+        ProjectIssueType.objects.filter(project=target_project).delete()
+
+        response = member_client.post(
+            _duplicate_url(workspace.slug, project.id, epic.id),
+            {
+                "target_project_id": str(target_project.id),
+                "target_workspace_slug": target_workspace.slug,
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data["error"] == "Target project is missing a compatible issue type"
+        assert not Issue.objects.filter(project=target_project, name=epic.name).exists()
+
+    @pytest.mark.django_db
     def test_duplicate_requires_edit_role_on_source_and_target(
         self, viewer_client, member_client, workspace, project, epic, member_user, create_user
     ):

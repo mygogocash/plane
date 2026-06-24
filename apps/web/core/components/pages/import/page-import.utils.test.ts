@@ -42,6 +42,21 @@ describe("parsePageImportFiles", () => {
     expect(result.pages[0].html).toContain("<li>Invite team</li>");
   });
 
+  it("drops unsafe Markdown link schemes", async () => {
+    const file = makeFile(
+      "Links.md",
+      "# Links\n\n[Unsafe](java\tscript:alert(1))\n\n[Safe](https://example.com/docs)",
+      "text/markdown"
+    );
+
+    const result = await parsePageImportFiles([file]);
+
+    expect(result.errors).toEqual([]);
+    expect(result.pages[0].html).toContain("Unsafe");
+    expect(result.pages[0].html).not.toContain("java");
+    expect(result.pages[0].html).toContain('<a href="https://example.com/docs">Safe</a>');
+  });
+
   it("parses Notion ZIP files in deterministic content-path order and maps local image assets", async () => {
     const archive = zipSync({
       "Workspace/Second.html": strToU8("<html><body><h1>Second</h1><p>Two</p></body></html>"),

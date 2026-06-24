@@ -123,6 +123,7 @@ class TestStateTransitionEnforcement:
         )
 
         assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.data["error"] == "Transition is not permitted"
         issue.refresh_from_db()
         assert issue.state_id == state_a.id
 
@@ -138,6 +139,7 @@ class TestStateTransitionEnforcement:
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data["error"] == "You are not permitted to perform this transition"
         issue.refresh_from_db()
         assert issue.state_id == state_a.id
 
@@ -172,6 +174,8 @@ class TestStateTransitionEnforcement:
 
         assert patch_resp.status_code == status.HTTP_409_CONFLICT
         assert post_resp.status_code == status.HTTP_409_CONFLICT
+        assert patch_resp.data["error"] == "Transition is not permitted"
+        assert post_resp.data["error"] == "Transition is not permitted"
 
     @pytest.mark.django_db
     def test_partial_update_name_only__no_enforcement(

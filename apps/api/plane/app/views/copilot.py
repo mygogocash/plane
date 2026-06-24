@@ -31,22 +31,12 @@ from plane.db.models import (
     Workspace,
 )
 from plane.utils.exception_logger import log_exception
-from plane.utils.content_validator import validate_html_content
-from plane.utils.html_processor import strip_tags
 
 from .base import BaseAPIView
 from .external.base import get_llm_config, get_vertex_ai_config, is_llm_configured, is_vertex_provider
 
 
-COPILOT_MODES = (
-    "answer",
-    "draft_subtasks",
-    "command",
-    "auto",
-    "create_work_item",
-    "describe",
-    "summarize_issue",
-)
+COPILOT_MODES = ("answer", "draft_subtasks", "command", "auto")
 EVIDENCE_LIMIT = 8
 TEXT_LIMIT = 700
 ISSUE_ACTION_FIELDS = {
@@ -61,10 +51,7 @@ ISSUE_ACTION_FIELDS = {
     "target_date",
 }
 ISSUE_PRIORITIES = {"urgent", "high", "medium", "low", "none"}
-WRITE_MODES = {"command", "draft_subtasks", "create_work_item"}
-# Work-item AI modes (AI-1): drafts/summaries returned for review, never auto-saved.
-AI_WORKITEM_MODES = {"create_work_item", "describe", "summarize_issue"}
-DESCRIBE_ACTIONS = {"draft", "simplify", "rewrite"}
+WRITE_MODES = {"command", "draft_subtasks"}
 
 
 class CopilotMessageSerializer(serializers.Serializer):
@@ -73,16 +60,15 @@ class CopilotMessageSerializer(serializers.Serializer):
     mode = serializers.ChoiceField(choices=COPILOT_MODES, default="auto")
     project_id = serializers.UUIDField(required=False, allow_null=True)
     issue_id = serializers.UUIDField(required=False, allow_null=True)
-    action = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 class CopilotQuerySerializer(serializers.Serializer):
-    scope = serializers.ChoiceField(choices=("epic", "initiative", "workspace"))
+    scope = serializers.ChoiceField(choices=("epic", "initiative", "project", "workspace"))
     object_id = serializers.UUIDField(required=False, allow_null=True)
     question = serializers.CharField(allow_blank=False, trim_whitespace=True)
 
     def validate(self, attrs):
-        if attrs["scope"] in {"epic", "initiative"} and not attrs.get("object_id"):
+        if attrs["scope"] in {"epic", "initiative", "project"} and not attrs.get("object_id"):
             raise serializers.ValidationError({"object_id": "object_id is required for scoped Copilot queries."})
         return attrs
 
@@ -126,20 +112,6 @@ class CopilotMessagesEndpoint(BaseAPIView):
             return Response(
                 {"error": "You don't have the required permissions."},
                 status=status.HTTP_403_FORBIDDEN,
-            )
-
-        if mode in AI_WORKITEM_MODES:
-            return _handle_workitem_ai_mode(
-                slug=slug,
-                user=request.user,
-                mode=mode,
-                action=payload.get("action"),
-                message=payload["message"],
-                project_id=project_id,
-                issue_id=issue_id,
-                api_key=api_key,
-                model=model,
-                provider=provider,
             )
 
         conversation = _get_or_create_conversation(
@@ -553,6 +525,8 @@ def retrieve_copilot_query_evidence(slug, user, question, scope, object_id=None)
         return retrieve_copilot_evidence(slug=slug, user=user, message=question)
     if scope == "epic":
         return _epic_query_evidence(slug=slug, user=user, epic_id=object_id)
+    if scope == "project":
+        return _project_query_evidence(slug=slug, user=user, project_id=object_id)
     if scope == "initiative":
         return _initiative_query_evidence(slug=slug, user=user, initiative_id=object_id)
     return Response({"error": "Unsupported Copilot query scope."}, status=status.HTTP_400_BAD_REQUEST)
@@ -581,6 +555,33 @@ def _epic_query_evidence(slug, user, epic_id):
     evidence = [_issue_evidence(epic, slug, entity_type="epic")]
     evidence.extend(_status_update_evidence(slug=slug, user=user, epic=epic, initiative=None))
     return evidence[:EVIDENCE_LIMIT]
+
+
+def _project_query_evidence(slug, user, project_id):
+    project = Project.objects.filter(id=project_id, workspace__slug=slug).first()
+    if project is None:
+        return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not ProjectMember.objects.filter(project=project, member=user, is_active=True).exists():
+        return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    evidence = [
+        {
+            "entity_type": "project",
+            "entity_id": str(project.id),
+            "title": project.name,
+            "text": f"Project {project.name}",
+            "source_url": f"/{slug}/projects/{project.id}/issues",
+        }
+    ]
+    project_epics = Issue.issue_objects.filter(
+        workspace__slug=slug,
+        project=project,
+        type__is_epic=True,
+    ).select_related("project", "workspace")[:EVIDENCE_LIMIT]
+    for epic in project_epics:
+        evidence.extend(_status_update_evidence(slug=slug, user=user, epic=epic))
+    return evidence
 
 
 def _initiative_query_evidence(slug, user, initiative_id):
@@ -639,8 +640,10 @@ def _initiative_evidence(initiative, slug):
     )
 
 
-def _status_update_evidence(slug, user, epic=None, initiative=None):
+def _status_update_evidence(slug, user, epic=None, initiative=None, project=None):
     queryset = StatusUpdate.objects.filter(workspace__slug=slug)
+    if project is not None:
+        queryset = queryset.filter(epic__project=project, epic__project_id__in=_readable_project_ids(slug, user))
     if epic is not None:
         queryset = queryset.filter(epic=epic, epic__project_id__in=_readable_project_ids(slug, user))
     elif initiative is not None:
@@ -749,213 +752,9 @@ def call_vertex_copilot_llm(model, mode, message, evidence, context):
     return json.loads(output_text)
 
 
-def call_copilot_workitem_llm(api_key, model, provider, mode, action, message, evidence, context):
-    """LLM call for the work-item AI modes (create_work_item / describe / summarize_issue).
-
-    Returns the provider's parsed JSON object. Kept separate from ``call_copilot_llm`` so the
-    proven answer/command schema path stays untouched.
-    """
-    system_prompt = _workitem_system_prompt(mode, action)
-    user_prompt = _copilot_user_prompt(mode, message, evidence, context)
-
-    if is_vertex_provider(provider):
-        project, location = get_vertex_ai_config()
-        if not project or not location:
-            raise ValueError("Missing Google Vertex AI project or location")
-
-        from google import genai
-        from google.genai.types import HttpOptions
-
-        client = genai.Client(
-            vertexai=True,
-            project=project,
-            location=location,
-            http_options=HttpOptions(api_version="v1"),
-        )
-        response = client.models.generate_content(
-            model=model,
-            contents=f"{system_prompt}\n\n{user_prompt}",
-            config={"response_mime_type": "application/json", "temperature": 0.2},
-        )
-        output_text = getattr(response, "text", None)
-        if not output_text:
-            raise ValueError("Google Vertex AI response did not include JSON text")
-        return json.loads(output_text)
-
-    client = OpenAI(api_key=api_key)
-    if provider.lower() == "gemini":
-        model = f"gemini/{model}"
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-    )
-    return json.loads(response.choices[0].message.content)
-
-
-def _workitem_system_prompt(mode, action=None):
-    if mode == "create_work_item":
-        return (
-            "You are Plane Copilot. From the user's request, draft ONE work item as JSON with keys: "
-            "title, description_html, priority (one of urgent, high, medium, low, none), assignee, "
-            "type, and property_values (an object). The draft is returned for human review and is NOT "
-            "saved. Ground every field in the request; never invent IDs."
-        )
-    if mode == "describe":
-        verb = {"draft": "Write", "simplify": "Simplify", "rewrite": "Rewrite"}.get(action, "Improve")
-        return (
-            f"You are Plane Copilot. {verb} the work item description from the user's input. "
-            "Return JSON with a single key 'text' holding the result as plain readable text. Save nothing."
-        )
-    return (
-        "You are Plane Copilot. Summarize the work item using ONLY the provided evidence. "
-        "Return JSON with a single key 'summary'. If the evidence is thin, say so briefly. Read-only."
-    )
-
-
-def _handle_workitem_ai_mode(slug, user, mode, action, message, project_id, issue_id, api_key, model, provider):
-    if mode == "describe":
-        normalized_action = (action or "").strip().lower()
-        if normalized_action not in DESCRIBE_ACTIONS:
-            return Response({"error": "invalid_describe_action"}, status=status.HTTP_400_BAD_REQUEST)
-        result = _call_workitem_llm_safe(
-            api_key,
-            model,
-            provider,
-            mode="describe",
-            action=normalized_action,
-            message=message,
-            evidence=[],
-            context={"workspace_slug": slug},
-        )
-        if isinstance(result, Response):
-            return result
-        text = _text_from_html(result.get("text") or result.get("description_html") or result.get("summary"))
-        return Response(
-            {"mode": "describe", "action": normalized_action, "text": text},
-            status=status.HTTP_200_OK,
-        )
-
-    if mode == "create_work_item":
-        result = _call_workitem_llm_safe(
-            api_key,
-            model,
-            provider,
-            mode="create_work_item",
-            action=None,
-            message=message,
-            evidence=[],
-            context={"workspace_slug": slug, "project_id": str(project_id) if project_id else None},
-        )
-        if isinstance(result, Response):
-            return result
-        return Response(
-            {"mode": "create_work_item", "draft": _shape_work_item_draft(result)},
-            status=status.HTTP_200_OK,
-        )
-
-    # summarize_issue — scoped, read-only digest (cross-project evidence excluded by readability).
-    if not issue_id:
-        return Response({"error": "issue_id_required"}, status=status.HTTP_400_BAD_REQUEST)
-    issue = Issue.issue_objects.filter(workspace__slug=slug, id=issue_id).first()
-    search_message = " ".join(filter(None, [issue.name if issue else "", message]))
-    evidence = retrieve_copilot_evidence(
-        slug=slug, user=user, message=search_message, project_id=project_id, issue_id=issue_id
-    )
-    result = _call_workitem_llm_safe(
-        api_key,
-        model,
-        provider,
-        mode="summarize_issue",
-        action=None,
-        message=message,
-        evidence=evidence,
-        context={"workspace_slug": slug, "issue_id": str(issue_id)},
-    )
-    if isinstance(result, Response):
-        return result
-    summary = _text_from_html(result.get("summary") or result.get("answer"))
-    return Response(
-        {"mode": "summarize_issue", "summary": summary, "evidence": evidence},
-        status=status.HTTP_200_OK,
-    )
-
-
-def _call_workitem_llm_safe(api_key, model, provider, *, mode, action, message, evidence, context):
-    """Call the provider and fail soft: any outage -> 503 (never 500, never leak the error)."""
-    try:
-        result = call_copilot_workitem_llm(
-            api_key=api_key,
-            model=model,
-            provider=provider,
-            mode=mode,
-            action=action,
-            message=message,
-            evidence=evidence,
-            context=context,
-        )
-    except Exception as error:
-        log_exception(error)
-        return Response(
-            {"error": "ai_unavailable", "message": "AI is temporarily unavailable."},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
-    if not isinstance(result, dict):
-        return Response(
-            {"error": "ai_unavailable", "message": "AI is temporarily unavailable."},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
-    return result
-
-
-def _shape_work_item_draft(result):
-    # ponytail: draft is never persisted, so property_values is shaped/sanitized, not type-validated.
-    if not isinstance(result, dict):
-        result = {}
-    priority = result.get("priority")
-    if priority not in ISSUE_PRIORITIES:
-        priority = "none"
-    property_values = result.get("property_values")
-    if not isinstance(property_values, dict):
-        property_values = {}
-    return {
-        "title": _text_from_html(result.get("title"))[:255],
-        "description_html": _sanitize_html(result.get("description_html")),
-        "priority": priority,
-        "assignee": result.get("assignee"),
-        "type": result.get("type"),
-        "property_values": {str(key): _sanitize_property_value(value) for key, value in property_values.items()},
-    }
-
-
-def _sanitize_html(value):
-    if not value or not isinstance(value, str):
-        return "<p></p>"
-    is_valid, _error, clean_html = validate_html_content(value)
-    if not is_valid or not clean_html:
-        return "<p></p>"
-    return clean_html
-
-
-def _text_from_html(value):
-    if value is None:
-        return ""
-    text = value if isinstance(value, str) else json.dumps(value, default=str)
-    return strip_tags(text).strip()
-
-
-def _sanitize_property_value(value):
-    if isinstance(value, str):
-        return strip_tags(value).strip()
-    return value
-
-
 def _copilot_system_prompt():
     return (
-        "You are Plane Copilot. Answer only from the provided Plane workspace evidence. "
+        "You are Manut Copilot. Answer only from the provided Plane workspace evidence. "
         "If evidence is insufficient, say what is missing. For subtask drafts, propose child work items "
         "that a user must review before creation. For command mode, return only allowlisted actions: "
         "create_issue, update_issue, set_priority, set_state, assign_user, unassign_user, and create_label. "
@@ -1470,7 +1269,7 @@ def _vertex_copilot_response_schema() -> dict[str, Any]:
             "priority": {
                 "type": "STRING",
                 "enum": ["urgent", "high", "medium", "low", "none"],
-                "description": "Plane priority value.",
+                "description": "Manut priority value.",
             },
             "assignee_ids": {"type": "ARRAY", "items": {"type": "STRING"}},
             "label_ids": {"type": "ARRAY", "items": {"type": "STRING"}},
@@ -1493,7 +1292,7 @@ def _vertex_copilot_response_schema() -> dict[str, Any]:
                     "unassign_user",
                     "create_label",
                 ],
-                "description": "Allowlisted Plane action type.",
+                "description": "Allowlisted Manut action type.",
             },
             "project_id": {"type": "STRING"},
             "issue_id": {"type": "STRING"},

@@ -1,3 +1,7 @@
+// Copyright (c) 2023-present Plane Software, Inc. and contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+// See the LICENSE file for details.
+
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -6,6 +10,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+
 // local imports
 import { AskAIAction, submitCopilotQuestion } from "./ask-ai-action";
 
@@ -94,5 +99,78 @@ describe("AskAIAction", () => {
     expect(result).toMatchObject({ status: "unavailable" });
     expect(markup).toContain("Ask AI");
     expect(markup).toContain("AI unavailable");
+  });
+
+  it("submits workspace-scoped questions without an object id", async () => {
+    const service = {
+      query: vi.fn().mockResolvedValue(answer),
+    };
+
+    const result = await submitCopilotQuestion({
+      owner: { scope: "workspace", workspaceSlug: "acme", title: "Acme" },
+      question: "Summarize the workspace",
+      service,
+    });
+
+    expect(service.query).toHaveBeenCalledWith("acme", {
+      scope: "workspace",
+      question: "Summarize the workspace",
+    });
+    expect(result).toMatchObject({ status: "success" });
+  });
+
+  it("submits project-scoped questions with the project object id", async () => {
+    const service = {
+      query: vi.fn().mockResolvedValue(answer),
+    };
+
+    const result = await submitCopilotQuestion({
+      owner: { scope: "project", workspaceSlug: "acme", objectId: "project-1", title: "Roadmap" },
+      question: "Summarize project risk",
+      service,
+    });
+
+    expect(service.query).toHaveBeenCalledWith("acme", {
+      scope: "project",
+      object_id: "project-1",
+      question: "Summarize project risk",
+    });
+    expect(result).toMatchObject({ status: "success" });
+  });
+
+  it("renders workspace-scoped result copy", () => {
+    const service = {
+      query: vi.fn().mockResolvedValue(answer),
+    };
+
+    const markup = renderToStaticMarkup(
+      <AskAIAction
+        owner={{ scope: "workspace", workspaceSlug: "acme", title: "Acme" }}
+        service={service}
+        initialQuestion="Summarize progress"
+        initialResult={answer}
+      />
+    );
+
+    expect(markup).toContain("Scoped to this workspace");
+    expect(markup).toContain(answer.summary);
+  });
+
+  it("renders project-scoped result copy", () => {
+    const service = {
+      query: vi.fn().mockResolvedValue(answer),
+    };
+
+    const markup = renderToStaticMarkup(
+      <AskAIAction
+        owner={{ scope: "project", workspaceSlug: "acme", objectId: "project-1", title: "Roadmap" }}
+        service={service}
+        initialQuestion="Summarize progress"
+        initialResult={answer}
+      />
+    );
+
+    expect(markup).toContain("Scoped to this project");
+    expect(markup).toContain(answer.summary);
   });
 });

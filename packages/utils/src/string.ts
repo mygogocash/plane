@@ -56,7 +56,7 @@ export const truncateText = (str: string, length: number) => {
 export const createSimilarString = (str: string) => {
   const shuffled = str
     .split("")
-    .sort(() => Math.random() - 0.5)
+    .toSorted(() => Math.random() - 0.5)
     .join("");
 
   return shuffled;
@@ -130,6 +130,9 @@ export const sanitizeHTML = (htmlString: string) => {
   return sanitizedText.trim(); // trim the string to remove leading and trailing whitespaces
 };
 
+export const sanitizeRichHTML = (htmlString: string, options: sanitizeHtml.IOptions) =>
+  sanitizeHtml(htmlString, options).trim();
+
 /**
  * @description: This function will remove all the HTML tags from the string and truncate the string to the specified length
  * @param {string} html
@@ -153,7 +156,7 @@ export const checkEmailValidity = (email: string): boolean => {
   if (!email) return false;
 
   const isEmailValid =
-    /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(
+    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(
       email
     );
 
@@ -236,7 +239,7 @@ export const isCommentEmpty = (comment: Content | undefined): boolean => {
 
   // Handle JSONContent[] (array)
   if (Array.isArray(comment)) {
-    return comment.length === 0 || comment.every(isJSONContentEmpty);
+    return comment.every(isJSONContentEmpty);
   }
 
   // Handle JSONContent (object)

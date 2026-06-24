@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 # Module imports
-from plane.db.models import Issue, Project, ProjectMember, State, User, WorkspaceMember
+from plane.db.models import Issue, IssueEmbedding, Project, ProjectMember, State, User, WorkspaceMember
 
 
 def _similar_url(slug, project_id, title="", limit=None):
@@ -114,6 +114,40 @@ class TestSimilarIssuesAPI:
         assert [result["id"] for result in response.data["results"]] == [str(open_issue.id)]
 
     @pytest.mark.django_db
+    def test_similar_uses_embedding_rank_when_available(
+        self, member_client, monkeypatch, workspace, project, open_state
+    ):
+        monkeypatch.setenv("WORKSPACE_AI_EMBEDDINGS_ENABLED", "1")
+        monkeypatch.setattr(
+            "plane.app.views.issue.similar.get_issue_embedding_provider",
+            lambda: lambda _text: [1.0, 0.0],
+        )
+        semantic_match = _create_issue(project, open_state, "Refund workflow is unclear")
+        weaker_match = _create_issue(project, open_state, "Checkout payment fails for mobile card")
+        IssueEmbedding.objects.create(
+            workspace=workspace,
+            project=project,
+            issue=semantic_match,
+            model_name="@cf/baai/bge-base-en-v1.5",
+            content_hash="a" * 64,
+            embedding=[1.0, 0.0],
+        )
+        IssueEmbedding.objects.create(
+            workspace=workspace,
+            project=project,
+            issue=weaker_match,
+            model_name="@cf/baai/bge-base-en-v1.5",
+            content_hash="b" * 64,
+            embedding=[0.0, 1.0],
+        )
+
+        response = member_client.get(_similar_url(workspace.slug, project.id, "checkout payment fails"))
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["results"][0]["issue_id"] == str(semantic_match.id)
+        assert response.data["results"][0]["retrieval"] == "embedding"
+        assert response.data["results"][0]["matched_on"] == ["embedding"]
+
     def test_cross_project_never_returned(self, member_client, workspace, project, open_state, member_user):
         other_project = Project.objects.create(
             name="Other Similar Project",

@@ -3,13 +3,11 @@
 # See the LICENSE file for details.
 
 # Python imports
-import hashlib
-import hmac
 import logging
 import time
 
 # Django imports
-from django.conf import settings
+from django.core.signing import Signer
 from django.http import HttpRequest
 
 # Third party imports
@@ -21,6 +19,7 @@ from plane.utils.exception_logger import log_exception
 from plane.bgtasks.logger_task import process_logs
 
 api_logger = logging.getLogger("plane.api.request")
+api_token_identifier_signer = Signer(salt="plane.api-token-log")
 
 
 class RequestLoggerMiddleware:
@@ -139,11 +138,8 @@ class APITokenLogMiddleware:
             log_data = {
                 # Tokenize the (high-entropy) API key into a stable, non-reversible
                 # identifier so logs can be correlated to a token without ever
-                # persisting the raw key. A keyed HMAC is used rather than a bare
-                # hash so the digest cannot be precomputed from a known key value.
-                "token_identifier": hmac.new(
-                    settings.SECRET_KEY.encode(), api_key.encode(), hashlib.sha256
-                ).hexdigest(),
+                # persisting the raw key.
+                "token_identifier": api_token_identifier_signer.signature(api_key),
                 "path": request.path,
                 "method": request.method,
                 "query_params": request.META.get("QUERY_STRING", ""),

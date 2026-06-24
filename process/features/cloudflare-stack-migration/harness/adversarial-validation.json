@@ -1,0 +1,32 @@
+{
+  "feature": "cloudflare-stack-migration",
+  "generated_at": "2026-06-21T07:30:00.000Z",
+  "status": "production_cutover_not_safe",
+  "hypotheses": [
+    {
+      "hypothesis": "A Cloudflare-only push could still redeploy GKE because pnpm-lock.yaml is treated as a shared frontend input.",
+      "result": "confirmed_and_mitigated",
+      "mitigation": "Manut CI/CD now detects Cloudflare-only push sets and forces GKE component flags false."
+    },
+    {
+      "hypothesis": "The Worker /api/instances/ placeholder is incompatible with current frontend expectations.",
+      "result": "confirmed_and_mitigated",
+      "mitigation": "Worker response now follows nested config and instance contract shape."
+    },
+    {
+      "hypothesis": "Proxying to https://app.manut.xyz from a Worker attached to app.manut.xyz could recurse or blackhole traffic.",
+      "result": "confirmed_and_mitigated",
+      "mitigation": "Default same-origin LEGACY_GKE_ORIGIN was removed and proxy helper refuses same-origin upstreams."
+    },
+    {
+      "hypothesis": "R2 upload handling could accidentally replace GCS before object parity is proven.",
+      "result": "confirmed_and_mitigated",
+      "mitigation": "Uploads remain classified as legacy proxy routes; the R2 handler exists standalone but is not wired into app routing."
+    },
+    {
+      "hypothesis": "Production D1 could report cloudflare-preview because shared migration seeds current_version.",
+      "result": "confirmed_and_mitigated",
+      "mitigation": "Environment-specific current_version seed was removed; runtime falls back to INSTANCE_VERSION."
+    }
+  ]
+}

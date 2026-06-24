@@ -1,0 +1,72 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+export type CloudflareBindings = {
+  MANUT_DB?: D1Database;
+  UPLOADS?: R2Bucket;
+  JOBS?: Queue;
+  CONFIG?: KVNamespace;
+  LIVE_ROOMS?: DurableObjectNamespace;
+  APP_ENV?: string;
+  APP_ORIGIN?: string;
+  LEGACY_GKE_ORIGIN?: string;
+  R2_UPLOADS_READ_ENABLED?: string;
+  MANUT_DIAGNOSTIC_TOKEN?: string;
+  INSTANCE_VERSION?: string;
+  INSTANCE_ID?: string;
+  INSTANCE_NAME?: string;
+};
+
+export type InstancePayload = {
+  config: {
+    admin_base_url: string | null;
+    app_base_url: string | null;
+    enable_signup: boolean;
+    file_size_limit: number;
+    github_app_name: string;
+    has_llm_configured: boolean;
+    has_unsplash_configured: boolean;
+    instance_changelog_url: string;
+    is_email_password_enabled: boolean;
+    is_gitea_enabled: boolean;
+    is_github_enabled: boolean;
+    is_gitlab_enabled: boolean;
+    is_google_enabled: boolean;
+    is_magic_login_enabled: boolean;
+    is_self_managed: boolean;
+    is_smtp_configured: boolean;
+    is_workspace_creation_disabled: boolean;
+    posthog_api_key: string | null;
+    posthog_host: string | null;
+    slack_client_id: string | null;
+    space_base_url: string | null;
+  };
+  instance: {
+    created_at: string;
+    created_by: string | null;
+    current_version: string;
+    deleted_at: string | null;
+    domain: string;
+    edition: "PLANE_COMMUNITY";
+    id: string;
+    instance_id: string;
+    instance_name: string;
+    is_current_version_deprecated: boolean;
+    is_setup_done: boolean;
+    is_signup_screen_visited: boolean;
+    is_support_required: boolean;
+    is_telemetry_enabled: boolean;
+    is_test: boolean;
+    is_verified: boolean;
+    last_checked_at: string;
+    latest_version: string;
+    namespace: string | null;
+    updated_at: string;
+    updated_by: string | null;
+    whitelist_emails: string | null;
+    workspaces_exist: boolean;
+  };
+};

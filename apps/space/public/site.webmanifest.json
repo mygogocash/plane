@@ -1,11 +1,11 @@
 {
-  "name": "Plane Space",
-  "short_name": "Plane Space",
-  "description": "Plane helps you plan your work items, cycles, and product modules.",
+  "name": "Manut Space",
+  "short_name": "Manut Space",
+  "description": "Manut Space publishes selected Manut boards and roadmaps for teams and customers.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#3f76ff",
+  "background_color": "#fafaf2",
+  "theme_color": "#0e0e10",
   "icons": [
     { "src": "/favicon/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/favicon/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }

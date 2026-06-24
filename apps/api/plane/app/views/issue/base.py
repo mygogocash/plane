@@ -80,6 +80,7 @@ from plane.utils.workflow import (
     apply_auto_assignment,
     create_approval,
     enforce_state_transition,
+    workflow_error_message,
 )
 from plane.utils.issue_filters import issue_filters
 from plane.utils.order_queryset import order_issue_queryset
@@ -212,6 +213,23 @@ class IssueListEndpoint(BaseAPIView):
             datetime_fields = ["created_at", "updated_at"]
             issues = user_timezone_converter(issues, datetime_fields, request.user.user_timezone)
         return Response(issues, status=status.HTTP_200_OK)
+
+
+def normalize_duplicate_override(raw_override):
+    if not isinstance(raw_override, dict) or raw_override.get("acknowledged") is not True:
+        return None
+
+    candidate_issue_ids = raw_override.get("candidate_issue_ids") or []
+    if not isinstance(candidate_issue_ids, list):
+        candidate_issue_ids = []
+
+    normalized_candidate_ids = [str(candidate_id) for candidate_id in candidate_issue_ids if candidate_id][:10]
+
+    return {
+        "acknowledged": True,
+        "candidate_issue_ids": normalized_candidate_ids,
+        "threshold": raw_override.get("threshold"),
+    }
 
 
 class IssueViewSet(BaseViewSet):
@@ -604,7 +622,21 @@ class IssueViewSet(BaseViewSet):
                 user_id=request.user.id,
                 is_creating=True,
             )
-            return Response(issue, status=status.HTTP_201_CREATED)
+        duplicate_override = normalize_duplicate_override(request.data.get("duplicate_override"))
+
+        if duplicate_override:
+            issue_activity.delay(
+                type="issue_duplicate_override.activity.created",
+                requested_data=json.dumps(duplicate_override, cls=DjangoJSONEncoder),
+                current_instance=None,
+                issue_id=str(issue_instance.id),
+                actor_id=str(request.user.id),
+                project_id=str(project_id),
+                epoch=int(timezone.now().timestamp()),
+                origin=base_host(request=request, is_app=True),
+            )
+
+        return Response(issue, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], creator=True, model=Issue)
@@ -809,9 +841,9 @@ class IssueViewSet(BaseViewSet):
             try:
                 decision = enforce_state_transition(issue, new_state_id, request.user)
             except IllegalTransition as exc:
-                return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+                return Response({"error": workflow_error_message(exc)}, status=status.HTTP_409_CONFLICT)
             except ActorNotAllowed as exc:
-                return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"error": workflow_error_message(exc)}, status=status.HTTP_403_FORBIDDEN)
 
             # Approval-gated transition: defer the state change here too. Create a pending
             # approval and return 202 instead of silently applying the move.
