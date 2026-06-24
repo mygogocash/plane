@@ -45,10 +45,12 @@ import { useCycle } from "@/hooks/store/use-cycle";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useInstance } from "@/hooks/store/use-instance";
 import { useAppRouter } from "@/hooks/use-app-router";
 import useLocalStorage from "@/hooks/use-local-storage";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/plane-web/components/breadcrumbs/common";
+import { GetDigestButton } from "@/components/ai/summaries/GetDigestButton";
 
 export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
   // refs
@@ -70,12 +72,13 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
   const { currentProjectDetails, loader } = useProject();
   const { isMobile } = usePlatformOS();
   const { allowPermissions } = useUserPermissions();
+  const { config } = useInstance();
 
   const activeLayout = issueFilters?.displayFilters?.layout;
 
   const { setValue, storedValue } = useLocalStorage("cycle_sidebar_collapsed", false);
 
-  const isSidebarCollapsed = storedValue ? (storedValue === true ? true : false) : false;
+  const isSidebarCollapsed = storedValue === true;
   const toggleSidebar = () => {
     setValue(!isSidebarCollapsed);
   };
@@ -233,6 +236,15 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
 
             {canUserCreateIssue && (
               <>
+                {workspaceSlug && cycleId ? (
+                  <GetDigestButton
+                    workspaceSlug={workspaceSlug.toString()}
+                    entityType="cycle"
+                    entityId={cycleId.toString()}
+                    entityTitle={cycleDetails?.name}
+                    isProviderConfigured={config?.has_llm_configured}
+                  />
+                ) : null}
                 <Button onClick={() => setAnalyticsModal(true)} variant="secondary" size="lg">
                   <span className="hidden @4xl:flex">Analytics</span>
                   <span className="@4xl:hidden">

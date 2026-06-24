@@ -23,12 +23,45 @@ const repoRoot = path.resolve(packageRoot, "..", "..");
 
 function passingInput() {
   return {
+    schema_version: 2,
     approved_by: "operator@example.com",
     approved_at: "2026-06-21T12:00:00.000Z",
     target_origin: "https://app.manut.xyz",
     maintenance_window: {
       start_at: "2026-06-21T13:00:00.000Z",
       end_at: "2026-06-21T14:00:00.000Z",
+    },
+    operator_inputs: {
+      maintenance_window: {
+        announcement_url: "https://calendar.example.com/cutover-window",
+        owner: "Ops Commander",
+      },
+      rollback_checkpoint: {
+        rollback_target: "GKE production service before Cloudflare routing change",
+        rollback_command: "pnpm --filter @manut/cloudflare cutover:rollback -- --target=gke",
+        checkpoint_evidence_path:
+          "process/features/cloudflare-stack-migration/reports/phase-07-production-cutover-readiness_21-06-26.md",
+        owner: "Platform Operator",
+      },
+      dns_routing: {
+        change_ticket_url: "https://changes.example.com/manut-cutover-gate-123",
+        current_origin: "https://gke-app.example.com",
+        cutover_origin: "https://app.manut.xyz",
+        routing_owner: "DNS Operator",
+      },
+      write_freeze: {
+        start_at: "2026-06-21T12:45:00.000Z",
+        end_at: "2026-06-21T14:15:00.000Z",
+        announcement_url: "https://status.example.com/write-freeze",
+        coordinator: "Ops Coordinator",
+      },
+      smoke_readiness: {
+        public_smoke_command: "pnpm --filter @manut/cloudflare smoke:worker",
+        authenticated_smoke_command:
+          "pnpm --filter @manut/cloudflare smoke:authenticated -- --origin=https://app.manut.xyz",
+        evidence_path: "process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json",
+        owner: "QA Operator",
+      },
     },
     checks: REQUIRED_OPERATOR_APPROVAL_CHECKS.map((check) => ({
       id: check.id,
@@ -45,7 +78,7 @@ describe("operator approval report", () => {
 
     expect(template).toMatchObject({
       template_kind: "operator-approval-input",
-      schema_version: 1,
+      schema_version: 2,
       generated_at: "2026-06-22T00:00:00.000Z",
       approved_by: "",
       approved_at: "",
@@ -54,8 +87,39 @@ describe("operator approval report", () => {
         start_at: "",
         end_at: "",
       },
+      operator_inputs: {
+        rollback_checkpoint: {
+          rollback_target: "",
+          rollback_command: "",
+          checkpoint_evidence_path: "",
+          owner: "",
+        },
+        dns_routing: {
+          change_ticket_url: "",
+          current_origin: "",
+          cutover_origin: "",
+          routing_owner: "",
+        },
+        smoke_readiness: {
+          public_smoke_command: "",
+          authenticated_smoke_command: "",
+          evidence_path: "",
+          owner: "",
+        },
+      },
     });
     expect(template.checks).toHaveLength(REQUIRED_OPERATOR_APPROVAL_CHECKS.length);
+    expect(template.checks.find((check) => check.id === "maintenance-window-announced")).toMatchObject({
+      required_inputs: [
+        { path: "maintenance_window.start_at", label: "Maintenance window start timestamp" },
+        { path: "maintenance_window.end_at", label: "Maintenance window end timestamp" },
+        {
+          path: "operator_inputs.maintenance_window.announcement_url",
+          label: "Maintenance announcement or calendar URL",
+        },
+        { path: "operator_inputs.maintenance_window.owner", label: "Maintenance-window operator owner" },
+      ],
+    });
     expect(template.checks.map((check) => check.id)).toEqual(
       REQUIRED_OPERATOR_APPROVAL_CHECKS.map((check) => check.id)
     );
@@ -72,13 +136,36 @@ describe("operator approval report", () => {
     expect(report).toMatchObject({
       ok: true,
       cutover_approved: true,
+      decision_complete: true,
       approved_by: "operator@example.com",
       summary: {
         total: REQUIRED_OPERATOR_APPROVAL_CHECKS.length,
         failed: 0,
+        remaining_operator_inputs: 0,
       },
+      remaining_operator_inputs: [],
     });
     expect(validateOperatorApprovalReport(report)).toEqual({ ok: true });
+  });
+
+  it("blocks approval when a required rollback operator input is missing", () => {
+    const input = passingInput();
+    input.operator_inputs.rollback_checkpoint.rollback_command = "";
+
+    const report = buildOperatorApprovalReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      cutover_approved: false,
+      decision_complete: false,
+      validation_error:
+        "Operator approval check rollback-checkpoint-confirmed is missing operator input operator_inputs.rollback_checkpoint.rollback_command.",
+    });
+    expect(report.remaining_operator_inputs).toContainEqual({
+      check_id: "rollback-checkpoint-confirmed",
+      path: "operator_inputs.rollback_checkpoint.rollback_command",
+      label: "Rollback command or runbook step",
+    });
   });
 
   it("blocks reports without an approver identity", () => {

@@ -1,0 +1,51 @@
+{
+  "kind": "cloudflare-builds-shadow-report",
+  "generated_at": "2026-06-24T13:19:30.826Z",
+  "ok": false,
+  "worker_name": "manut-app",
+  "repository": "mygogocash/plane",
+  "production_branch": "preview",
+  "run": {
+    "build_url": "https://dash.cloudflare.com/187ab61ed9dbc6e616cb23e6b95aa8f1/workers/services/view/manut-app/production/builds/4a54064d-7fba-437b-aa19-d2b7d28bb5cc",
+    "github_check_url": "https://github.com/mygogocash/plane/runs/83199924061",
+    "branch": "codex/cloudflare-cutoff-gates",
+    "commit_sha": "a5ca19c32a22b006179b1994f08fa97883baa2ef",
+    "build_command": "pnpm --filter @manut/cloudflare ci:cloudflare",
+    "build_command_observed": false,
+    "deploy_command": "pnpm --filter @manut/cloudflare exec wrangler versions upload --env production",
+    "deploy_command_observed": false,
+    "github_check_conclusion": "success",
+    "is_production_branch": false,
+    "worker_version_uploaded": true,
+    "worker_version_id": "703b72f7-d075-4dc2-96aa-95d42fea5d0c",
+    "active_production_version_id_after": "f9aff236-d7b8-44a2-8d1f-d51bc67ad82b",
+    "production_traffic_changed": false,
+    "production_deploy_reviewed": false
+  },
+  "readiness": {
+    "status": "blocked",
+    "summary": {
+      "total": 19,
+      "passed": 14,
+      "blocked": 5
+    },
+    "blocked_checks": [
+      "d1-import-validation",
+      "authenticated-smoke",
+      "betterstack-cutover-green",
+      "operator-cutover-approval",
+      "phase8-seven-green-days"
+    ]
+  },
+  "validation": {
+    "ok": false,
+    "errors": ["build_command_not_observed", "deploy_command_not_observed"],
+    "warnings": [],
+    "readiness": {
+      "total": 19,
+      "passed": 14,
+      "blocked": 5
+    }
+  },
+  "conclusion": "Cloudflare Builds shadow evidence is incomplete or unsafe."
+}

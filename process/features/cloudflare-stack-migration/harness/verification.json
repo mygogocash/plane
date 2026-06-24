@@ -1,48 +1,52 @@
 {
   "feature": "cloudflare-stack-migration",
-  "generated_at": "2026-06-21T07:30:00.000Z",
-  "status": "local_foundation_verified",
-  "commands": [
+  "generated_at": "2026-06-24T11:34:16.000Z",
+  "status": "cutoff_gate_tooling_verified",
+  "branch": "codex/cloudflare-cutoff-gates",
+  "commit": "91382f635",
+  "pull_request": {
+    "number": 31,
+    "url": "https://github.com/mygogocash/plane/pull/31",
+    "base": "preview",
+    "mergeable": true
+  },
+  "local_verification": [
     {
-      "command": "pnpm --filter @manut/cloudflare check",
-      "status": "passed",
-      "evidence": "tsc --noEmit completed successfully"
+      "command": "pnpm exec oxlint <scoped changed Cloudflare files>",
+      "result": "pass",
+      "evidence": "0 warnings and 0 errors"
+    },
+    {
+      "command": "pnpm exec oxfmt --check <scoped changed Cloudflare files and harness JSON>",
+      "result": "pass",
+      "evidence": "All matched files use the correct format"
     },
     {
       "command": "pnpm --filter @manut/cloudflare test",
-      "status": "passed",
-      "evidence": "5 test files, 36 tests passed"
+      "result": "pass",
+      "evidence": "26 test files passed, 230 tests passed"
     },
     {
-      "command": "pnpm --filter @manut/cloudflare exec wrangler deploy --dry-run --env=\"\" --outdir /tmp/manut-cloudflare-dry-run-preview",
-      "status": "passed",
-      "evidence": "Worker bundled with D1, R2, KV, Queue, Durable Object, and preview vars"
-    },
-    {
-      "command": "node apps/cloudflare/tools/django-model-inventory.mjs --root apps/api/plane --json",
-      "status": "passed",
-      "evidence": "121 model classes, 114 concrete, 138 migration files"
-    },
-    {
-      "command": "node apps/cloudflare/tools/compare-row-counts.mjs <matching-source.json> <matching-target.json> --json",
-      "status": "passed",
-      "evidence": "exit 0 on matching counts"
-    },
-    {
-      "command": "node apps/cloudflare/tools/compare-row-counts.mjs <source.json> <mismatched-target.json> --json",
-      "status": "passed",
-      "evidence": "exit 1 on actual mismatch"
-    },
-    {
-      "command": "ruby -e 'require \"yaml\"; YAML.load_file(ARGV[0]); YAML.load_file(ARGV[1])' .github/workflows/ci-cd.yml .github/workflows/cloudflare-ci-cd.yml",
-      "status": "passed",
-      "evidence": "workflow YAML parsed"
+      "command": "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json",
+      "result": "expected_blocked",
+      "evidence": "status=blocked, passed=14, total=19"
     }
   ],
-  "known_gaps": [
-    "actionlint is not installed locally",
-    "root pnpm check still has unrelated pre-existing @plane/i18n formatting failure",
-    "authenticated browser smoke has not been run for Cloudflare preview",
-    "Cloudflare resource ids are placeholders until preview provisioning"
+  "ci_snapshot": {
+    "source": "gh pr checks 31 --repo mygogocash/plane",
+    "observed_at": "2026-06-24T11:34:16.000Z",
+    "summary": "PR checks were mergeable with core Cloudflare, copyright, format, types, and Workers build checks passing; deploy jobs skipped as expected for this PR."
+  },
+  "review": {
+    "final_code_review": "pass_with_concerns",
+    "pr_safe_to_open": true,
+    "production_cutover_safe": false,
+    "concern": "Production gates still require real operator/live evidence."
+  },
+  "verified_controls": [
+    "Authenticated smoke false-green path is blocked by operator evidence validation.",
+    "Operator approval false-green path is blocked by schema-v2 validation.",
+    "Better Stack monitor-state stale evidence path is blocked by provenance and freshness validation.",
+    "Phase 8 seven-green-days report remains blocked until Phase 7 readiness is green."
   ]
 }

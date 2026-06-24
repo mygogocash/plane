@@ -11,6 +11,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { validateEvidenceJson } from "../tools/cutover-readiness.mjs";
+
 const REQUIRED_AUTHENTICATED_SMOKE_IDS = [
   "login",
   "session-refresh",
@@ -63,6 +65,156 @@ function runReadiness(root: string, env: NodeJS.ProcessEnv = {}) {
 }
 
 describe("cutover readiness evidence gate", () => {
+  it("rejects legacy authenticated smoke evidence without operator session proof", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "cutover-auth-smoke-legacy-"));
+    const evidencePath = path.join(root, "authenticated-smoke.json");
+    await writeFile(
+      evidencePath,
+      JSON.stringify(
+        {
+          ok: true,
+          evidence_kind: "authenticated-smoke",
+          target_origin: "https://app.manut.xyz",
+          actor: "operator@example.com",
+          cloudflare_route_verified: true,
+          cloudflare_route_evidence: "x-manut-cloudflare-phase header observed on app.manut.xyz",
+          checks: REQUIRED_AUTHENTICATED_SMOKE_IDS.map((id) => ({
+            id,
+            ok: true,
+            status: "pass",
+            evidence: `${id} logged-in screenshot`,
+            observed_at: "2026-06-21T12:00:00.000Z",
+            url: "https://app.manut.xyz/workspaces/gogocash",
+          })),
+        },
+        null,
+        2
+      )
+    );
+
+    await expect(validateEvidenceJson(evidencePath, "authenticated-smoke")).resolves.toMatchObject({
+      ok: false,
+      message: "operator_evidence_missing",
+    });
+  });
+
+  it("rejects legacy operator approval evidence without schema-v2 decision inputs", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "cutover-operator-legacy-"));
+    const evidencePath = path.join(root, "operator-approval.json");
+    await writeFile(
+      evidencePath,
+      JSON.stringify(
+        {
+          ok: true,
+          evidence_kind: "operator-approval",
+          cutover_approved: true,
+          approved_by: "operator@example.com",
+          approved_at: "2026-06-21T12:00:00.000Z",
+          target_origin: "https://app.manut.xyz",
+          maintenance_window: {
+            start_at: "2026-06-21T12:00:00.000Z",
+            end_at: "2026-06-21T13:00:00.000Z",
+          },
+          checks: [
+            { id: "maintenance-window-announced", ok: true, evidence: "window approved" },
+            { id: "rollback-checkpoint-confirmed", ok: true, evidence: "rollback checkpoint confirmed" },
+            { id: "dns-change-approved", ok: true, evidence: "dns change approved" },
+            { id: "write-freeze-confirmed", ok: true, evidence: "write freeze confirmed" },
+            { id: "smoke-readiness-confirmed", ok: true, evidence: "smoke readiness confirmed" },
+          ],
+        },
+        null,
+        2
+      )
+    );
+
+    await expect(validateEvidenceJson(evidencePath, "operator-approval")).resolves.toMatchObject({
+      ok: false,
+      message: "Operator approval report schema_version must be 2.",
+    });
+  });
+
+  it("rejects stale Better Stack monitor-state evidence", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "cutover-betterstack-state-"));
+    const evidencePath = path.join(root, "betterstack-cutover.json");
+    await writeFile(
+      evidencePath,
+      JSON.stringify(
+        {
+          ok: true,
+          evidence_kind: "betterstack-cutover",
+          generated_at: "2026-06-24T08:00:00.000Z",
+          monitor_source: "monitor-state-file",
+          monitor_state_path: "process/features/cloudflare-stack-migration/reports/betterstack-monitor-state.json",
+          monitor_summary: { total: 3, passed: 3, failed: 0 },
+          endpoint_summary: { total: 3, passed: 3, failed: 0 },
+          monitor_checks: [
+            {
+              id: "public-site",
+              ok: true,
+              status: "up",
+              monitor_id: "monitor-public-site",
+              url: "https://manut.xyz/",
+              expected_url: "https://manut.xyz/",
+              url_matches: true,
+              last_checked_at: "2026-06-22T08:00:00.000Z",
+            },
+            {
+              id: "app-root",
+              ok: true,
+              status: "up",
+              monitor_id: "monitor-app-root",
+              url: "https://app.manut.xyz/",
+              expected_url: "https://app.manut.xyz/",
+              url_matches: true,
+              last_checked_at: "2026-06-24T07:00:00.000Z",
+            },
+            {
+              id: "api-instances",
+              ok: true,
+              status: "up",
+              monitor_id: "monitor-api-instances",
+              url: "https://app.manut.xyz/api/instances/",
+              expected_url: "https://app.manut.xyz/api/instances/",
+              url_matches: true,
+              last_checked_at: "2026-06-24T07:00:00.000Z",
+            },
+          ],
+          endpoint_checks: [
+            {
+              id: "public-site",
+              ok: true,
+              status: 200,
+              keyword_found: true,
+              url: "https://manut.xyz/",
+            },
+            {
+              id: "app-root",
+              ok: true,
+              status: 200,
+              keyword_found: true,
+              url: "https://app.manut.xyz/",
+            },
+            {
+              id: "api-instances",
+              ok: true,
+              status: 200,
+              keyword_found: true,
+              url: "https://app.manut.xyz/api/instances/",
+            },
+          ],
+        },
+        null,
+        2
+      )
+    );
+
+    await expect(validateEvidenceJson(evidencePath, "betterstack-cutover")).resolves.toMatchObject({
+      ok: false,
+      message: "Better Stack monitor-state check public-site is stale.",
+    });
+  });
+
   it("exposes selected checks separately from the full audit list", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
 
@@ -269,6 +421,15 @@ describe("cutover readiness evidence gate", () => {
         actor: "operator@example.com",
         cloudflare_route_verified: true,
         cloudflare_route_evidence: "x-manut-cloudflare-phase header observed on app.manut.xyz",
+        operator_evidence_required: true,
+        operator_evidence_verified: true,
+        operator_evidence: {
+          run_id: "auth-smoke-20260621",
+          workspace_identifier: "gogocash",
+          authenticated_workspace_url: "https://app.manut.xyz/workspaces/gogocash",
+          user_identity_redacted: "operator@example.com redacted",
+          browser_artifact: "process/features/cloudflare-stack-migration/reports/auth-smoke.png",
+        },
         checks: [
           {
             id: "login",
@@ -847,6 +1008,7 @@ describe("cutover readiness evidence gate", () => {
       JSON.stringify({
         ok: true,
         evidence_kind: "betterstack-cutover",
+        monitor_source: "betterstack-api",
         monitor_summary: { total: 3, passed: 3, failed: 0 },
         endpoint_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [
@@ -963,6 +1125,7 @@ describe("cutover readiness evidence gate", () => {
       JSON.stringify({
         ok: true,
         evidence_kind: "betterstack-cutover",
+        monitor_source: "betterstack-api",
         monitor_summary: { total: 4, passed: 3, failed: 1 },
         endpoint_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [
@@ -1024,6 +1187,7 @@ describe("cutover readiness evidence gate", () => {
       JSON.stringify({
         ok: true,
         evidence_kind: "betterstack-cutover",
+        monitor_source: "betterstack-api",
         monitor_summary: { total: 3, passed: 3, failed: 0 },
         endpoint_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [
@@ -1207,7 +1371,10 @@ describe("cutover readiness evidence gate", () => {
       JSON.stringify({
         ok: true,
         evidence_kind: "operator-approval",
+        schema_version: 2,
         cutover_approved: true,
+        decision_complete: true,
+        remaining_operator_inputs: [],
         approved_by: "operator@example.com",
         approved_at: "2026-06-21T12:00:00.000Z",
         target_origin: "https://app.manut.xyz",
@@ -1320,6 +1487,7 @@ describe("cutover readiness evidence gate", () => {
       JSON.stringify({
         ok: true,
         evidence_kind: "betterstack-cutover",
+        monitor_source: "betterstack-api",
         monitor_summary: { total: 3, passed: 3, failed: 0 },
         endpoint_summary: { total: 3, passed: 3, failed: 0 },
         monitor_checks: [

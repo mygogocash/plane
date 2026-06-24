@@ -1,33 +1,51 @@
 {
   "feature": "cloudflare-stack-migration",
-  "generated_at": "2026-06-21T07:30:00.000Z",
-  "risk_tier": "R1",
+  "generated_at": "2026-06-24T11:34:16.000Z",
+  "risk_level": "R1",
   "status": "blocked_for_production_cutover",
-  "allowed_actions": [
-    "commit local Cloudflare foundation code",
-    "run local typecheck, tests, baseline, and wrangler dry-runs",
-    "run validation-only GitHub workflow",
-    "provision preview resources after placeholder ids are replaced"
+  "pr_decision": "safe_to_open_and_review",
+  "production_decision": "do_not_cut_over",
+  "cutover_readiness": {
+    "command": "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json",
+    "status": "blocked",
+    "passed": 14,
+    "total": 19,
+    "blocked_gates": [
+      "d1-import-validation",
+      "authenticated-smoke",
+      "betterstack-cutover-green",
+      "operator-cutover-approval",
+      "phase8-seven-green-days"
+    ]
+  },
+  "resolved_false_green_risks": [
+    {
+      "id": "AUTH-SMOKE-LEGACY-BYPASS",
+      "status": "mitigated",
+      "control": "Authenticated smoke reports require operator session evidence and readiness regression coverage rejects legacy green JSON."
+    },
+    {
+      "id": "OPERATOR-APPROVAL-LEGACY-BYPASS",
+      "status": "mitigated",
+      "control": "Operator approval readiness validation requires schema_version >= 2 and complete decision inputs."
+    },
+    {
+      "id": "BETTERSTACK-MONITOR-STATE-PROVENANCE",
+      "status": "mitigated",
+      "control": "Monitor-state evidence requires explicit source, state path, generated_at, and fresh per-monitor timestamps."
+    }
   ],
-  "blocked_actions": [
-    "point app.manut.xyz to Cloudflare",
-    "apply production D1 migrations",
-    "route uploads to R2 before object-count and checksum validation",
-    "disable GKE/GCP rollback",
-    "delete or mutate Cloud SQL, GCS, Redis, RabbitMQ, or GKE resources"
+  "production_stop_conditions": [
+    "Do not perform DNS/routing changes until Phase 7 readiness is green.",
+    "Do not perform final D1 import without operator approval and source/target evidence.",
+    "Do not disable GCP, GKE, Cloud SQL/Postgres, GCS uploads, rollback images, static IP, DNS/LB rollback paths, deployer accounts, or secrets.",
+    "Do not mark Phase 8 green until seven elapsed green days have real production evidence."
   ],
-  "required_before_cutover": [
-    "full /api/instances/ parity with current nested IInstanceInfo shape",
-    "distinct legacy upstream host for proxy fallback",
-    "D1 row-count and relationship validation",
-    "R2 object-count and checksum validation",
-    "authenticated smoke covering login, sidebar, project list, work item CRUD, uploads, and live update",
-    "Better Stack monitors green for GKE and Cloudflare preview"
-  ],
-  "rollback_anchor": {
-    "app_dns_gke_ip": "34.143.231.225",
-    "gke_namespace": "manut-ce",
-    "helm_release": "manut-app",
-    "gcs_uploads_bucket": "plane-affine-495114-uploads"
-  }
+  "operator_inputs_required": [
+    "Final Postgres source counts and post-import D1 target counts",
+    "Real logged-in authenticated smoke evidence for all required workflows",
+    "Better Stack API evidence or fresh monitor-state export",
+    "Schema-v2 operator approval covering maintenance window, rollback, DNS/routing, write freeze, and smoke readiness",
+    "Seven days of post-cutover stability evidence"
+  ]
 }

@@ -1,0 +1,181 @@
+{
+  "generated_at": "2026-06-24T07:20:35.328Z",
+  "evidence_kind": "worker-smoke",
+  "base_url": "https://manut-app.bettergogocash.workers.dev/",
+  "ok": false,
+  "summary": {
+    "total": 7,
+    "passed": 2,
+    "failed": 5
+  },
+  "checks": [
+    {
+      "id": "healthz",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/healthz",
+      "status": 200,
+      "duration_ms": 157,
+      "content_type": "application/json",
+      "cf_ray": "a109f880eaad2d50-SIN",
+      "edge_route": null,
+      "edge_contract": null,
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"ok\":true,\"service\":\"manut-cloudflare\",\"env\":\"production\"}"
+    },
+    {
+      "id": "instances",
+      "ok": true,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/instances/",
+      "status": 200,
+      "duration_ms": 761,
+      "content_type": "application/json",
+      "cf_ray": "a109f880f825a05d-SIN",
+      "edge_route": null,
+      "edge_contract": null,
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": true,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"config\":{\"admin_base_url\":null,\"app_base_url\":\"https://app.manut.xyz\",\"enable_signup\":false,\"file_size_limit\":5242880,\"github_app_name\":\"\",\"has_llm_configured"
+    },
+    {
+      "id": "migration-status",
+      "ok": false,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/migration-status",
+      "status": 200,
+      "duration_ms": 165,
+      "content_type": "application/json",
+      "cf_ray": "a109f8810841fd1b-SIN",
+      "edge_route": null,
+      "edge_contract": null,
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": false,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"status\":\"queues-cron-cache-live\",\"active_phase\":\"queues-cron-cache-live\",\"app_origin\":\"https://app.manut.xyz\",\"legacy_proxy_configured\":false,\"r2_uploads_read"
+    },
+    {
+      "id": "route-map",
+      "ok": false,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/routes",
+      "status": 200,
+      "duration_ms": 161,
+      "content_type": "application/json",
+      "cf_ray": "a109f880f86df93e-SIN",
+      "edge_route": null,
+      "edge_contract": null,
+      "assertions": [
+        {
+          "ok": true,
+          "name": "status",
+          "expected": [200],
+          "actual": 200
+        },
+        {
+          "ok": false,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"status\":\"frontend-edge-routing\",\"active_phase\":\"frontend-edge-routing\",\"app_origin\":\"https://app.manut.xyz\",\"cutover_ready\":false,\"legacy_proxy_configured\":fa"
+    },
+    {
+      "id": "d1-workspaces-shadow",
+      "ok": false,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/d1/workspaces",
+      "status": 403,
+      "duration_ms": 135,
+      "content_type": "application/json",
+      "cf_ray": "a109f880f97d7983-SIN",
+      "edge_route": null,
+      "edge_contract": null,
+      "assertions": [
+        {
+          "ok": false,
+          "name": "status",
+          "expected": [200],
+          "actual": 403
+        },
+        {
+          "ok": false,
+          "name": "json-contract"
+        }
+      ],
+      "body_sample": "{\"error\":\"MANUT_DIAGNOSTIC_ACCESS_DENIED\",\"message\":\"Production Cloudflare diagnostics require an internal diagnostic token.\"}"
+    },
+    {
+      "id": "legacy-api-proxy",
+      "ok": false,
+      "url": "https://manut-app.bettergogocash.workers.dev/api/workspaces/",
+      "status": 502,
+      "duration_ms": 138,
+      "content_type": "application/json",
+      "cf_ray": "a109f8810b9d3f7c-SIN",
+      "edge_route": "legacy-gke",
+      "edge_contract": "api",
+      "assertions": [
+        {
+          "ok": false,
+          "name": "status",
+          "expected": [401, 403],
+          "actual": 502
+        },
+        {
+          "ok": true,
+          "name": "headers-contract"
+        }
+      ],
+      "body_sample": "{\"error\":\"LEGACY_GKE_ORIGIN_NOT_CONFIGURED\",\"message\":\"This route is a legacy proxy candidate, but LEGACY_GKE_ORIGIN is not configured.\"}"
+    },
+    {
+      "id": "legacy-uploads-proxy",
+      "ok": false,
+      "url": "https://manut-app.bettergogocash.workers.dev/uploads",
+      "status": 502,
+      "duration_ms": 144,
+      "content_type": "application/json",
+      "cf_ray": "a109f881188549c8-SIN",
+      "edge_route": "legacy-gke",
+      "edge_contract": "uploads",
+      "assertions": [
+        {
+          "ok": false,
+          "name": "status",
+          "expected": [403],
+          "actual": 502
+        },
+        {
+          "ok": true,
+          "name": "headers-contract"
+        }
+      ],
+      "body_sample": "{\"error\":\"LEGACY_GKE_ORIGIN_NOT_CONFIGURED\",\"message\":\"This route is a legacy proxy candidate, but LEGACY_GKE_ORIGIN is not configured.\"}"
+    }
+  ]
+}

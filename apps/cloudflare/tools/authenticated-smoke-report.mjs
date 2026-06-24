@@ -1,140 +1,86 @@
+#!/usr/bin/env node
+
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { resolveRepoPath } from "./path-utils.mjs";
 
-export const REQUIRED_AUTHENTICATED_SMOKE_CHECKS = [
-  {
-    id: "login",
-    label: "User can log in and reach the authenticated app shell.",
-  },
-  {
-    id: "session-refresh",
-    label: "Authenticated session survives a hard refresh.",
-  },
-  {
-    id: "workspace-sidebar",
-    label: "Workspace sidebar renders expected workspace context.",
-  },
-  {
-    id: "project-list",
-    label: "Project list loads for the authenticated workspace.",
-  },
-  {
-    id: "work-item-create",
-    label: "A non-critical work item can be created.",
-  },
-  {
-    id: "work-item-edit",
-    label: "The non-critical work item can be edited.",
-  },
-  {
-    id: "work-item-delete",
-    label: "The non-critical work item can be deleted or archived.",
-  },
-  {
+const DEFAULT_TARGET_ORIGIN = "https://app.manut.xyz";
+const INPUT_TEMPLATE_KIND = "authenticated-smoke-input";
+const REPORT_KIND = "authenticated-smoke";
+const REPORT_SCHEMA_VERSION = 1;
+const EVIDENCE_MODEL_VERSION = 2;
+
+export const REQUIRED_AUTHENTICATED_SMOKE_CHECKS = Object.freeze([
+  Object.freeze({ id: "login", label: "User can log in and reach the authenticated app shell." }),
+  Object.freeze({ id: "session-refresh", label: "Authenticated session survives a hard refresh." }),
+  Object.freeze({ id: "workspace-sidebar", label: "Workspace sidebar renders expected workspace context." }),
+  Object.freeze({ id: "project-list", label: "Project list loads for the authenticated workspace." }),
+  Object.freeze({ id: "work-item-create", label: "A non-critical work item can be created." }),
+  Object.freeze({ id: "work-item-edit", label: "The non-critical work item can be edited." }),
+  Object.freeze({ id: "work-item-delete", label: "The non-critical work item can be deleted or archived." }),
+  Object.freeze({
     id: "upload-attachment",
     label: "Attachment or logo upload succeeds and resolves through uploads.",
-  },
-  {
+  }),
+  Object.freeze({
     id: "live-update",
     label: "A representative live update propagates to another view or session.",
-  },
-  {
+  }),
+  Object.freeze({
     id: "admin-route",
     label: "The authorized admin route loads or correctly denies non-admin users.",
-  },
-  {
+  }),
+  Object.freeze({
     id: "public-space-route",
     label: "A public space route loads without authenticated-session leakage.",
-  },
+  }),
+]);
+
+const PUBLIC_PROBE_ROUTE_PATTERNS = [
+  /^\/api\/instances(?:\/|$)/i,
+  /^\/api\/health(?:\/|$)/i,
+  /^\/health(?:\/|$)/i,
+  /^\/cdn-cgi\/trace$/i,
+  /^\/login(?:\/|$)/i,
+  /^\/sign-?up(?:\/|$)/i,
+  /^\/signup(?:\/|$)/i,
+  /^\/accounts?(?:\/|$)/i,
+  /^\/auth(?:\/|$)/i,
+];
+
+const UNAUTHENTICATED_EVIDENCE_PATTERNS = [
+  /\bsign\s*up\s*-\s*manut\b/i,
+  /\bsign\s*up\b/i,
+  /\bsignup\b/i,
+  /\bnot\s+logged\s+in\b/i,
+  /\bunauthenticated\b/i,
+  /\bpublic\s+probe\b/i,
+  /\bpublic\s+health\b/i,
+  /\bapi\/instances\b/i,
+  /\bapi\/health\b/i,
 ];
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/authenticated-smoke-report.mjs --input <manual-evidence.json> [--json] [--out <report.json>]
        node apps/cloudflare/tools/authenticated-smoke-report.mjs --template [--json] [--out <input-template.json>]
 
-Builds canonical Phase 7 authenticated smoke evidence from a manually captured
-checklist. This tool does not log in for you; it validates that each required
-authenticated workflow has explicit evidence.
-
-Input JSON shapes:
-  {"checks":[{"id":"login","ok":true,"evidence":"screenshot or note"}]}
-  {"login":{"ok":true,"evidence":"screenshot or note"}}
-
-Exit codes:
-  0  all required authenticated smoke checks have passing evidence
-  1  evidence was captured but one or more required checks failed
-  2  usage or input error`;
-}
-
-function parseArgs(argv) {
-  const options = {
-    inputPath: null,
-    template: false,
-    json: false,
-    outPath: null,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-
-    if (arg === "--") {
-      continue;
-    }
-
-    if (arg === "--help" || arg === "-h") {
-      options.help = true;
-      continue;
-    }
-
-    if (arg === "--json") {
-      options.json = true;
-      continue;
-    }
-
-    if (arg === "--template") {
-      options.template = true;
-      continue;
-    }
-
-    if (arg === "--input") {
-      const inputPath = argv[index + 1];
-      if (!inputPath) {
-        throw new Error("--input requires a path");
-      }
-      options.inputPath = inputPath;
-      index += 1;
-      continue;
-    }
-
-    if (arg === "--out") {
-      const outPath = argv[index + 1];
-      if (!outPath) {
-        throw new Error("--out requires a path");
-      }
-      options.outPath = outPath;
-      index += 1;
-      continue;
-    }
-
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  if (!options.help && !options.template && !options.inputPath) {
-    throw new Error("--input is required");
-  }
-
-  if (options.template && options.inputPath) {
-    throw new Error("--template cannot be combined with --input");
-  }
-
-  return options;
+Converts real logged-in operator smoke evidence into the canonical Cloudflare/GCP cutover
+authenticated smoke report. Public probes, auth pages, and assumptions remain blocked.`;
 }
 
 function isRecord(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function trimString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function optionalString(value) {
+  const trimmed = trimString(value);
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function hasEvidence(value) {
@@ -142,170 +88,356 @@ function hasEvidence(value) {
     return value.trim().length > 0;
   }
 
-  if (typeof value === "number") {
-    return Number.isFinite(value);
+  if (!isRecord(value)) {
+    return false;
   }
 
-  if (Array.isArray(value)) {
-    return value.some((item) => hasEvidence(item));
-  }
+  return Object.values(value).some((entry) => {
+    if (typeof entry === "string") {
+      return entry.trim().length > 0;
+    }
 
-  return isRecord(value) && Object.values(value).some((item) => hasEvidence(item));
+    if (Array.isArray(entry)) {
+      return entry.some(hasEvidence);
+    }
+
+    return isRecord(entry) && hasEvidence(entry);
+  });
 }
 
-function validateTargetOrigin(value) {
-  if (typeof value !== "string" || value.trim() === "") {
-    return { ok: false, message: "Authenticated smoke report target_origin must be https://app.manut.xyz." };
+function isIsoTimestamp(value) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return false;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp);
+}
+
+function parseProductionUrl(value) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return { ok: false, url: null, reason: "url_missing" };
   }
 
   try {
-    const url = new URL(value);
-    if (url.origin !== "https://app.manut.xyz") {
-      return { ok: false, message: "Authenticated smoke report target_origin must be https://app.manut.xyz." };
+    const url = new URL(value.trim());
+    if (url.origin !== DEFAULT_TARGET_ORIGIN) {
+      return { ok: false, url, reason: "url_not_production" };
     }
-  } catch {
-    return { ok: false, message: "Authenticated smoke report target_origin must be https://app.manut.xyz." };
-  }
 
-  return { ok: true };
+    return { ok: true, url, reason: null };
+  } catch {
+    return { ok: false, url: null, reason: "url_invalid" };
+  }
 }
 
-function parseTimestamp(value, label) {
-  if (typeof value !== "string" || value.trim() === "") {
-    return { ok: false, message: `Authenticated smoke report must include ${label}.` };
-  }
-
-  if (Number.isNaN(Date.parse(value))) {
-    return { ok: false, message: `Authenticated smoke report ${label} must be a valid ISO timestamp.` };
-  }
-
-  return { ok: true };
+function isPublicProbeRoute(url) {
+  return PUBLIC_PROBE_ROUTE_PATTERNS.some((pattern) => pattern.test(url.pathname));
 }
 
-function validateProductionCheckUrl(value, checkId) {
-  const message = `Authenticated smoke check ${checkId} must include a production app.manut.xyz URL.`;
-  if (typeof value !== "string" || value.trim() === "") {
-    return { ok: false, message };
-  }
+function evidenceTextContainsUnauthenticatedProbe(...values) {
+  const text = values
+    .flatMap((value) => {
+      if (typeof value === "string") {
+        return [value];
+      }
 
-  try {
-    const url = new URL(value);
-    if (url.origin !== "https://app.manut.xyz") {
-      return { ok: false, message };
-    }
-  } catch {
-    return { ok: false, message };
-  }
+      if (isRecord(value)) {
+        return Object.values(value).filter((entry) => typeof entry === "string");
+      }
 
-  return { ok: true };
+      return [];
+    })
+    .join("\n");
+
+  return UNAUTHENTICATED_EVIDENCE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 function normalizeInputChecks(input) {
-  if (Array.isArray(input)) {
-    return input;
+  const source = isRecord(input) && isRecord(input.checks) ? input.checks : input?.checks;
+
+  if (Array.isArray(source)) {
+    return new Map(
+      source
+        .filter(isRecord)
+        .map((row) => [trimString(row.id), row])
+        .filter(([id]) => id.length > 0)
+    );
   }
 
-  if (!isRecord(input)) {
-    throw new Error("Authenticated smoke input must be an object, array, or {checks} object.");
+  if (isRecord(source)) {
+    return new Map(
+      Object.entries(source)
+        .filter(([, row]) => isRecord(row))
+        .map(([id, row]) => [id, { id, ...row }])
+    );
   }
 
-  if (Array.isArray(input.checks)) {
-    return input.checks;
+  if (isRecord(input) && !("checks" in input)) {
+    return new Map(
+      Object.entries(input)
+        .filter(([, row]) => isRecord(row))
+        .map(([id, row]) => [id, { id, ...row }])
+    );
   }
 
-  return Object.entries(input)
-    .filter(([, value]) => isRecord(value))
-    .map(([id, value]) => Object.assign({ id }, value));
+  return new Map();
 }
 
-function normalizeCheck(row) {
-  if (!isRecord(row)) {
-    throw new Error("Each authenticated smoke check must be an object.");
-  }
-
-  if (typeof row.id !== "string" || row.id.length === 0) {
-    throw new Error("Each authenticated smoke check requires an id.");
-  }
+function normalizeOperatorEvidence(input) {
+  const source = isRecord(input?.operator_evidence)
+    ? input.operator_evidence
+    : isRecord(input?.operator_context)
+      ? input.operator_context
+      : {};
 
   return {
-    id: row.id,
-    ok: row.ok === true,
-    evidence: row.evidence ?? row.screenshot ?? row.note ?? row.notes ?? null,
-    observed_at: typeof row.observed_at === "string" ? row.observed_at : null,
-    url: typeof row.url === "string" ? row.url : null,
-    note: typeof row.note === "string" ? row.note : typeof row.notes === "string" ? row.notes : null,
+    run_id: optionalString(source.run_id ?? input?.run_id),
+    workspace_identifier: optionalString(
+      source.workspace_identifier ?? source.workspace_slug ?? input?.workspace_identifier ?? input?.workspace_slug
+    ),
+    authenticated_workspace_url: optionalString(
+      source.authenticated_workspace_url ??
+        source.workspace_url ??
+        input?.authenticated_workspace_url ??
+        input?.workspace_url
+    ),
+    user_identity_redacted: optionalString(
+      source.user_identity_redacted ?? source.session_subject ?? input?.user_identity_redacted ?? input?.session_subject
+    ),
+    browser_artifact: optionalString(
+      source.browser_artifact ?? source.screenshot ?? input?.browser_artifact ?? input?.screenshot
+    ),
+    note: optionalString(source.note ?? input?.operator_note),
   };
 }
 
-export function validateAuthenticatedSmokeReport(report) {
+function validateOperatorEvidence(operatorEvidence, required) {
+  const errors = [];
+  const present = Object.values(operatorEvidence).some((value) => typeof value === "string" && value.length > 0);
+
+  if (!present && !required) {
+    return { present, verified: false, errors };
+  }
+
+  if (!present && required) {
+    errors.push("operator_evidence_missing");
+    return { present, verified: false, errors };
+  }
+
+  if (!operatorEvidence.workspace_identifier) {
+    errors.push("operator_workspace_identifier_missing");
+  }
+
+  if (!operatorEvidence.authenticated_workspace_url) {
+    errors.push("operator_authenticated_workspace_url_missing");
+  } else {
+    const workspaceUrl = parseProductionUrl(operatorEvidence.authenticated_workspace_url);
+    if (!workspaceUrl.ok) {
+      errors.push(`operator_authenticated_workspace_${workspaceUrl.reason}`);
+    } else if (isPublicProbeRoute(workspaceUrl.url)) {
+      errors.push("operator_authenticated_workspace_public_probe_url");
+    }
+  }
+
+  if (!operatorEvidence.user_identity_redacted && !operatorEvidence.browser_artifact) {
+    errors.push("operator_session_evidence_missing");
+  }
+
+  if (
+    evidenceTextContainsUnauthenticatedProbe(
+      operatorEvidence.authenticated_workspace_url,
+      operatorEvidence.user_identity_redacted,
+      operatorEvidence.browser_artifact,
+      operatorEvidence.note
+    )
+  ) {
+    errors.push("operator_evidence_not_authenticated");
+  }
+
+  return { present, verified: errors.length === 0, errors };
+}
+
+function normalizeCheck(requiredCheck, row, fallbackObservedAt) {
+  const evidence = row?.evidence ?? null;
+  const observedAt = optionalString(row?.observed_at) ?? optionalString(fallbackObservedAt);
+  const url = optionalString(row?.url ?? (isRecord(evidence) ? evidence.url : null));
+  const note = optionalString(row?.note ?? (isRecord(evidence) ? evidence.note : null));
+  const title = optionalString(row?.title ?? (isRecord(evidence) ? evidence.title : null));
+  const issues = [];
+
+  if (!row) {
+    issues.push("missing");
+  } else if (row.ok !== true) {
+    issues.push("ok_false");
+  }
+
+  if (!hasEvidence(evidence)) {
+    issues.push("evidence_missing");
+  }
+
+  if (!observedAt) {
+    issues.push("observed_at_missing");
+  } else if (!isIsoTimestamp(observedAt)) {
+    issues.push("observed_at_invalid");
+  }
+
+  if (!url) {
+    issues.push("url_missing");
+  } else {
+    const checkUrl = parseProductionUrl(url);
+    if (!checkUrl.ok) {
+      issues.push(checkUrl.reason);
+    } else if (isPublicProbeRoute(checkUrl.url)) {
+      issues.push("public_probe_url");
+    }
+  }
+
+  if (evidenceTextContainsUnauthenticatedProbe(evidence, note, title, url)) {
+    issues.push("unauthenticated_evidence");
+  }
+
+  const ok = row?.ok === true && issues.length === 0;
+
+  return {
+    id: requiredCheck.id,
+    label: requiredCheck.label,
+    ok,
+    status: ok ? "pass" : issues[0],
+    evidence,
+    observed_at: observedAt,
+    url,
+    note,
+    title,
+    blockers: issues,
+  };
+}
+
+function buildValidationErrors(report) {
+  const errors = [];
+  const warnings = [];
+
   if (!isRecord(report)) {
-    return { ok: false, message: "Authenticated smoke report must be a JSON object." };
+    return { errors: ["Evidence JSON must be an object."], warnings };
   }
 
-  if (report.ok !== true) {
-    return { ok: false, message: "Evidence JSON must contain ok: true." };
+  if (report.target_origin !== DEFAULT_TARGET_ORIGIN) {
+    errors.push(`Authenticated smoke report target_origin must be ${DEFAULT_TARGET_ORIGIN}.`);
   }
 
-  const targetOrigin = validateTargetOrigin(report.target_origin);
-  if (!targetOrigin.ok) {
-    return targetOrigin;
+  if (report.evidence_kind !== REPORT_KIND) {
+    errors.push(`Evidence JSON evidence_kind must be "${REPORT_KIND}".`);
   }
 
-  if (typeof report.actor !== "string" || report.actor.trim() === "") {
-    return { ok: false, message: "Authenticated smoke report must include actor." };
+  if (!trimString(report.actor)) {
+    errors.push("Authenticated smoke actor is required.");
   }
 
   if (report.cloudflare_route_verified !== true) {
-    return { ok: false, message: "Authenticated smoke report must set cloudflare_route_verified: true." };
+    errors.push("Authenticated smoke report must set cloudflare_route_verified: true.");
   }
 
   if (!hasEvidence(report.cloudflare_route_evidence)) {
-    return { ok: false, message: "Authenticated smoke report must include cloudflare_route_evidence." };
+    errors.push("Cloudflare route evidence is required.");
   }
 
-  if (!Array.isArray(report.checks)) {
-    return { ok: false, message: "Authenticated smoke report must include checks[]." };
+  if (report.ok !== true) {
+    errors.push("Evidence JSON ok must be true.");
   }
 
-  const checksById = new Map(report.checks.map((check) => [check.id, check]));
-  for (const definition of REQUIRED_AUTHENTICATED_SMOKE_CHECKS) {
-    const check = checksById.get(definition.id);
+  const operatorEvidence = normalizeOperatorEvidence(report);
+  const operatorValidation = validateOperatorEvidence(operatorEvidence, true);
+  if (operatorValidation.errors.length > 0) {
+    errors.push(...operatorValidation.errors);
+  } else if (!operatorValidation.present) {
+    warnings.push("operator_evidence_not_supplied");
+  }
+
+  const checks = Array.isArray(report.checks) ? report.checks : [];
+  const reportChecks = new Map(checks.filter(isRecord).map((check) => [check.id, check]));
+
+  for (const requiredCheck of REQUIRED_AUTHENTICATED_SMOKE_CHECKS) {
+    if (!reportChecks.has(requiredCheck.id)) {
+      errors.push(`Authenticated smoke report is missing ${requiredCheck.id}.`);
+    }
+  }
+
+  for (const requiredCheck of REQUIRED_AUTHENTICATED_SMOKE_CHECKS) {
+    const check = reportChecks.get(requiredCheck.id);
     if (!check) {
-      return { ok: false, message: `Authenticated smoke report is missing ${definition.id}.` };
+      continue;
     }
-    if (check.ok !== true) {
-      return { ok: false, message: `Authenticated smoke check ${definition.id} is not passing.` };
+
+    if (check.ok !== true || check.status !== "pass") {
+      errors.push(`Authenticated smoke check ${requiredCheck.id} is not passing.`);
     }
+
     if (!hasEvidence(check.evidence)) {
-      return { ok: false, message: `Authenticated smoke check ${definition.id} is missing evidence.` };
+      errors.push(`Authenticated smoke check ${requiredCheck.id} is missing evidence.`);
     }
-    const observedAt = parseTimestamp(check.observed_at, `checks.${definition.id}.observed_at`);
-    if (!observedAt.ok) {
-      return observedAt;
+
+    if (!isIsoTimestamp(check.observed_at)) {
+      errors.push(`Authenticated smoke check ${requiredCheck.id} is missing a valid observed_at timestamp.`);
     }
-    const productionUrl = validateProductionCheckUrl(check.url, definition.id);
-    if (!productionUrl.ok) {
-      return productionUrl;
+
+    const checkUrl = parseProductionUrl(check.url);
+    if (!checkUrl.ok) {
+      errors.push(`Authenticated smoke check ${requiredCheck.id} must use a ${DEFAULT_TARGET_ORIGIN} URL.`);
+    } else if (isPublicProbeRoute(checkUrl.url)) {
+      errors.push(
+        `Authenticated smoke check ${requiredCheck.id} uses public or unauthenticated probe URL ${check.url}.`
+      );
+    }
+
+    if (evidenceTextContainsUnauthenticatedProbe(check.evidence, check.note, check.title, check.url)) {
+      errors.push(`Authenticated smoke check ${requiredCheck.id} evidence is not authenticated workspace evidence.`);
     }
   }
 
-  return { ok: true };
+  return { errors, warnings };
 }
 
-export function buildAuthenticatedSmokeInputTemplate({ generatedAt = new Date().toISOString() } = {}) {
+export function validateAuthenticatedSmokeReport(report) {
+  const { errors, warnings } = buildValidationErrors(report);
+
+  if (errors.length === 0) {
+    return { ok: true };
+  }
+
+  const result = {
+    ok: false,
+    message: errors[0],
+    errors,
+  };
+
+  return warnings.length === 0 ? result : { ...result, warnings };
+}
+
+export function buildAuthenticatedSmokeInputTemplate(options = {}) {
+  const now = typeof options === "string" ? options : (options.now ?? new Date().toISOString());
+
   return {
-    template_kind: "authenticated-smoke-input",
-    schema_version: 1,
-    generated_at: generatedAt,
+    template_kind: INPUT_TEMPLATE_KIND,
+    schema_version: REPORT_SCHEMA_VERSION,
+    evidence_model_version: EVIDENCE_MODEL_VERSION,
+    generated_at: now,
     instructions:
-      "Fill every ok/evidence/observed_at/url field from a real authenticated production smoke run, then pass this file to auth:smoke-report. Every check URL must be under https://app.manut.xyz. Do not mark checks passing from assumptions or public health probes.",
+      "Fill every operator_evidence field and every check ok/evidence/observed_at/url field from a real logged-in production smoke run. Every check URL must be under https://app.manut.xyz and must not be a public health/API probe, auth page, or Sign up page. Do not mark checks passing from assumptions.",
     actor: "",
-    target_origin: "https://app.manut.xyz",
+    target_origin: DEFAULT_TARGET_ORIGIN,
     cloudflare_route_verified: false,
     cloudflare_route_evidence: {
-      edge_header: "",
-      worker_url: "",
-      dns_or_route_evidence: "",
+      url: "",
+      note: "Record Cloudflare production-route evidence, for example cf-ray/cdn-cgi trace captured during the authenticated run.",
+    },
+    operator_evidence_required: true,
+    operator_evidence: {
+      run_id: "",
+      workspace_identifier: "",
+      authenticated_workspace_url: "",
+      user_identity_redacted: "",
+      browser_artifact: "",
+      note: "",
     },
     checks: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((check) => ({
       id: check.id,
@@ -315,155 +447,190 @@ export function buildAuthenticatedSmokeInputTemplate({ generatedAt = new Date().
       observed_at: "",
       url: "",
       note: "",
+      title: "",
     })),
   };
 }
 
-function failedCheckMessage(check) {
-  if (check.status === "missing") {
-    return `Authenticated smoke report is missing ${check.id}.`;
-  }
-
-  if (check.status === "evidence_missing") {
-    return `Authenticated smoke check ${check.id} is missing evidence.`;
-  }
-
-  return `Authenticated smoke check ${check.id} is not passing.`;
-}
-
 export function buildAuthenticatedSmokeReport(input, options = {}) {
-  const checksById = new Map(
-    normalizeInputChecks(input)
-      .map(normalizeCheck)
-      .map((check) => [check.id, check])
-  );
-  const checks = REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((definition) => {
-    const check = checksById.get(definition.id);
-    if (!check) {
-      return {
-        id: definition.id,
-        label: definition.label,
-        ok: false,
-        status: "missing",
-        evidence: null,
-      };
-    }
+  const source = isRecord(input) ? input : {};
+  const now = typeof options === "string" ? options : (options.now ?? new Date().toISOString());
+  const targetOrigin = optionalString(source.target_origin);
+  const actor = optionalString(source.actor);
+  const inputChecks = normalizeInputChecks(source);
+  const operatorEvidenceRequired = true;
+  const operatorEvidence = normalizeOperatorEvidence(source);
+  const operatorValidation = validateOperatorEvidence(operatorEvidence, operatorEvidenceRequired);
+  const routeEvidence = source.cloudflare_route_evidence ?? source.route_evidence ?? null;
 
-    const evidencePresent = hasEvidence(check.evidence);
-    return {
-      id: definition.id,
-      label: definition.label,
-      ok: check.ok && evidencePresent,
-      status: check.ok ? (evidencePresent ? "pass" : "evidence_missing") : "fail",
-      evidence: check.evidence,
-      observed_at: check.observed_at,
-      url: check.url,
-      note: check.note,
-    };
-  });
-  const failed = checks.filter((check) => !check.ok);
+  const checks = REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((requiredCheck) =>
+    normalizeCheck(requiredCheck, inputChecks.get(requiredCheck.id), source.observed_at)
+  );
+
+  const passed = checks.filter((check) => check.ok).length;
   const report = {
-    generated_at: new Date().toISOString(),
-    evidence_kind: "authenticated-smoke",
-    ok: failed.length === 0,
-    target_origin: options.targetOrigin ?? (isRecord(input) ? input.target_origin : null) ?? null,
-    actor: options.actor ?? (isRecord(input) ? input.actor : null) ?? null,
-    cloudflare_route_verified:
-      options.cloudflareRouteVerified ??
-      (isRecord(input) && typeof input.cloudflare_route_verified === "boolean"
-        ? input.cloudflare_route_verified
-        : false),
-    cloudflare_route_evidence:
-      options.cloudflareRouteEvidence ??
-      (isRecord(input) ? (input.cloudflare_route_evidence ?? input.route_provenance ?? null) : null),
+    generated_at: now,
+    evidence_kind: REPORT_KIND,
+    schema_version: REPORT_SCHEMA_VERSION,
+    evidence_model_version: EVIDENCE_MODEL_VERSION,
+    ok: false,
+    target_origin: targetOrigin,
+    actor,
+    cloudflare_route_verified: source.cloudflare_route_verified === true,
+    cloudflare_route_evidence: routeEvidence,
+    operator_evidence_required: operatorEvidenceRequired,
+    operator_evidence_verified: operatorValidation.verified,
+    operator_evidence: operatorEvidence,
     summary: {
-      total: checks.length,
-      passed: checks.length - failed.length,
-      failed: failed.length,
+      total: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.length,
+      passed,
+      failed: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.length - passed,
     },
-    required_check_ids: REQUIRED_AUTHENTICATED_SMOKE_CHECKS.map((check) => check.id),
     checks,
   };
 
-  const validation =
-    failed.length > 0
-      ? { ok: false, message: failedCheckMessage(failed[0]) }
-      : validateAuthenticatedSmokeReport(report);
-  return validation.ok ? report : { ...report, ok: false, validation_error: validation.message };
+  const preflightErrors = [];
+  if (targetOrigin !== DEFAULT_TARGET_ORIGIN) {
+    preflightErrors.push(`Authenticated smoke report target_origin must be ${DEFAULT_TARGET_ORIGIN}.`);
+  }
+
+  if (!actor) {
+    preflightErrors.push("Authenticated smoke actor is required.");
+  }
+
+  if (source.cloudflare_route_verified !== true) {
+    preflightErrors.push("Authenticated smoke report must set cloudflare_route_verified: true.");
+  }
+
+  if (!hasEvidence(routeEvidence)) {
+    preflightErrors.push("Cloudflare route evidence is required.");
+  }
+
+  if (operatorValidation.errors.length > 0) {
+    preflightErrors.push(...operatorValidation.errors);
+  }
+
+  const checkErrors = checks.flatMap((check) => {
+    if (check.ok) {
+      return [];
+    }
+
+    if (check.status === "missing") {
+      return [`Authenticated smoke report is missing ${check.id}.`];
+    }
+
+    return [`Authenticated smoke check ${check.id} is blocked: ${check.status}.`];
+  });
+
+  report.ok = preflightErrors.length === 0 && checkErrors.length === 0;
+  report.errors = [...preflightErrors, ...checkErrors];
+  report.warnings = operatorValidation.present ? [] : ["operator_evidence_not_supplied"];
+  report.validation = {
+    ok: report.ok,
+    errors: report.errors,
+    warnings: report.warnings,
+  };
+
+  return report;
 }
 
-async function loadInput(inputPath) {
-  const absolutePath = resolveRepoPath(inputPath);
-  try {
-    return JSON.parse(await readFile(absolutePath, "utf8"));
-  } catch (error) {
-    throw new Error(`Failed to read authenticated smoke input: ${error.message}`, { cause: error });
+function parseArgs(argv) {
+  const options = {
+    inputPath: null,
+    outPath: null,
+    json: false,
+    template: false,
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+
+    if (arg === "--json") {
+      options.json = true;
+    } else if (arg === "--template") {
+      options.template = true;
+    } else if (arg === "--input") {
+      const inputPath = argv[index + 1];
+      if (!inputPath) {
+        throw new Error("--input requires a path.");
+      }
+      options.inputPath = inputPath;
+      index += 1;
+    } else if (arg === "--out") {
+      const outPath = argv[index + 1];
+      if (!outPath) {
+        throw new Error("--out requires a path.");
+      }
+      options.outPath = outPath;
+      index += 1;
+    } else if (arg === "--help" || arg === "-h") {
+      options.help = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
   }
+
+  if (options.template && options.inputPath) {
+    throw new Error("--template and --input are mutually exclusive.");
+  }
+
+  if (!options.template && !options.inputPath && !options.help) {
+    throw new Error("--input is required unless --template is used.");
+  }
+
+  return options;
 }
 
-function printHumanReport(report) {
-  console.log(`Authenticated smoke report: ${report.ok ? "PASS" : "BLOCKED"}`);
-  console.log(`Target: ${report.target_origin}`);
-  console.log(`Checks passed: ${report.summary.passed}/${report.summary.total}`);
-
-  for (const check of report.checks) {
-    console.log(`- ${check.ok ? "PASS" : "FAIL"} ${check.id}: ${check.status}`);
-  }
-  if (report.validation_error) {
-    console.log(`Validation: ${report.validation_error}`);
-  }
+async function writeJson(outPath, value) {
+  const resolved = resolveRepoPath(outPath);
+  await mkdir(path.dirname(resolved), { recursive: true });
+  await writeFile(resolved, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-function printHumanTemplate(template, outPath) {
-  console.log("Authenticated smoke input template");
-  console.log(`Target: ${template.target_origin}`);
-  console.log(`Checks: ${template.checks.length}`);
-  if (outPath) {
-    console.log(`Wrote: ${outPath}`);
-  }
-}
-
-async function main() {
-  let options;
-  try {
-    options = parseArgs(process.argv.slice(2));
-  } catch (error) {
-    console.error(`Authenticated smoke report failed: ${error.message}`);
-    console.error("");
-    console.error(usage());
-    process.exitCode = 2;
-    return;
-  }
+async function main(argv = process.argv.slice(2)) {
+  const options = parseArgs(argv);
 
   if (options.help) {
     console.log(usage());
-    return;
+    return 0;
   }
 
-  const report = options.template
-    ? buildAuthenticatedSmokeInputTemplate()
-    : buildAuthenticatedSmokeReport(await loadInput(options.inputPath));
+  if (options.template) {
+    const template = buildAuthenticatedSmokeInputTemplate();
+    if (options.outPath) {
+      await writeJson(options.outPath, template);
+    }
+
+    console.log(
+      options.json
+        ? JSON.stringify(template, null, 2)
+        : `Authenticated smoke input template
+Checks: ${REQUIRED_AUTHENTICATED_SMOKE_CHECKS.length}
+Target origin: ${DEFAULT_TARGET_ORIGIN}
+Operator evidence required: true`
+    );
+    return 0;
+  }
+
+  const input = JSON.parse(await readFile(options.inputPath, "utf8"));
+  const report = buildAuthenticatedSmokeReport(input);
 
   if (options.outPath) {
-    const outPath = resolveRepoPath(options.outPath);
-    await mkdir(path.dirname(outPath), { recursive: true });
-    await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    await writeJson(options.outPath, report);
   }
 
-  if (options.json) {
-    console.log(JSON.stringify(report, null, 2));
-  } else if (options.template) {
-    printHumanTemplate(report, options.outPath);
-  } else {
-    printHumanReport(report);
-  }
-
-  process.exitCode = options.template || report.ok ? 0 : 1;
+  console.log(options.json ? JSON.stringify(report, null, 2) : usage());
+  return report.ok ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error(`Authenticated smoke report failed: ${error.message}`);
-    process.exitCode = 2;
-  });
+const isCliEntrypoint = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (isCliEntrypoint) {
+  try {
+    process.exitCode = await main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error(usage());
+    process.exitCode = 1;
+  }
 }

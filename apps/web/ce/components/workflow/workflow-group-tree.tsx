@@ -5,8 +5,11 @@
  */
 
 import { useContext } from "react";
+import { observer } from "mobx-react";
 import type { TIssueGroupByOptions } from "@plane/types";
 import { cn } from "@plane/utils";
+// hooks
+import { useProjectState } from "@/hooks/store/use-project-state";
 // store
 import { StoreContext } from "@/lib/store-context";
 // local imports
@@ -18,9 +21,10 @@ type Props = {
   groupId: string | undefined;
 };
 
-export function WorkFlowGroupTree(props: Props) {
+export const WorkFlowGroupTree = observer(function WorkFlowGroupTree(props: Props) {
   const { className, groupBy, groupId } = props;
   const store = useContext(StoreContext);
+  const { getStateById } = useProjectState();
   const projectId = store.router.projectId;
 
   if (!isSelfHostedFeatureEnabled("workflows_approvals") || groupBy !== "state" || !projectId || !groupId) return null;
@@ -32,8 +36,8 @@ export function WorkFlowGroupTree(props: Props) {
   return (
     <ul className={cn("space-y-1 text-12 text-secondary", className)} aria-label="Allowed workflow targets">
       {targetStateIds.map((stateId) => (
-        <li key={stateId}>{stateId}</li>
+        <li key={stateId}>{getStateById(stateId)?.name ?? stateId}</li>
       ))}
     </ul>
   );
-}
+});

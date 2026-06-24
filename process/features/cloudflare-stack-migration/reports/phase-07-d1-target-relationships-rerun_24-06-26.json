@@ -1,0 +1,11 @@
+{
+  "checks": [
+    {
+      "name": "projects.workspace_id",
+      "ok": true,
+      "source": "projects",
+      "target": "workspaces",
+      "orphan_count": 0
+    }
+  ]
+}
