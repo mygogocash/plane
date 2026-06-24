@@ -4,9 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { parseWorkflowTransitionResponse, shouldRouteStateChangeThroughWorkflow } from "./workflow-state-update";
+import {
+  parseWorkflowTransitionResponse,
+  shouldRouteStateChangeThroughWorkflow,
+  tryWorkflowRoutedIssueUpdate,
+} from "./workflow-state-update";
 
 describe("workflow state update helpers", () => {
   it("routes pure state changes when workflows are enabled", () => {
@@ -43,5 +47,72 @@ describe("workflow state update helpers", () => {
       kind: "transitioned",
       issue: { id: "issue-1", state_id: "state-b" },
     });
+  });
+});
+
+describe("tryWorkflowRoutedIssueUpdate", () => {
+  it("skips when shouldSync is false", async () => {
+    const transitionWorkItem = vi.fn();
+    const handled = await tryWorkflowRoutedIssueUpdate({
+      workspaceSlug: "acme",
+      projectId: "project-1",
+      issueId: "issue-1",
+      data: { state_id: "state-b" },
+      shouldSync: false,
+      issueBeforeUpdate: { state_id: "state-a" },
+      workflowStatus: "enabled",
+      transitionWorkItem,
+      onApprovalRequired: vi.fn(),
+      onTransitioned: vi.fn(),
+    });
+
+    expect(handled).toBe(false);
+    expect(transitionWorkItem).not.toHaveBeenCalled();
+  });
+
+  it("routes state-only drag updates through transitionWorkItem", async () => {
+    const onTransitioned = vi.fn().mockResolvedValue(undefined);
+    const handled = await tryWorkflowRoutedIssueUpdate({
+      workspaceSlug: "acme",
+      projectId: "project-1",
+      issueId: "issue-1",
+      data: { state_id: "state-b" },
+      shouldSync: true,
+      issueBeforeUpdate: { state_id: "state-a" },
+      workflowStatus: "enabled",
+      transitionWorkItem: vi.fn().mockResolvedValue({
+        kind: "transitioned",
+        issue: { state_id: "state-b" },
+      }),
+      onApprovalRequired: vi.fn(),
+      onTransitioned,
+    });
+
+    expect(handled).toBe(true);
+    expect(onTransitioned).toHaveBeenCalledWith({ state_id: "state-b" });
+  });
+
+  it("handles approval-required transitions without mutating issue state", async () => {
+    const onApprovalRequired = vi.fn();
+    const onTransitioned = vi.fn();
+    const handled = await tryWorkflowRoutedIssueUpdate({
+      workspaceSlug: "acme",
+      projectId: "project-1",
+      issueId: "issue-1",
+      data: { state_id: "state-b" },
+      shouldSync: true,
+      issueBeforeUpdate: { state_id: "state-a" },
+      workflowStatus: "enabled",
+      transitionWorkItem: vi.fn().mockResolvedValue({
+        kind: "approval_required",
+        approvalId: "approval-1",
+      }),
+      onApprovalRequired,
+      onTransitioned,
+    });
+
+    expect(handled).toBe(true);
+    expect(onApprovalRequired).toHaveBeenCalledOnce();
+    expect(onTransitioned).not.toHaveBeenCalled();
   });
 });
