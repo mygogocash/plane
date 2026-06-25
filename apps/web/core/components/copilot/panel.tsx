@@ -17,6 +17,7 @@ import { cn } from "@plane/utils";
 import { CopilotPromptBox, type TCopilotPromptMode } from "@/plane-web/components/copilot";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
+import { usePlatformOS } from "@/hooks/use-platform-os";
 // services
 import { IssueService } from "@/services/issue";
 import {
@@ -54,6 +55,7 @@ const PRIORITIES: TIssuePriorities[] = ["urgent", "high", "medium", "low", "none
 export function CopilotPanel(props: Props) {
   const { isOpen, onClose, workspaceSlug, projectId, issueId, onSubtasksCreated } = props;
   const { config } = useInstance();
+  const { isMobile } = usePlatformOS();
 
   const [message, setMessage] = useState("");
   const [mode, setMode] = useState<TCopilotMode>("auto");
@@ -223,7 +225,7 @@ export function CopilotPanel(props: Props) {
       onClose={onClose}
       width={EPortalWidth.HALF}
       position={EPortalPosition.RIGHT}
-      closeOnOverlayClick={false}
+      closeOnOverlayClick={isMobile}
     >
       <section className="flex h-full flex-col border-l border-subtle bg-surface-1 text-left">
         <header className="flex items-center justify-between border-b border-subtle px-5 py-4">

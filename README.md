@@ -11,17 +11,15 @@ editing source files.
 ## Current Deployment
 
 - Branch: `preview`
-- App: `https://app.manut.xyz`
-- Active workflow: `Manut CI/CD`
-- Image registry: `asia-southeast1-docker.pkg.dev/affine-495114/affine`
-- Manut cutover namespace/release: `manut-ce` / `manut-app`
-- Rollback runtime retained until cutover: `plane-ce` / `plane-app`
+- App: `https://app.manut.xyz` (Cloudflare Worker `manut-app` + D1/R2/KV/Queues)
+- Landing: `https://manut.xyz` (Cloudflare Pages)
+- Primary CI/CD: `.github/workflows/cloudflare-ci-cd.yml` and Cloudflare Workers Builds
+- **GCP/GKE runtime retired** (2026-06-25). Legacy Manut CI/CD still runs web/API checks on `preview` pushes but no longer publishes images or deploys to GKE.
 
 Current operational docs:
 
-- [Manut CI/CD spec](docs/cicd-spec-2026-06-06.md)
-- [Manut GCP ops handover](docs/gcp-manut-ops-handover.md)
-- [Manut CI redesign plan](process/features/manut-ci/active/MANUT_CI_REDESIGN_PLAN_20-06-26.md)
+- [Cloudflare stack migration](docs/cloudflare-stack-migration.md)
+- [Manut CI/CD spec](docs/cicd-spec-2026-06-06.md) (partially legacy — GCP sections historical)
 
 ## CI/CD
 

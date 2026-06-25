@@ -12,6 +12,7 @@ import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCopilot } from "@/hooks/store/use-copilot";
+import { MOBILE_BREAKPOINT } from "@/hooks/use-platform-os";
 
 export const SidebarCopilotItem = observer(function SidebarCopilotItem() {
   const { workspaceSlug } = useParams();
@@ -23,7 +24,7 @@ export const SidebarCopilotItem = observer(function SidebarCopilotItem() {
 
   const handleClick = () => {
     copilot.openPanel();
-    if (window.innerWidth < 768) toggleSidebar();
+    if (window.innerWidth < MOBILE_BREAKPOINT) toggleSidebar();
     if (isExtendedSidebarOpened) toggleExtendedSidebar(false);
   };
 

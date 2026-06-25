@@ -42,7 +42,7 @@ function UseProfileLayout({ params }: Route.ComponentProps) {
   );
 
   const windowSize = useSize();
-  const isSmallerScreen = windowSize[0] >= 768;
+  const isMediumScreenUp = windowSize[0] >= 768;
 
   const { data: userProjectsData } = useSWR(USER_PROFILE_PROJECT_SEGREGATION(workspaceSlug, userId), () =>
     userService.getUserProfileProjectsSegregation(workspaceSlug, userId)
@@ -85,11 +85,11 @@ function UseProfileLayout({ params }: Route.ComponentProps) {
                   </div>
                 )}
               </div>
-              {!isSmallerScreen && <ProfileSidebar userProjectsData={userProjectsData} />}
+              {!isMediumScreenUp && <ProfileSidebar userProjectsData={userProjectsData} />}
             </div>
           </ContentWrapper>
         </div>
-        {isSmallerScreen && <ProfileSidebar userProjectsData={userProjectsData} />}
+        {isMediumScreenUp && <ProfileSidebar userProjectsData={userProjectsData} />}
       </div>
     </>
   );

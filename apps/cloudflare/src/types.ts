@@ -20,6 +20,9 @@ export type CloudflareBindings = {
   INSTANCE_VERSION?: string;
   INSTANCE_ID?: string;
   INSTANCE_NAME?: string;
+  ASSETS?: Fetcher;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
 };
 
 export type InstancePayload = {
