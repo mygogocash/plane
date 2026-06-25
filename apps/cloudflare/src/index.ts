@@ -7,10 +7,12 @@
 import { Hono } from "hono";
 
 import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
+import { resolveRequestRouting, WORKER_NATIVE_ROUTE_DEFINITIONS } from "./api-router";
 import { handleD1WorkspaceProjectsRequest, handleD1WorkspacesRequest } from "./d1-core";
 import { buildInstancePayload } from "./instance";
 import { consumeJobQueue } from "./jobs";
 import { LiveRoomDurableObject } from "./live-room";
+import { handleWorkerNativeApiRequest } from "./native-api";
 import type { CloudflareBindings } from "./types";
 import { handleUploadsRequest } from "./uploads";
 
@@ -27,6 +29,7 @@ const migrationPhases = [
   "queues-cron-cache-live",
   "cloudflare-ci-cd",
   "production-cutover",
+  "worker-native-api-migration",
   "decommission",
 ] as const;
 
@@ -142,14 +145,18 @@ app.get("/api/cloudflare/d1/workspaces/:workspaceSlug/projects", (c) => {
 
 app.get("/api/cloudflare/migration-status", (c) =>
   c.json({
-    status: "queues-cron-cache-live",
-    active_phase: "queues-cron-cache-live",
+    status: "worker-native-api-migration",
+    active_phase: "worker-native-api-migration",
     app_origin: c.env.APP_ORIGIN ?? "https://app.manut.xyz",
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
+    worker_native_api_enabled: c.env.WORKER_NATIVE_API_ENABLED?.toLowerCase() === "true",
     r2_uploads_read_enabled: isR2UploadsReadEnabled(c.env),
     cache_target: "kv",
     data_target: "d1",
-    d1_shadow_domains: ["workspaces", "projects"],
+    d1_shadow_domains: ["workspaces", "projects", "users", "profiles", "workspace_members", "issues"],
+    worker_native_route_ids: WORKER_NATIVE_ROUTE_DEFINITIONS.map((route) => route.id),
+    identity_tables_schema: "0003_identity_core",
+    issues_tables_schema: "0004_issues_core",
     lock_target: "durable-objects",
     upload_target: "r2",
     queue_target: "cloudflare-queues",
@@ -220,7 +227,13 @@ app.all("/api/cloudflare/live/rooms/*", async (c) => {
 });
 
 app.all("*", async (c) => {
-  const classification = classifyEdgeRoute(c.req.raw);
+  const routing = resolveRequestRouting(c.req.raw, c.env);
+
+  if (routing.kind === "worker-native") {
+    return handleWorkerNativeApiRequest(c.req.raw, c.env, routing.route, routing.params);
+  }
+
+  const classification = routing.classification;
 
   if (classification.action === "legacy-proxy") {
     if (classification.contract === "uploads" && isR2UploadsReadEnabled(c.env)) {

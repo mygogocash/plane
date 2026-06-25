@@ -202,6 +202,44 @@ describe("seven green days report", () => {
     });
   });
 
+  it("allows operator-waived soak when all required checks pass before seven elapsed days", () => {
+    const input = {
+      ...passingInput(),
+      cutover_at: "2026-06-25T01:17:32.485Z",
+      verified_through: "2026-06-25T02:00:00.000Z",
+      soak_waived: true,
+      soak_waived_by: "Kunanon Jarat",
+      soak_waived_reason:
+        "Operator accepted accelerated Phase 8 prep; GKE remains online for production API until Cloudflare-native backend is ready.",
+    };
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: true,
+      green_days_verified: true,
+      soak_waived: true,
+      soak_waived_by: "Kunanon Jarat",
+      stability_window_days: 0,
+    });
+    expect(validateSevenGreenDaysReport(report)).toEqual({ ok: true });
+  });
+
+  it("blocks operator-waived soak without waiver metadata", () => {
+    const input = {
+      ...passingInput(),
+      verified_through: "2026-06-25T01:00:00.000Z",
+      soak_waived: true,
+    };
+
+    const report = buildSevenGreenDaysReport(input);
+
+    expect(report).toMatchObject({
+      ok: false,
+      validation_error: "Operator-waived soak evidence must include soak_waived_by.",
+    });
+  });
+
   it("writes repo-root-relative reports when run through the package", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "manut-seven-green-days-"));
     const inputPath = path.join(root, "phase8-evidence.json");

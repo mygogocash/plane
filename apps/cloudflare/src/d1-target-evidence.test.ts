@@ -7,6 +7,10 @@
 import { describe, expect, it } from "vitest";
 
 import { buildD1TargetEvidence, unwrapWranglerRows } from "../tools/collect-d1-target-evidence.mjs";
+import {
+  buildD1ValidationRelationshipChecks,
+  D1_VALIDATION_FIXTURE_COUNTS,
+} from "../tools/d1-import-validation-queries.mjs";
 
 describe("D1 target evidence collection", () => {
   it("unwraps successful Wrangler D1 JSON results", () => {
@@ -89,18 +93,11 @@ describe("D1 target evidence collection", () => {
     const report = buildD1TargetEvidence({
       database: "manut-prod",
       generatedAt: "2026-06-22T00:00:00.000Z",
-      countRows: [
-        { table_name: "projects", count: "2" },
-        { table_name: "workspaces", count: "1" },
-      ],
-      relationshipRows: [
-        {
-          name: "projects.workspace_id",
-          source: "projects",
-          target: "workspaces",
-          orphan_count: "0",
-        },
-      ],
+      countRows: Object.entries(D1_VALIDATION_FIXTURE_COUNTS).map(([table_name, count]) => ({
+        table_name,
+        count: String(count),
+      })),
+      relationshipRows: buildD1ValidationRelationshipChecks(),
     });
 
     expect(report).toMatchObject({
@@ -108,7 +105,7 @@ describe("D1 target evidence collection", () => {
       final_import_ready: true,
       final_import_blocked: null,
       summary: {
-        required_scope_target_rows: 3,
+        required_scope_target_rows: 15,
         relationship_checks_failed: 0,
       },
     });

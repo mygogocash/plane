@@ -13,7 +13,9 @@ export type CloudflareBindings = {
   APP_ENV?: string;
   APP_ORIGIN?: string;
   LEGACY_GKE_ORIGIN?: string;
+  LEGACY_GKE_RESOLVE_OVERRIDE?: string;
   R2_UPLOADS_READ_ENABLED?: string;
+  WORKER_NATIVE_API_ENABLED?: string;
   MANUT_DIAGNOSTIC_TOKEN?: string;
   INSTANCE_VERSION?: string;
   INSTANCE_ID?: string;

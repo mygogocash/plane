@@ -226,14 +226,14 @@ the prompt and override paths:
 
 At plan creation time, use this decision logic:
 
-| Signal | Action |
-|--------|--------|
-| `process/features/{topic}/` already exists | Use it; pass `Feature: {topic}` to subagent |
-| Topic clearly belongs to an existing feature | Use that feature's folder |
-| New multi-phase project with 3+ planned phases | Create feature folder upfront |
-| User says "this is a big feature" or names a product area | Create feature folder upfront |
-| Single plan, no backlog, unclear scope | Use `process/general-plans/active/` |
-| Cross-cutting work touching multiple features | Use general folders |
+| Signal                                                    | Action                                      |
+| --------------------------------------------------------- | ------------------------------------------- |
+| `process/features/{topic}/` already exists                | Use it; pass `Feature: {topic}` to subagent |
+| Topic clearly belongs to an existing feature              | Use that feature's folder                   |
+| New multi-phase project with 3+ planned phases            | Create feature folder upfront               |
+| User says "this is a big feature" or names a product area | Create feature folder upfront               |
+| Single plan, no backlog, unclear scope                    | Use `process/general-plans/active/`         |
+| Cross-cutting work touching multiple features             | Use general folders                         |
 
 Promotion protocol from general to feature folder:
 
@@ -430,38 +430,38 @@ request to surface relevant skills. Attach candidate skill names to the subagent
 
 Skill Registry:
 
-| Skill | Purpose | Trigger Keywords |
-|---|---|---|
-| `vc-frontend-design` | Polished UI from designs/screenshots/videos | UI, design, layout, component, page, interface, visual, CSS, Tailwind, login page, dashboard |
-| `vc-debug` | Root cause-analysis helper used alongside `debugger` | debug, root cause, investigate, why is this |
-| `vc-scenario` | Edge case generation across 12 dimensions | edge cases, test scenarios, what could go wrong |
-| `vc-security` | STRIDE + OWASP security audit | security, vulnerability, auth, XSS, SQL injection |
-| `vc-autoresearch` | Autonomous metric optimization loop | improve coverage, reduce bundle, optimize metric |
-| `vc-predict` | 5-persona pre-implementation debate | risks, predict issues, architectural review |
-| `vc-scout` | Fast parallel codebase scouting | find files, where is, search codebase |
-| `vc-tech-graph` | Publish-grade technical diagrams as SVG or PNG for durable process artifacts | generate diagram, architecture diagram, flowchart, sequence diagram, system visual |
-| `vc-watzup` | Read-only branch, local/remote ref, worktree, and active-plan handoff summary with advisory selected-plan hints | what's in flight, handoff, worktree status, active plans, next steps |
-| `vc-xia` | Repo comparison and adaptation-prep research | copy from repo, compare repo, adapt from repo, study how they built it, analyze feature parity |
-| `vc-repomix` | Pack local or remote repos into references-only artifacts | pack repo, snapshot codebase, repo context, compare repo, feature port, security audit |
-| `vc-docs` | Project documentation management | docs, README, document codebase |
-| `vc-docs-seeker` | Library docs via context7 | how does X work, API docs, version, syntax |
-| `vc-generate-plan` | Durable implementation planning | plan, PRD, spec, implementation plan |
-| `vc-generate-context` | Refresh repository context router | refresh context, regenerate context, repo context |
-| `vc-audit-context` | Context routing and discoverability audit | context audit, reorganize context, stale context |
-| `vc-audit-plans` | Active-plan maintenance and cleanup | stale plans, cleanup plans, archive plans, plan audit |
-| `vc-web-testing` | Playwright/Vitest/k6 test automation | tests, e2e, integration test, performance test |
-| `vc-sequential-thinking` | Step-by-step reasoning | complex problem, think through, analyze step by step |
-| `vc-problem-solving` | Cognitive unblocking techniques | stuck, can't figure out, complex, spiral |
-| `vc-context-engineering` | Token/context optimization | context limit, token usage, optimize context |
-| `vc-preview` | Visual diagrams, slides, file viewer | diagram, visualize, slides, preview |
-| `vc-mcp-management` | MCP server tools | MCP, model context protocol |
-| `vc-chrome-devtools` | Puppeteer browser automation | browser, screenshot, scrape, automate browser |
-| `vc-agent-browser` | AI browser automation CLI | long browser session, browserbase, visual testing |
-| `vc-team` | Multi-agent parallel collaboration | parallel agents, multi-agent, team |
-| `vc-setup` | Scaffold agent harness into new project | seed, harness, bootstrap, new project, scaffold, setup |
-| `vc-update` | Pull latest harness from remote kit repo | update harness, pull kit, sync harness, upgrade agents |
-| `vc-publish` | Push harness improvements to remote kit repo | publish kit, push harness, release kit, update remote |
-| `vc-audit-vc` | Agent harness health audit (agents, skills, README.md, protocol wiring) | harness, agent parity, skill audit, guide sync |
+| Skill                    | Purpose                                                                                                         | Trigger Keywords                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `vc-frontend-design`     | Polished UI from designs/screenshots/videos                                                                     | UI, design, layout, component, page, interface, visual, CSS, Tailwind, login page, dashboard   |
+| `vc-debug`               | Root cause-analysis helper used alongside `debugger`                                                            | debug, root cause, investigate, why is this                                                    |
+| `vc-scenario`            | Edge case generation across 12 dimensions                                                                       | edge cases, test scenarios, what could go wrong                                                |
+| `vc-security`            | STRIDE + OWASP security audit                                                                                   | security, vulnerability, auth, XSS, SQL injection                                              |
+| `vc-autoresearch`        | Autonomous metric optimization loop                                                                             | improve coverage, reduce bundle, optimize metric                                               |
+| `vc-predict`             | 5-persona pre-implementation debate                                                                             | risks, predict issues, architectural review                                                    |
+| `vc-scout`               | Fast parallel codebase scouting                                                                                 | find files, where is, search codebase                                                          |
+| `vc-tech-graph`          | Publish-grade technical diagrams as SVG or PNG for durable process artifacts                                    | generate diagram, architecture diagram, flowchart, sequence diagram, system visual             |
+| `vc-watzup`              | Read-only branch, local/remote ref, worktree, and active-plan handoff summary with advisory selected-plan hints | what's in flight, handoff, worktree status, active plans, next steps                           |
+| `vc-xia`                 | Repo comparison and adaptation-prep research                                                                    | copy from repo, compare repo, adapt from repo, study how they built it, analyze feature parity |
+| `vc-repomix`             | Pack local or remote repos into references-only artifacts                                                       | pack repo, snapshot codebase, repo context, compare repo, feature port, security audit         |
+| `vc-docs`                | Project documentation management                                                                                | docs, README, document codebase                                                                |
+| `vc-docs-seeker`         | Library docs via context7                                                                                       | how does X work, API docs, version, syntax                                                     |
+| `vc-generate-plan`       | Durable implementation planning                                                                                 | plan, PRD, spec, implementation plan                                                           |
+| `vc-generate-context`    | Refresh repository context router                                                                               | refresh context, regenerate context, repo context                                              |
+| `vc-audit-context`       | Context routing and discoverability audit                                                                       | context audit, reorganize context, stale context                                               |
+| `vc-audit-plans`         | Active-plan maintenance and cleanup                                                                             | stale plans, cleanup plans, archive plans, plan audit                                          |
+| `vc-web-testing`         | Playwright/Vitest/k6 test automation                                                                            | tests, e2e, integration test, performance test                                                 |
+| `vc-sequential-thinking` | Step-by-step reasoning                                                                                          | complex problem, think through, analyze step by step                                           |
+| `vc-problem-solving`     | Cognitive unblocking techniques                                                                                 | stuck, can't figure out, complex, spiral                                                       |
+| `vc-context-engineering` | Token/context optimization                                                                                      | context limit, token usage, optimize context                                                   |
+| `vc-preview`             | Visual diagrams, slides, file viewer                                                                            | diagram, visualize, slides, preview                                                            |
+| `vc-mcp-management`      | MCP server tools                                                                                                | MCP, model context protocol                                                                    |
+| `vc-chrome-devtools`     | Puppeteer browser automation                                                                                    | browser, screenshot, scrape, automate browser                                                  |
+| `vc-agent-browser`       | AI browser automation CLI                                                                                       | long browser session, browserbase, visual testing                                              |
+| `vc-team`                | Multi-agent parallel collaboration                                                                              | parallel agents, multi-agent, team                                                             |
+| `vc-setup`               | Scaffold agent harness into new project                                                                         | seed, harness, bootstrap, new project, scaffold, setup                                         |
+| `vc-update`              | Pull latest harness from remote kit repo                                                                        | update harness, pull kit, sync harness, upgrade agents                                         |
+| `vc-publish`             | Push harness improvements to remote kit repo                                                                    | publish kit, push harness, release kit, update remote                                          |
+| `vc-audit-vc`            | Agent harness health audit (agents, skills, README.md, protocol wiring)                                         | harness, agent parity, skill audit, guide sync                                                 |
 
 Rule: When one or more skills match the request, mention them to the user or include them in
 the subagent prompt context. Never silently skip relevant skills.
@@ -701,3 +701,24 @@ to Codex-native constructs:
 The authoritative historical source remains:
 
 - [CLAUDE.md](CLAUDE.md)
+
+## Learned User Preferences
+
+- Use `preview` as the default git base branch for commits and PRs unless explicitly promoting to `main`.
+- When promoting `preview` to `main`, use a bridge commit whose tree matches `origin/preview` because the branches may have unrelated histories on GitHub.
+- For large multi-phase implementation work, prefer spawning parallel subagents to speed development and audit acceptance criteria.
+
+## Learned Workspace Facts
+
+- GitHub default branch is `preview`; `main` is a separate promotion line. Manut production runs at `https://app.manut.xyz`.
+- Manut is GoGoCash's hosted Plane CE fork; internal package names stay `@plane/*` for upstream compatibility.
+- GCP Manut prod: project `affine-495114`, GKE cluster `plane-ce-gke`, namespace `plane-ce` (not `manut-ce-gke` or `manut-ce`).
+- Cloudflare cutover gate status: `pnpm --filter @manut/cloudflare cutover:readiness --json`; prep orchestration: `cutover:prep --json`.
+- `pnpm --filter @manut/cloudflare auth:smoke-report` must not use an extra `--` before flags (e.g. not `auth:smoke-report -- --input`).
+- Better Stack cutover gate can be operator-waived with `betterstack:cutover-report --waive-monitors --waived-by <name>` when live endpoint probes are green.
+- Phase 7/8 operator gates, runbooks, and evidence reports live under `process/features/cloudflare-stack-migration/reports/`.
+- Phase 8 requires a 7 green-day soak before GCP decommission; gate report: `pnpm --filter @manut/cloudflare seven-green-days:report --json`.
+- Production D1 database is `manut-prod` (Cloudflare Worker env `production`).
+- `app.manut.xyz` routes through the Cloudflare Worker; native API handlers activate when `WORKER_NATIVE_API_ENABLED=true`, otherwise requests proxy to legacy GKE.
+- When the Worker serves the same hostname as `LEGACY_GKE_ORIGIN`, set `LEGACY_GKE_RESOLVE_OVERRIDE` to the GKE ingress IP to avoid same-origin proxy loops.
+- `MANUT_DIAGNOSTIC_TOKEN` is required for D1 shadow diagnostic smoke checks.

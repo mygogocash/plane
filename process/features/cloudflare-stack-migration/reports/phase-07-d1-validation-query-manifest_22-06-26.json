@@ -2,7 +2,7 @@
   "ok": true,
   "evidence_kind": "d1-import-validation-queries",
   "schema_version": 1,
-  "generated_at": "2026-06-22T02:14:34.577Z",
+  "generated_at": "2026-06-24T16:31:12.389Z",
   "scope": "active-workspaces-projects-shadow-read",
   "tables": [
     {

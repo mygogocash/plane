@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-06-25T01:25:30.000Z",
+  "evidence_kind": "gcp-backups-final",
+  "ok": true,
+  "operator": "Kunanon Jarat",
+  "purpose": "Phase 8 safe cutoff prep (Option A); GKE remains online for production API.",
+  "cloud_sql": {
+    "instance": "plane-pg",
+    "project": "affine-495114",
+    "database": "plane",
+    "on_demand_backup_id": "1782350623415",
+    "on_demand_backup_description": "manut-phase8-safe-cutoff-prep-25-06-26",
+    "on_demand_backup_status": "SUCCESSFUL",
+    "on_demand_backup_start_time": "2026-06-25T01:23:43.424Z",
+    "logical_export_attempt": "kubectl pg_dump unavailable in plane-app-api-wl image (pg_dump not found); automated backup used instead.",
+    "gcs_export_attempt": "gcloud sql export sql to plane-affine-495114-uploads failed HTTP 412 (service account bucket permissions)."
+  },
+  "gcs_uploads": {
+    "bucket": "plane-affine-495114-uploads",
+    "local_mirror": "process/features/cloudflare-stack-migration/reports/backups/gcs-plane-affine-495114-uploads-25-06-26",
+    "object_count": 19,
+    "total_bytes": 4613734,
+    "command": "gsutil -m rsync -r gs://plane-affine-495114-uploads <local_mirror>"
+  },
+  "d1": {
+    "database": "manut-prod",
+    "export_path": "process/features/cloudflare-stack-migration/reports/backups/d1-manut-prod-final-25-06-26.sql",
+    "export_bytes": 6348,
+    "command": "wrangler d1 export manut-prod --remote --env production"
+  },
+  "r2": {
+    "bucket": "manut-uploads-prod",
+    "parity_report": "process/features/cloudflare-stack-migration/reports/phase-07-r2-manifest-validation_21-06-26.json"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "evidence_kind": "postgres-source-counts",
+  "schema_version": 1,
+  "generated_at": "2026-06-24T23:55:08.136Z",
+  "source": "final-postgres-import-window-plane-ce",
+  "required_scope": {
+    "count_tables": ["workspaces", "projects"]
+  },
+  "counts": {
+    "projects": 10,
+    "workspaces": 3
+  },
+  "summary": {
+    "required_tables_total": 2,
+    "required_tables_present": 2,
+    "required_scope_source_rows": 13
+  },
+  "operator_runbook": {
+    "readiness_blocker_id": "d1-import-validation",
+    "canonical_report": "process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json",
+    "runbook": "process/features/cloudflare-stack-migration/references/phase-07-d1-import-validation-runbook_24-06-26.md",
+    "production_action_gate": "These tools only normalize and validate evidence. Run the production D1 import only after explicit operator approval.",
+    "required_inputs": {
+      "postgres_source_counts": "<postgres-source-counts.json>",
+      "d1_target_counts": "<d1-target-counts.json>",
+      "d1_relationship_checks": "<d1-target-relationships.json>"
+    },
+    "commands": {
+      "target_evidence": "pnpm --filter @manut/cloudflare d1:target-evidence -- --json --out <d1-target-snapshot.json> --counts-out <d1-target-counts.json> --relationships-out <d1-target-relationships.json>",
+      "validate_import": "pnpm --filter @manut/cloudflare d1:validate-import -- <postgres-source-counts.json> <d1-target-counts.json> --relationships <d1-target-relationships.json> --out process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json --json",
+      "readiness": "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json"
+    }
+  },
+  "operator_next_steps": [
+    "After explicit operator approval and import, collect D1 target counts and relationship evidence.",
+    "Do not treat process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json as ready until all validation errors are resolved.",
+    "Re-run the cutover readiness command and confirm the d1-import-validation blocker changes to pass."
+  ],
+  "validation_errors": []
+}
