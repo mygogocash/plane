@@ -13,6 +13,8 @@ const TEMPLATE_KIND = "cloudflare-builds-shadow-input";
 const ACCEPTED_BUILD_COMMANDS = new Set([
   "pnpm --filter @manut/cloudflare ci:cloudflare",
   "pnpm --dir ../.. --filter @manut/cloudflare ci:cloudflare",
+  "pnpm --filter @manut/cloudflare deploy:build",
+  "pnpm --dir ../.. --filter @manut/cloudflare deploy:build",
 ]);
 const ACCEPTED_PRODUCTION_DEPLOY_COMMANDS = new Set([
   "pnpm --filter @manut/cloudflare deploy:production",
