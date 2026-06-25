@@ -17,6 +17,55 @@ type WorkspaceRow = {
   updated_at: string;
 };
 
+type ProfileRow = {
+  user_id: string;
+  is_onboarded: number;
+  onboarding_step: string | null;
+  is_tour_completed: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type WorkspaceMemberRow = {
+  id: string;
+  workspace_id: string;
+  member_id: string;
+  role: number;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+};
+
+const DEFAULT_ONBOARDING_STEP = {
+  profile_complete: false,
+  workspace_create: false,
+  workspace_invite: false,
+  workspace_join: false,
+};
+
+const DEFAULT_WORKSPACE_VIEW_PROPS = {
+  filters: {
+    priority: null,
+    state: null,
+    state_group: null,
+    assignees: null,
+    created_by: null,
+    labels: null,
+    start_date: null,
+    target_date: null,
+    subscriber: null,
+  },
+  display_filters: {
+    group_by: null,
+    order_by: "-created_at",
+    type: null,
+    sub_issue: true,
+    show_empty_groups: true,
+    layout: "list",
+    calendar_date_range: "",
+  },
+};
+
 type ProjectRow = {
   id: string;
   workspace_id: string;
@@ -144,6 +193,179 @@ export async function getUserById(env: CloudflareBindings, userId: string) {
     console.error("D1_USER_BY_ID_FAILED", error);
     return d1QueryFailed("users");
   }
+}
+
+export async function getUserProfile(env: CloudflareBindings, userId: string) {
+  const db = requireDatabase(env);
+  if (isResponse(db)) {
+    return db;
+  }
+
+  try {
+    return await db
+      .prepare(
+        `SELECT user_id, is_onboarded, onboarding_step, is_tour_completed, created_at, updated_at
+         FROM profiles
+         WHERE user_id = ?
+         LIMIT 1`
+      )
+      .bind(userId)
+      .first<ProfileRow>();
+  } catch (error) {
+    console.error("D1_USER_PROFILE_FAILED", error);
+    return d1QueryFailed("profiles");
+  }
+}
+
+export function parseOnboardingStep(raw: string | null) {
+  if (!raw) {
+    return { ...DEFAULT_ONBOARDING_STEP };
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      profile_complete: Boolean(parsed.profile_complete),
+      workspace_create: Boolean(parsed.workspace_create),
+      workspace_invite: Boolean(parsed.workspace_invite),
+      workspace_join: Boolean(parsed.workspace_join),
+    };
+  } catch {
+    return { ...DEFAULT_ONBOARDING_STEP };
+  }
+}
+
+export function mapUserProfilePayload(profile: ProfileRow) {
+  return {
+    id: profile.user_id,
+    user: profile.user_id,
+    role: null,
+    last_workspace_id: null,
+    theme: {
+      theme: undefined,
+      primary: undefined,
+      background: undefined,
+      darkPalette: false,
+    },
+    is_app_rail_docked: true,
+    onboarding_step: parseOnboardingStep(profile.onboarding_step),
+    use_case: null,
+    is_onboarded: Boolean(profile.is_onboarded),
+    is_tour_completed: Boolean(profile.is_tour_completed),
+    billing_address_country: "INDIA",
+    billing_address: null,
+    has_billing_address: false,
+    company_name: "",
+    notification_view_mode: "full",
+    is_smooth_cursor_enabled: false,
+    is_mobile_onboarded: false,
+    mobile_onboarding_step: {
+      profile_complete: false,
+      workspace_create: false,
+      workspace_join: false,
+    },
+    mobile_timezone_auto_set: false,
+    language: "en",
+    start_of_the_week: 0,
+    goals: {},
+    background_color: "#2640ff",
+    is_navigation_tour_completed: false,
+    has_marketing_email_consent: false,
+    is_subscribed_to_changelog: false,
+    product_tour: {
+      work_items: false,
+      cycles: false,
+      modules: false,
+      intake: false,
+      pages: false,
+    },
+    created_at: profile.created_at,
+    updated_at: profile.updated_at,
+  };
+}
+
+export function buildUserSettingsWorkspacePayload(
+  workspaces: Array<WorkspaceRow & { role?: number; total_members?: number }>
+) {
+  const invites = 0;
+  const fallbackWorkspace = workspaces[0];
+
+  if (!fallbackWorkspace) {
+    return {
+      last_workspace_id: null,
+      last_workspace_slug: null,
+      last_workspace_name: null,
+      last_workspace_logo: "",
+      fallback_workspace_id: null,
+      fallback_workspace_slug: null,
+      invites,
+    };
+  }
+
+  return {
+    last_workspace_id: fallbackWorkspace.id,
+    last_workspace_slug: fallbackWorkspace.slug,
+    last_workspace_name: fallbackWorkspace.name,
+    last_workspace_logo: fallbackWorkspace.logo ?? "",
+    fallback_workspace_id: fallbackWorkspace.id,
+    fallback_workspace_slug: fallbackWorkspace.slug,
+    invites,
+  };
+}
+
+export async function getWorkspaceMemberMe(env: CloudflareBindings, slug: string, userId: string) {
+  const db = requireDatabase(env);
+  if (isResponse(db)) {
+    return db;
+  }
+
+  try {
+    return await db
+      .prepare(
+        `SELECT
+           wm.id,
+           wm.workspace_id,
+           wm.member_id,
+           wm.role,
+           wm.is_active,
+           wm.created_at,
+           wm.updated_at
+         FROM workspace_members wm
+         JOIN workspaces w ON w.id = wm.workspace_id
+         WHERE w.slug = ?
+           AND w.deleted_at IS NULL
+           AND wm.member_id = ?
+           AND wm.is_active = 1
+         LIMIT 1`
+      )
+      .bind(slug, userId)
+      .first<WorkspaceMemberRow>();
+  } catch (error) {
+    console.error("D1_WORKSPACE_MEMBER_ME_FAILED", error);
+    return d1QueryFailed("workspace-members");
+  }
+}
+
+export function mapWorkspaceMemberMePayload(row: WorkspaceMemberRow) {
+  return {
+    id: row.id,
+    workspace: row.workspace_id,
+    member: row.member_id,
+    role: row.role,
+    company_role: null,
+    view_props: DEFAULT_WORKSPACE_VIEW_PROPS,
+    default_props: DEFAULT_WORKSPACE_VIEW_PROPS,
+    issue_props: {},
+    is_active: Boolean(row.is_active),
+    getting_started_checklist: {},
+    tips: {},
+    explored_features: {},
+    draft_issue_count: 0,
+    created_by: row.member_id,
+    updated_by: row.member_id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
 }
 
 export async function getUserWorkspaces(env: CloudflareBindings, userId: string) {
