@@ -49,8 +49,18 @@ describe("worker native api router", () => {
   });
 
   it("does not match unregistered routes", () => {
-    expect(matchWorkerNativeRoute("GET", "/api/users/me/profile/")).toBeNull();
+    expect(matchWorkerNativeRoute("POST", "/api/users/me/profile/")).toBeNull();
     expect(matchWorkerNativeRoute("POST", "/api/users/me/workspaces/")).toBeNull();
+  });
+
+  it("matches profile and workspace member me routes", () => {
+    expect(matchWorkerNativeRoute("GET", "/api/users/me/profile/")).toMatchObject({
+      route: { id: "users-me-profile" },
+    });
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/workspace-members/me/")).toMatchObject({
+      route: { id: "workspace-member-me" },
+      params: { slug: "gogocash" },
+    });
   });
 
   it("resolves worker-native routing only when the feature flag is enabled", () => {
@@ -76,10 +86,12 @@ describe("worker native api router", () => {
     expect(WORKER_NATIVE_ROUTE_DEFINITIONS.every((route) => route.implemented)).toBe(true);
     expect(WORKER_NATIVE_ROUTE_DEFINITIONS.map((route) => route.id)).toEqual([
       "users-me",
+      "users-me-profile",
       "users-me-settings",
       "users-me-workspaces",
       "workspace-detail",
       "workspace-projects",
+      "workspace-member-me",
       "workspace-asset-presign",
     ]);
   });

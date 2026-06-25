@@ -29,6 +29,14 @@ const isValidURL = (url: string): boolean => {
   return !disallowedSchemes.test(url);
 };
 
+function AuthRedirectSpinner() {
+  return (
+    <div className="relative flex h-screen w-full items-center justify-center bg-canvas">
+      <LogoSpinner />
+    </div>
+  );
+}
+
 export const AuthenticationWrapper = observer(function AuthenticationWrapper(props: TAuthenticationWrapper) {
   const pathname = usePathname();
   const router = useAppRouter();
@@ -93,10 +101,10 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
       if (currentUserProfile?.id && isUserOnboard) {
         const currentRedirectRoute = getWorkspaceRedirectionUrl();
         router.push(currentRedirectRoute);
-        return <></>;
+        return <AuthRedirectSpinner />;
       } else {
         router.push("/onboarding");
-        return <></>;
+        return <AuthRedirectSpinner />;
       }
     }
   }
@@ -104,12 +112,12 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
   if (pageType === EPageTypes.ONBOARDING) {
     if (!currentUser?.id) {
       router.push(`/${pathname ? `?next_path=${pathname}` : ``}`);
-      return <></>;
+      return <AuthRedirectSpinner />;
     } else {
       if (currentUser && currentUserProfile?.id && isUserOnboard) {
         const currentRedirectRoute = getWorkspaceRedirectionUrl();
         router.replace(currentRedirectRoute);
-        return <></>;
+        return <AuthRedirectSpinner />;
       } else return <>{children}</>;
     }
   }
@@ -117,12 +125,12 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
   if (pageType === EPageTypes.SET_PASSWORD) {
     if (!currentUser?.id) {
       router.push(`/${pathname ? `?next_path=${pathname}` : ``}`);
-      return <></>;
+      return <AuthRedirectSpinner />;
     } else {
       if (currentUser && !currentUser?.is_password_autoset && currentUserProfile?.id && isUserOnboard) {
         const currentRedirectRoute = getWorkspaceRedirectionUrl();
         router.push(currentRedirectRoute);
-        return <></>;
+        return <AuthRedirectSpinner />;
       } else return <>{children}</>;
     }
   }
@@ -132,11 +140,11 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
       if (currentUserProfile && currentUserProfile?.id && isUserOnboard) return <>{children}</>;
       else {
         router.push(`/onboarding`);
-        return <></>;
+        return <AuthRedirectSpinner />;
       }
     } else {
       router.push(`/${pathname ? `?next_path=${pathname}` : ``}`);
-      return <></>;
+      return <AuthRedirectSpinner />;
     }
   }
 

@@ -48,6 +48,10 @@ export function d1QueryFailed(domain: string): Response {
   return errorResponse(500, "D1_QUERY_FAILED", "The worker-native D1 query failed.", { domain });
 }
 
+export function notFoundResponse(message: string): Response {
+  return jsonResponse({ error: "NOT_FOUND", detail: message }, 404);
+}
+
 export function requireDatabase(env: CloudflareBindings): D1Database | Response {
   if (!env.MANUT_DB) {
     return d1Missing("native-api");
