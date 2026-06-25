@@ -29,6 +29,7 @@ APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-production"
 R2_UPLOADS_READ_ENABLED = "true"
 RESEND_FROM_EMAIL = "Manut <no-reply@gogocash.co>"
+WORKER_NATIVE_API_ENABLED = "true"
 
 [[d1_databases]]
 binding = "MANUT_DB"

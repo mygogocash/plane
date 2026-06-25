@@ -66,6 +66,7 @@ APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-production"
 R2_UPLOADS_READ_ENABLED = "true"
 RESEND_FROM_EMAIL = "Manut <no-reply@gogocash.co>"
+WORKER_NATIVE_API_ENABLED = "true"
 # GCP legacy proxy retired 2026-06-25. All traffic is Worker-native or 501 until migrated.
 
 [[env.production.d1_databases]]
