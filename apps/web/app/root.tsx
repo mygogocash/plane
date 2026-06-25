@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import Script from "next/script";
 import { Links, Meta, Outlet, Scripts } from "react-router";
 import type { LinksFunction } from "react-router";
-import { ThemeProvider, useTheme } from "next-themes";
+import { ThemeProvider } from "next-themes";
 // plane imports
 import {
   MANUT_BRAND,
@@ -134,10 +134,9 @@ export default function Root() {
 }
 
 export function HydrateFallback() {
-  const { resolvedTheme } = useTheme();
-
-  // if we are on the server or the theme is not resolved, return an empty div
-  if (typeof window === "undefined" || resolvedTheme === undefined) return <div />;
+  if (typeof window === "undefined") {
+    return <div className="relative h-screen w-full bg-canvas" />;
+  }
 
   return (
     <div className="relative flex h-screen w-full items-center justify-center bg-canvas">
