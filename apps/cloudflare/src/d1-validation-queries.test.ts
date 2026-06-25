@@ -39,20 +39,28 @@ describe("D1 import validation query manifest", () => {
   it("builds count and relationship queries for the current D1 shadow scope", () => {
     const report = buildD1ValidationQueries({ generatedAt: "2026-06-22T00:00:00.000Z" });
 
+    expect(report.tables).toHaveLength(6);
+    expect(report.tables.map((table: { table: string }) => table.table)).toEqual([
+      "workspaces",
+      "projects",
+      "users",
+      "profiles",
+      "workspace_members",
+      "issues",
+    ]);
+    expect(report.relationships).toHaveLength(6);
+    expect(report.relationships.map((relationship: { name: string }) => relationship.name)).toEqual([
+      "projects.workspace_id",
+      "profiles.user_id",
+      "workspace_members.workspace_id",
+      "workspace_members.member_id",
+      "issues.project_id",
+      "issues.workspace_id",
+    ]);
     expect(report).toMatchObject({
       ok: true,
       generated_at: "2026-06-22T00:00:00.000Z",
-      tables: [
-        { table: "workspaces", where: "deleted_at IS NULL" },
-        { table: "projects", where: "deleted_at IS NULL" },
-      ],
-      relationships: [
-        {
-          name: "projects.workspace_id",
-          source: "projects",
-          target: "workspaces",
-        },
-      ],
+      scope: "worker-native-identity-and-issues",
     });
     expect(report.postgres_count_sql).toContain("'workspaces' AS table_name");
     expect(report.postgres_count_sql).toContain("COUNT(*)::bigint AS count");

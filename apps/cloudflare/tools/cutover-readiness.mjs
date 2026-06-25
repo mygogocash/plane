@@ -234,6 +234,9 @@ export async function validateEvidenceJson(filePath, validationKind = null) {
       validation = validateR2ManifestReport(json);
     } else if (kind === "worker-smoke") {
       validation = validateWorkerSmokeReport(json);
+      if (validation.ok && path.basename(filePath).includes("cloudflare-production-smoke")) {
+        validation = validateProductionWorkerSmokeFreshness(json);
+      }
     } else if (kind === "cloudflare-production-deploy") {
       validation = validateCloudflareProductionDeployReport(json);
     } else if (kind === "live-shadow-validation") {
@@ -548,6 +551,35 @@ function validateRequiredChecks(report, requiredIds, label) {
   return { ok: true };
 }
 
+export const PRODUCTION_WORKER_SMOKE_MAX_AGE_MS = 72 * 60 * 60 * 1000;
+
+function validateProductionWorkerSmokeFreshness(report) {
+  const generatedAt = Date.parse(report.generated_at);
+  if (!Number.isFinite(generatedAt)) {
+    return {
+      ok: false,
+      message: "Production Worker smoke report must include a valid generated_at timestamp.",
+    };
+  }
+
+  if (Date.now() - generatedAt > PRODUCTION_WORKER_SMOKE_MAX_AGE_MS) {
+    return {
+      ok: false,
+      message:
+        "Production Worker smoke evidence is stale; re-run smoke:worker against production and update the canonical report.",
+    };
+  }
+
+  if (!isRecord(report.summary) || report.summary.failed !== 0) {
+    return {
+      ok: false,
+      message: "Production Worker smoke report must have zero failed checks.",
+    };
+  }
+
+  return { ok: true };
+}
+
 function validateWorkerSmokeReport(report) {
   if (typeof report.base_url !== "string" || report.base_url.trim() === "") {
     return { ok: false, message: "Worker smoke report must include base_url." };
@@ -647,6 +679,41 @@ function hasCanonicalEndpointUrl(check, id) {
 }
 
 function validateBetterStackCutoverReport(report) {
+  if (report.monitor_source === "operator-waived") {
+    if (report.monitors_waived !== true) {
+      return { ok: false, message: "Operator-waived Better Stack evidence must set monitors_waived: true." };
+    }
+    if (typeof report.monitors_waived_by !== "string" || report.monitors_waived_by.trim() === "") {
+      return { ok: false, message: "Operator-waived Better Stack evidence must include monitors_waived_by." };
+    }
+    if (typeof report.monitors_waived_reason !== "string" || report.monitors_waived_reason.trim() === "") {
+      return { ok: false, message: "Operator-waived Better Stack evidence must include monitors_waived_reason." };
+    }
+    if (!isRecord(report.endpoint_summary) || report.endpoint_summary.failed !== 0) {
+      return { ok: false, message: "Better Stack endpoint probes must all pass when monitors are waived." };
+    }
+    if (
+      !Array.isArray(report.endpoint_checks) ||
+      report.endpoint_checks.length < REQUIRED_BETTERSTACK_MONITOR_IDS.length
+    ) {
+      return { ok: false, message: "Better Stack report must include endpoint_checks for all required endpoints." };
+    }
+    const endpointChecksById = new Map(report.endpoint_checks.map((check) => [check?.id, check]));
+    for (const id of REQUIRED_BETTERSTACK_MONITOR_IDS) {
+      const check = endpointChecksById.get(id);
+      if (!check) {
+        return { ok: false, message: `Better Stack report is missing required endpoint probe ${id}.` };
+      }
+      if (check.ok !== true || check.status !== 200 || check.keyword_found !== true) {
+        return { ok: false, message: "Better Stack endpoint probes must all pass." };
+      }
+      if (!hasCanonicalEndpointUrl(check, id)) {
+        return { ok: false, message: "Better Stack endpoint probes must target canonical Manut production URLs." };
+      }
+    }
+    return { ok: true };
+  }
+
   if (!isRecord(report.monitor_summary)) {
     return { ok: false, message: "Better Stack report must include monitor_summary." };
   }
@@ -726,10 +793,11 @@ function validateBetterStackCutoverReport(report) {
     }
   }
 
-  if (!["betterstack-api", "monitor-state-file"].includes(report.monitor_source)) {
+  if (!["betterstack-api", "monitor-state-file", "operator-waived"].includes(report.monitor_source)) {
     return {
       ok: false,
-      message: "Better Stack cutover report must include monitor_source betterstack-api or monitor-state-file.",
+      message:
+        "Better Stack cutover report must include monitor_source betterstack-api, monitor-state-file, or operator-waived.",
     };
   }
 

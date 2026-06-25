@@ -15,9 +15,9 @@ describe("Wrangler production config", () => {
     expect(wranglerConfig).toContain('account_id = "187ab61ed9dbc6e616cb23e6b95aa8f1"');
   });
 
-  it("does not attach app.manut.xyz routes before cutover", () => {
-    expect(wranglerConfig).not.toMatch(/^routes?\s*=/m);
-    expect(wranglerConfig).not.toMatch(/^custom_domain\s*=/m);
+  it("attaches app.manut.xyz production routes for slice 5 cutover", () => {
+    expect(wranglerConfig).toContain('pattern = "app.manut.xyz/*"');
+    expect(wranglerConfig).toContain('zone_name = "manut.xyz"');
   });
 
   it("does not check in a self-referential legacy GKE origin", () => {

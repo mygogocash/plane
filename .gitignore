@@ -34,8 +34,8 @@ yarn-error.log*
 pnpm-debug.log*
 .pnpm-debug.log*
 
-# Local env files
-.env
+# Local migration backup artifacts (manifest JSON lives in reports/)
+process/features/cloudflare-stack-migration/reports/backups/
 .env.local
 .env.development.local
 .env.test.local

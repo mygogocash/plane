@@ -32,6 +32,7 @@ import {
 // plane-web imports
 import { isSelfHostedFeatureEnabled } from "@/plane-web/lib/self-host-entitlements";
 import { SidebarItem } from "@/plane-web/components/workspace/sidebar/sidebar-item";
+import { SidebarCopilotItem } from "./sidebar-copilot-item";
 
 export const SidebarMenuItems = observer(function SidebarMenuItems() {
   // routers
@@ -106,6 +107,7 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
         {filteredStaticNavigationItems.map((item) => (
           <SidebarItem key={`static_${item.key}`} item={item} />
         ))}
+        <SidebarCopilotItem />
       </div>
       <Disclosure as="div" className="flex flex-col" defaultOpen={!!isWorkspaceMenuOpen}>
         <div className="group flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-placeholder hover:bg-layer-transparent-hover">

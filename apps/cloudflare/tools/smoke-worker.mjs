@@ -91,7 +91,7 @@ const checks = [
     path: "/api/cloudflare/migration-status",
     expectedStatuses: [200],
     validateJson: (json) =>
-      json.status === "queues-cron-cache-live" &&
+      json.status === "worker-native-api-migration" &&
       json.legacy_proxy_configured === true &&
       json.r2_uploads_read_enabled === false,
   },

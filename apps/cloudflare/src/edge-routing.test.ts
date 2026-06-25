@@ -70,6 +70,7 @@ describe("legacy proxy helper", () => {
 
     expect(proxyRequest.url).toBe("https://legacy-gke.manut.internal/api/workspaces/?cursor=abc");
     expect(proxyRequest.method).toBe("GET");
+    expect(proxyRequest.headers.get("host")).toBe("app.manut.xyz");
     expect(proxyRequest.headers.get("x-forwarded-host")).toBe("app.manut.xyz");
     expect(proxyRequest.headers.get("x-manut-edge-route")).toBe("legacy-gke");
     expect(proxyRequest.headers.get("x-manut-edge-contract")).toBe("api");
@@ -122,6 +123,29 @@ describe("legacy proxy helper", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toEqual({
       proxied_url: "https://legacy-gke.manut.internal/auth/login?next=%2Fspaces",
+    });
+  });
+
+  it("proxies to the same app origin when a GKE resolve override is configured", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ ok: true }, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await proxyToLegacyOrigin(
+      new Request("https://app.manut.xyz/api/workspaces/"),
+      {
+        LEGACY_GKE_ORIGIN: "https://app.manut.xyz",
+        LEGACY_GKE_RESOLVE_OVERRIDE: "34.143.231.225",
+      },
+      "api"
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] as [Request, RequestInit];
+    expect(init).toMatchObject({
+      cf: {
+        resolveOverride: "34.143.231.225",
+      },
     });
   });
 

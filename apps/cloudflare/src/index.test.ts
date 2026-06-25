@@ -209,17 +209,38 @@ describe("Manut Cloudflare Worker foundation", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      status: "queues-cron-cache-live",
-      active_phase: "queues-cron-cache-live",
+      status: "worker-native-api-migration",
+      active_phase: "worker-native-api-migration",
       app_origin: "https://app.manut.xyz",
       legacy_proxy_configured: false,
+      worker_native_api_enabled: false,
       cache_target: "kv",
-      d1_shadow_domains: ["workspaces", "projects"],
+      d1_shadow_domains: ["workspaces", "projects", "users", "profiles", "workspace_members", "issues"],
+      worker_native_route_ids: expect.arrayContaining(["users-me-workspaces", "workspace-detail"]),
+      identity_tables_schema: "0003_identity_core",
+      issues_tables_schema: "0004_issues_core",
       lock_target: "durable-objects",
       data_target: "d1",
       upload_target: "r2",
       queue_target: "cloudflare-queues",
       live_target: "durable-objects",
+    });
+  });
+
+  it("returns worker-native legacy proxy failure when WORKER_NATIVE_API_ENABLED is true without LEGACY_GKE_ORIGIN", async () => {
+    const response = await app.request(
+      "/api/users/me/workspaces/",
+      {},
+      {
+        ...env,
+        WORKER_NATIVE_API_ENABLED: "true",
+      }
+    );
+
+    expect(response.status).toBe(502);
+    expect(response.headers.get("x-manut-edge-route")).toBe("worker-native-api");
+    await expect(response.json()).resolves.toMatchObject({
+      error: "LEGACY_USERS_ME_WORKSPACES_PROXY_FAILED",
     });
   });
 

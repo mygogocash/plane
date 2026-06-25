@@ -12,6 +12,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validateEvidenceJson } from "../tools/cutover-readiness.mjs";
+import {
+  buildD1ValidationRelationshipChecks,
+  D1_VALIDATION_FIXTURE_COUNTS,
+} from "../tools/d1-import-validation-queries.mjs";
 
 const REQUIRED_AUTHENTICATED_SMOKE_IDS = [
   "login",
@@ -36,12 +40,42 @@ const REQUIRED_SEVEN_GREEN_DAYS_IDS = [
 ];
 
 function d1RelationshipCheck(overrides: Record<string, unknown> = {}) {
+  return buildD1ValidationRelationshipChecks(overrides)[0];
+}
+
+function d1RelationshipChecks(overrides: Record<string, unknown> = {}) {
+  return buildD1ValidationRelationshipChecks(overrides);
+}
+
+function d1CountMatches(overrides: Partial<typeof D1_VALIDATION_FIXTURE_COUNTS> = {}) {
+  const counts = { ...D1_VALIDATION_FIXTURE_COUNTS, ...overrides };
+  return Object.entries(counts).map(([table, count]) => ({
+    table,
+    sourceCount: count,
+    targetCount: count,
+  }));
+}
+
+function passingD1ImportEvidence(overrides: Record<string, unknown> = {}) {
   return {
-    name: "projects.workspace_id",
-    source: "projects",
-    target: "workspaces",
     ok: true,
-    orphan_count: 0,
+    evidence_kind: "d1-import-validation",
+    source_counts: "postgres-counts.json",
+    target_counts: "d1-counts.json",
+    summary: {
+      count_tables_matched: 6,
+      count_tables_mismatched: 0,
+      required_scope_source_rows: 15,
+      required_scope_target_rows: 15,
+      relationship_checks_failed: 0,
+    },
+    count_report: {
+      ok: true,
+      matchedTableCount: 6,
+      mismatchedTableCount: 0,
+      matches: d1CountMatches(),
+    },
+    relationship_checks: d1RelationshipChecks(),
     ...overrides,
   };
 }
@@ -270,6 +304,41 @@ describe("cutover readiness evidence gate", () => {
     expect(check).toMatchObject({
       status: "blocked",
       remediation: "Worker smoke report must include base_url.",
+    });
+  });
+
+  it("rejects stale production Worker smoke evidence", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "manut-cutover-gate-"));
+    const reportDir = path.join(root, "process/features/cloudflare-stack-migration/reports");
+    await mkdir(reportDir, { recursive: true });
+    const staleDate = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
+    const checks = [
+      "healthz",
+      "instances",
+      "migration-status",
+      "route-map",
+      "d1-workspaces-shadow",
+      "legacy-api-proxy",
+      "legacy-uploads-proxy",
+    ].map((id) => ({ id, ok: true }));
+    await writeFile(
+      path.join(reportDir, "phase-07-cloudflare-production-smoke_21-06-26.json"),
+      JSON.stringify({
+        ok: true,
+        evidence_kind: "worker-smoke",
+        generated_at: staleDate,
+        base_url: "https://manut-app.bettergogocash.workers.dev/",
+        summary: { total: 7, passed: 7, failed: 0 },
+        checks,
+      })
+    );
+
+    const report = runReadiness(root);
+    const check = report.checks.find((item: { id: string }) => item.id === "cloudflare-production-smoke");
+
+    expect(check).toMatchObject({
+      status: "blocked",
+      remediation: expect.stringContaining("stale"),
     });
   });
 
@@ -558,26 +627,13 @@ describe("cutover readiness evidence gate", () => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
-      JSON.stringify({
-        ok: true,
-        source_counts: "postgres-counts.json",
-        target_counts: "d1-counts.json",
-        summary: {
-          count_tables_matched: 2,
-          count_tables_mismatched: 0,
-          relationship_checks_failed: 0,
-        },
-        count_report: {
-          ok: true,
-          matchedTableCount: 2,
-          mismatchedTableCount: 0,
-          matches: [
-            { table: "workspaces", sourceCount: 1, targetCount: 1 },
-            { table: "projects", sourceCount: 2, targetCount: 2 },
-          ],
-        },
-        relationship_checks: [d1RelationshipCheck({ ok: false, orphan_count: 1 })],
-      })
+      JSON.stringify(
+        passingD1ImportEvidence({
+          relationship_checks: d1RelationshipChecks().map((check) =>
+            check.name === "projects.workspace_id" ? Object.assign({}, check, { ok: false, orphan_count: 1 }) : check
+          ),
+        })
+      )
     );
 
     const report = runReadiness(root);
@@ -644,12 +700,16 @@ describe("cutover readiness evidence gate", () => {
           ok: true,
           matchedTableCount: 2,
           mismatchedTableCount: 0,
-          matches: [
-            { table: "workspaces", sourceCount: 0, targetCount: 0 },
-            { table: "projects", sourceCount: 0, targetCount: 0 },
-          ],
+          matches: d1CountMatches({
+            workspaces: 0,
+            projects: 0,
+            users: 0,
+            profiles: 0,
+            workspace_members: 0,
+            issues: 0,
+          }),
         },
-        relationship_checks: [d1RelationshipCheck()],
+        relationship_checks: d1RelationshipChecks(),
       })
     );
 
@@ -668,29 +728,11 @@ describe("cutover readiness evidence gate", () => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
-      JSON.stringify({
-        ok: true,
-        evidence_kind: "r2-manifest-validation",
-        source_counts: "postgres-counts.json",
-        target_counts: "d1-counts.json",
-        summary: {
-          count_tables_matched: 2,
-          count_tables_mismatched: 0,
-          required_scope_source_rows: 3,
-          required_scope_target_rows: 3,
-          relationship_checks_failed: 0,
-        },
-        count_report: {
-          ok: true,
-          matchedTableCount: 2,
-          mismatchedTableCount: 0,
-          matches: [
-            { table: "workspaces", sourceCount: 1, targetCount: 1 },
-            { table: "projects", sourceCount: 2, targetCount: 2 },
-          ],
-        },
-        relationship_checks: [d1RelationshipCheck()],
-      })
+      JSON.stringify(
+        passingD1ImportEvidence({
+          evidence_kind: "r2-manifest-validation",
+        })
+      )
     );
 
     const report = runReadiness(root);
@@ -732,7 +774,7 @@ describe("cutover readiness evidence gate", () => {
 
     expect(check).toMatchObject({
       status: "blocked",
-      remediation: "D1 import report must cover required tables: missing projects.",
+      remediation: expect.stringContaining("missing projects"),
     });
   });
 
@@ -742,26 +784,11 @@ describe("cutover readiness evidence gate", () => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
-      JSON.stringify({
-        ok: true,
-        source_counts: "postgres-counts.json",
-        target_counts: "d1-counts.json",
-        summary: {
-          count_tables_matched: 2,
-          count_tables_mismatched: 0,
-          relationship_checks_failed: 0,
-        },
-        count_report: {
-          ok: true,
-          matchedTableCount: 2,
-          mismatchedTableCount: 0,
-          matches: [
-            { table: "workspaces", sourceCount: 1, targetCount: 1 },
-            { table: "projects", sourceCount: 2, targetCount: 2 },
-          ],
-        },
-        relationship_checks: [{ name: "projects.owner_id", ok: true, orphan_count: 0 }],
-      })
+      JSON.stringify(
+        passingD1ImportEvidence({
+          relationship_checks: [{ name: "projects.owner_id", ok: true, orphan_count: 0 }],
+        })
+      )
     );
 
     const report = runReadiness(root);
@@ -769,7 +796,7 @@ describe("cutover readiness evidence gate", () => {
 
     expect(check).toMatchObject({
       status: "blocked",
-      remediation: "D1 import report must cover required relationships: missing projects.workspace_id.",
+      remediation: expect.stringContaining("missing projects.workspace_id"),
     });
   });
 
@@ -779,29 +806,15 @@ describe("cutover readiness evidence gate", () => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
-      JSON.stringify({
-        ok: true,
-        evidence_kind: "d1-import-validation",
-        source_counts: "postgres-counts.json",
-        target_counts: "d1-counts.json",
-        summary: {
-          count_tables_matched: 2,
-          count_tables_mismatched: 0,
-          required_scope_source_rows: 3,
-          required_scope_target_rows: 3,
-          relationship_checks_failed: 0,
-        },
-        count_report: {
-          ok: true,
-          matchedTableCount: 2,
-          mismatchedTableCount: 0,
-          matches: [
-            { table: "workspaces", sourceCount: 1, targetCount: 1 },
-            { table: "projects", sourceCount: 2, targetCount: 2 },
-          ],
-        },
-        relationship_checks: [{ name: "projects.workspace_id", ok: true, orphan_count: 0 }],
-      })
+      JSON.stringify(
+        passingD1ImportEvidence({
+          relationship_checks: d1RelationshipChecks().map((check) =>
+            check.name === "projects.workspace_id"
+              ? { name: "projects.workspace_id", ok: true, orphan_count: 0 }
+              : check
+          ),
+        })
+      )
     );
 
     const report = runReadiness(root);
@@ -819,27 +832,11 @@ describe("cutover readiness evidence gate", () => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
-      JSON.stringify({
-        ok: true,
-        source_counts: "postgres-counts.json",
-        target_counts: "d1-counts.json",
-        summary: {
-          count_tables_matched: 2,
-          count_tables_mismatched: 0,
-          relationship_checks_failed: 0,
-        },
-        validation_errors: ["operator overrode missing relationship checks"],
-        count_report: {
-          ok: true,
-          matchedTableCount: 2,
-          mismatchedTableCount: 0,
-          matches: [
-            { table: "workspaces", sourceCount: 1, targetCount: 1 },
-            { table: "projects", sourceCount: 2, targetCount: 2 },
-          ],
-        },
-        relationship_checks: [d1RelationshipCheck()],
-      })
+      JSON.stringify(
+        passingD1ImportEvidence({
+          validation_errors: ["operator overrode missing relationship checks"],
+        })
+      )
     );
 
     const report = runReadiness(root);
@@ -1443,29 +1440,20 @@ describe("cutover readiness evidence gate", () => {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, "phase-07-d1-import-validation_21-06-26.json"),
-      JSON.stringify({
-        ok: true,
-        evidence_kind: "d1-import-validation",
-        source_counts: "postgres-counts.json",
-        target_counts: "d1-counts.json",
-        summary: {
-          count_tables_matched: 2,
-          count_tables_mismatched: "0",
-          required_scope_source_rows: "3",
-          required_scope_target_rows: "3",
-          relationship_checks_failed: "0",
-        },
-        count_report: {
-          ok: true,
-          matchedTableCount: 2,
-          mismatchedTableCount: 0,
-          matches: [
-            { table: "workspaces", sourceCount: 1, targetCount: 1 },
-            { table: "projects", sourceCount: 2, targetCount: 2 },
-          ],
-        },
-        relationship_checks: [d1RelationshipCheck({ orphan_count: undefined, orphanCount: "0" })],
-      })
+      JSON.stringify(
+        passingD1ImportEvidence({
+          summary: {
+            count_tables_matched: "6",
+            count_tables_mismatched: "0",
+            required_scope_source_rows: "12",
+            required_scope_target_rows: "12",
+            relationship_checks_failed: "0",
+          },
+          relationship_checks: d1RelationshipChecks().map((check, index) =>
+            index === 0 ? Object.assign({}, check, { orphan_count: undefined, orphanCount: "0" }) : check
+          ),
+        })
+      )
     );
     await writeFile(
       path.join(reportDir, "phase-07-r2-manifest-validation_21-06-26.json"),
