@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const wranglerConfig = readFileSync(path.join(repoRoot, "apps", "cloudflare", "wrangler.toml"), "utf8");
+const rootWranglerConfig = readFileSync(path.join(repoRoot, "wrangler.toml"), "utf8");
 
 describe("Wrangler production config", () => {
   it("pins the Cloudflare account for non-interactive deploys", () => {
@@ -31,5 +32,12 @@ describe("Wrangler production config", () => {
     expect(wranglerConfig).toContain("invocation_logs = true");
     expect(wranglerConfig).toContain("[observability.traces]");
     expect(wranglerConfig).toContain("persist = true");
+  });
+});
+
+describe("Root Wrangler config for Workers Builds", () => {
+  it("points assets at a repo-root-relative web client build directory", () => {
+    expect(rootWranglerConfig).toContain('directory = "apps/web/build/client"');
+    expect(rootWranglerConfig).not.toContain('directory = "../web/build/client"');
   });
 });
