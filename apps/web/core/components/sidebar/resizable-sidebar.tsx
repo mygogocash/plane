@@ -146,12 +146,14 @@ export function ResizableSidebar({
     if (!isAnySidebarDropdownOpen && isCollapsed && isHoveringTrigger) {
       handlePeekLeave();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when dropdown state changes
   }, [isAnySidebarDropdownOpen]);
 
   useEffect(() => {
     if (!isAnyExtendedSidebarExpanded && isCollapsed && isHoveringTrigger) {
       handlePeekLeave();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when extended sidebar state changes
   }, [isAnyExtendedSidebarExpanded]);
 
   // Reset peek when sidebar is expanded
@@ -203,67 +205,68 @@ export function ResizableSidebar({
         >
           {children}
 
-          {/* Resize Handle */}
-          <div
-            className={cn(
-              "absolute z-[20] h-full w-1 cursor-ew-resize transition-all duration-200",
-              !isResizing && "hover:bg-surface-2",
-              isResizing && "w-1.5 bg-layer-1",
-              "top-0 right-0"
-            )}
-            // onDoubleClick toggle sidebar
-            onDoubleClick={() => toggleCollapsed()}
-            onMouseDown={(e) => startResizing(e)}
-            role="separator"
-            aria-label="Resize sidebar"
-          />
-        </aside>
-      </div>
-      {/* Peek View */}
-      <div
-        className={cn(
-          "shadow-sm absolute left-0 z-20 h-full bg-surface-1",
-          !isResizing && "transition-all duration-300 ease-in-out",
-          isCollapsed && showPeek ? "translate-x-0 opacity-100" : "translate-x-[-100%] opacity-0",
-          "pointer-events-none",
-          isCollapsed && showPeek && "pointer-events-auto",
-          !showPeek ? "w-0" : "w-full"
-        )}
-        style={{
-          width: `${width}px`,
-        }}
-        onMouseEnter={handlePeekEnter}
-        onMouseLeave={handlePeekLeave}
-        role="complementary"
-        aria-label="Sidebar peek view"
-      >
-        <aside
-          className={cn(
-            "group/sidebar relative z-20 flex h-full w-full flex-col overflow-hidden bg-surface-1 pt-4",
-            "self-center rounded-md rounded-tl-none rounded-bl-none border-r border-subtle",
-            isAnyExtendedSidebarExpanded && "rounded-none"
+          {/* Resize Handle — desktop only; touch devices use the sidebar toggle */}
+          {!isMobile && (
+            <div
+              className={cn(
+                "absolute z-[20] h-full w-1 cursor-ew-resize transition-all duration-200",
+                !isResizing && "hover:bg-surface-2",
+                isResizing && "w-1.5 bg-layer-1",
+                "top-0 right-0"
+              )}
+              onDoubleClick={() => toggleCollapsed()}
+              onMouseDown={(e) => startResizing(e)}
+              role="separator"
+              aria-label="Resize sidebar"
+            />
           )}
-        >
-          {children}
-          {/* Resize Handle */}
-          <div
-            className={cn(
-              "absolute z-[20] h-full w-1 cursor-ew-resize transition-all duration-200",
-              !isResizing && "hover:bg-surface-2",
-              isResizing && "bg-layer-1",
-              "top-0 right-0"
-            )}
-            // onDoubleClick toggle sidebar
-            onDoubleClick={() => toggleCollapsed()}
-            onMouseDown={(e) => startResizing(e)}
-            role="separator"
-            aria-label="Resize sidebar"
-          />
         </aside>
       </div>
+      {/* Peek View — hover affordance for collapsed desktop sidebar only */}
+      {!isMobile && (
+        <div
+          className={cn(
+            "shadow-sm absolute left-0 z-20 h-full bg-surface-1",
+            !isResizing && "transition-all duration-300 ease-in-out",
+            isCollapsed && showPeek ? "translate-x-0 opacity-100" : "translate-x-[-100%] opacity-0",
+            "pointer-events-none",
+            isCollapsed && showPeek && "pointer-events-auto",
+            !showPeek ? "w-0" : "w-full"
+          )}
+          style={{
+            width: `${width}px`,
+          }}
+          onMouseEnter={handlePeekEnter}
+          onMouseLeave={handlePeekLeave}
+          role="complementary"
+          aria-label="Sidebar peek view"
+        >
+          <aside
+            className={cn(
+              "group/sidebar relative z-20 flex h-full w-full flex-col overflow-hidden bg-surface-1 pt-4",
+              "self-center rounded-md rounded-tl-none rounded-bl-none border-r border-subtle",
+              isAnyExtendedSidebarExpanded && "rounded-none"
+            )}
+          >
+            {children}
+            <div
+              className={cn(
+                "absolute z-[20] h-full w-1 cursor-ew-resize transition-all duration-200",
+                !isResizing && "hover:bg-surface-2",
+                isResizing && "bg-layer-1",
+                "top-0 right-0"
+              )}
+              onDoubleClick={() => toggleCollapsed()}
+              onMouseDown={(e) => startResizing(e)}
+              role="separator"
+              aria-label="Resize sidebar"
+            />
+          </aside>
+        </div>
+      )}
 
       {/* Extended Sidebar */}
-      {extendedSidebar && extendedSidebar}
+      {extendedSidebar}
     </>
   );
 }

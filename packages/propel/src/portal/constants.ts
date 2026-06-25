@@ -17,10 +17,12 @@ export enum EPortalPosition {
   CENTER = "center",
 }
 
+const MOBILE_PORTAL_WIDTH = "max-md:w-full max-md:min-w-0 max-md:max-w-none";
+
 export const PORTAL_WIDTH_CLASSES = {
-  [EPortalWidth.QUARTER]: "w-1/4 min-w-80 max-w-96",
-  [EPortalWidth.HALF]: "w-1/2 min-w-96 max-w-2xl",
-  [EPortalWidth.THREE_QUARTER]: "w-3/4 min-w-96 max-w-5xl",
+  [EPortalWidth.QUARTER]: `w-1/4 min-w-80 max-w-96 ${MOBILE_PORTAL_WIDTH}`,
+  [EPortalWidth.HALF]: `w-1/2 min-w-96 max-w-2xl ${MOBILE_PORTAL_WIDTH}`,
+  [EPortalWidth.THREE_QUARTER]: `w-3/4 min-w-96 max-w-5xl ${MOBILE_PORTAL_WIDTH}`,
   [EPortalWidth.FULL]: "w-full",
 } as const;
 
