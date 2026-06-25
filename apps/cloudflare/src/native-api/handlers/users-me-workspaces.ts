@@ -5,14 +5,20 @@
  */
 
 import type { CloudflareBindings } from "../../types";
-import { proxyLegacyApiGetOrFail } from "../legacy-proxy";
+import { getUserWorkspaces, mapWorkspacePayload } from "../db";
+import { isResponse, jsonResponse } from "../http";
+import { isResponse as isBridgeResponse, resolveLegacyAuthenticatedUser } from "../../session-bridge";
 
 export async function handleUsersMeWorkspacesRequest(request: Request, env: CloudflareBindings): Promise<Response> {
-  return proxyLegacyApiGetOrFail(
-    request,
-    env,
-    "/api/users/me/workspaces/",
-    "LEGACY_USERS_ME_WORKSPACES_PROXY_FAILED",
-    "Unable to load workspaces from the legacy session bridge."
-  );
+  const user = await resolveLegacyAuthenticatedUser(request, env);
+  if (isBridgeResponse(user)) {
+    return user;
+  }
+
+  const workspaces = await getUserWorkspaces(env, user.id);
+  if (isResponse(workspaces)) {
+    return workspaces;
+  }
+
+  return jsonResponse(workspaces.map((row) => mapWorkspacePayload(row)));
 }

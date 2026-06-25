@@ -114,7 +114,7 @@ describe("Manut Cloudflare Worker foundation", () => {
         enable_signup: false,
         is_email_password_enabled: true,
         is_google_enabled: false,
-        is_smtp_configured: true,
+        is_smtp_configured: false,
       },
       instance: {
         current_version: "test-version",
@@ -227,7 +227,7 @@ describe("Manut Cloudflare Worker foundation", () => {
     });
   });
 
-  it("returns worker-native legacy proxy failure when WORKER_NATIVE_API_ENABLED is true without LEGACY_GKE_ORIGIN", async () => {
+  it("returns worker-native unauthorized when WORKER_NATIVE_API_ENABLED is true without a session", async () => {
     const response = await app.request(
       "/api/users/me/workspaces/",
       {},
@@ -237,10 +237,10 @@ describe("Manut Cloudflare Worker foundation", () => {
       }
     );
 
-    expect(response.status).toBe(502);
+    expect(response.status).toBe(401);
     expect(response.headers.get("x-manut-edge-route")).toBe("worker-native-api");
     await expect(response.json()).resolves.toMatchObject({
-      error: "LEGACY_USERS_ME_WORKSPACES_PROXY_FAILED",
+      detail: "Authentication credentials were not provided.",
     });
   });
 

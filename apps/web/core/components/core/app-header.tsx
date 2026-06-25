@@ -38,7 +38,7 @@ export const AppHeader = observer(function AppHeader(props: AppHeaderProps) {
       <Row className={cn("flex h-11 w-full items-center gap-2 border-b border-subtle bg-surface-1", rowClassName)}>
         <ExtendedAppHeader header={header} />
         {workspaceSlug ? (
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto hidden items-center md:flex">
             <AIAssistantButton
               workspaceSlug={workspaceSlug}
               isProviderConfigured={config?.has_llm_configured}

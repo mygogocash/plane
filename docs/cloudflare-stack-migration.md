@@ -6,8 +6,9 @@ intentionally non-destructive until the production cutover phase is approved.
 ## Current Production Baseline
 
 - Landing: `https://manut.xyz` is served through Cloudflare Pages.
-- App: `https://app.manut.xyz` still routes to the current GKE/GCP stack.
-- Current app data resources are documented in `docs/gcp-manut-ops-handover.md`.
+- App: `https://app.manut.xyz` is fronted by the Cloudflare Worker `manut-app` (D1/R2/KV/Queues).
+- **GCP/GKE runtime was decommissioned on 2026-06-25.** See `process/features/cloudflare-stack-migration/reports/phase-08-gcp-decommission-executed_25-06-26.md`.
+- Historical GKE/GCP resources are documented in `docs/gcp-manut-ops-handover.md` (archived reference).
 
 ## Target Cloudflare Resources
 
@@ -47,6 +48,7 @@ GitHub secrets:
 - `CLOUDFLARE_API_TOKEN`
 - `BETTERSTACK_API_TOKEN`
 - `MANUT_DIAGNOSTIC_TOKEN` for production diagnostic smoke checks
+- `RESEND_API_KEY` for Worker magic-login email delivery (Resend HTTP API)
 
 The Cloudflare token must be a raw API token, not a Global API Key, not a
 `Bearer ...` string, and not a copied shell command.
@@ -55,6 +57,14 @@ Cloudflare Worker secrets / runtime variables:
 
 - `MANUT_DIAGNOSTIC_TOKEN` must be set on production Workers before exposing
   `/api/cloudflare/d1/*` or `/api/cloudflare/live/*` diagnostics.
+- `RESEND_API_KEY` must be set on production Workers for magic-login email delivery.
+  Use `RESEND_FROM_EMAIL` (Wrangler var, default `Manut <no-reply@gogocash.co>`) for the
+  verified sender domain. Local wiring:
+
+```bash
+RESEND_API_KEY=re_... pnpm --filter @manut/cloudflare resend:wire-production
+```
+
 - `LEGACY_GKE_ORIGIN` must be set outside checked-in Wrangler config only when
   a distinct legacy GKE hostname is available. Do not set it to
   `https://app.manut.xyz`; that becomes a self-referential origin after DNS

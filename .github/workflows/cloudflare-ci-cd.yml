@@ -195,6 +195,16 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: pnpm --filter @manut/cloudflare deploy:preview
 
+      - name: Wire Resend secret (production)
+        if: ${{ inputs.deploy_target == 'production' && secrets.RESEND_API_KEY != '' }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RESEND_API_KEY" | pnpm --filter @manut/cloudflare exec wrangler secret put RESEND_API_KEY --env production
+
       - name: Deploy production Worker
         if: ${{ inputs.deploy_target == 'production' }}
         env:
