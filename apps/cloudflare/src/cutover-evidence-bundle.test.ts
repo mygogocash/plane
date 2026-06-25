@@ -14,6 +14,10 @@ import { describe, expect, it } from "vitest";
 import { REQUIRED_AUTHENTICATED_SMOKE_CHECKS } from "../tools/authenticated-smoke-report.mjs";
 import { REQUIRED_OPERATOR_APPROVAL_CHECKS } from "../tools/operator-approval-report.mjs";
 import { REQUIRED_SEVEN_GREEN_DAYS_CHECKS } from "../tools/seven-green-days-report.mjs";
+import {
+  buildD1ValidationRelationshipChecks,
+  D1_VALIDATION_FIXTURE_COUNTS,
+} from "../tools/d1-import-validation-queries.mjs";
 
 const packageRoot = path.resolve(__dirname, "..");
 
@@ -244,12 +248,12 @@ describe("cutover evidence bundle", () => {
     const approvalInput = path.join(root, "operator-approval-input.json");
     const sevenDaysInput = path.join(root, "seven-green-days-input.json");
 
-    await writeFile(sourceCounts, JSON.stringify({ workspaces: 1, projects: 2 }), "utf8");
-    await writeFile(d1Counts, JSON.stringify({ workspaces: 1, projects: 2 }), "utf8");
+    await writeFile(sourceCounts, JSON.stringify(D1_VALIDATION_FIXTURE_COUNTS), "utf8");
+    await writeFile(d1Counts, JSON.stringify(D1_VALIDATION_FIXTURE_COUNTS), "utf8");
     await writeFile(
       relationships,
       JSON.stringify({
-        checks: [{ name: "projects.workspace_id", source: "projects", target: "workspaces", orphan_count: 0 }],
+        checks: buildD1ValidationRelationshipChecks(),
       }),
       "utf8"
     );

@@ -49,6 +49,7 @@ function CustomSelect(props: ICustomSelectProps) {
 
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "bottom-start",
+    strategy: "fixed",
   });
 
   const openDropdown = useCallback(() => {
@@ -69,6 +70,7 @@ function CustomSelect(props: ICustomSelectProps) {
     <DropdownContext.Provider value={closeDropdown}>
       <Combobox
         as="div"
+        role="group"
         ref={dropdownRef}
         tabIndex={tabIndex}
         value={value}
@@ -115,7 +117,7 @@ function CustomSelect(props: ICustomSelectProps) {
         </>
         {isOpen &&
           createPortal(
-            <Combobox.Options data-prevent-outside-click>
+            <Combobox.Options className="fixed z-30" data-prevent-outside-click>
               <div
                 className={cn(
                   "z-30 my-1 min-w-48 overflow-y-scroll rounded-md border-[0.5px] border-subtle-1 bg-surface-1 px-2 py-2.5 text-11 whitespace-nowrap focus:outline-none",

@@ -1,0 +1,85 @@
+{
+  "template_kind": "operator-approval-input",
+  "schema_version": 2,
+  "generated_at": "2026-06-24T16:35:00.000Z",
+  "instructions": "Operator-approved Phase 7 cutover packet. Better Stack API monitors waived; live endpoint probes remain required.",
+  "approved_by": "Kunanon Jarat <54348660+KunanonJ@users.noreply.github.com>",
+  "approved_at": "2026-06-24T16:35:00.000Z",
+  "target_origin": "https://app.manut.xyz",
+  "maintenance_window": {
+    "start_at": "2026-06-24T19:00:00.000Z",
+    "end_at": "2026-06-24T23:00:00.000Z"
+  },
+  "operator_inputs": {
+    "maintenance_window": {
+      "announcement_url": "process/features/cloudflare-stack-migration/reports/phase-07-cutover-execution-runbook_24-06-26.md",
+      "owner": "Kunanon Jarat"
+    },
+    "rollback_checkpoint": {
+      "rollback_target": "GKE manut-ce / manut-app Helm release (pre-cutover origin)",
+      "rollback_command": "Re-point app.manut.xyz DNS/routing to GKE origin per phase-07-cutover-execution-runbook_24-06-26.md rollback section",
+      "checkpoint_evidence_path": "process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-deploy_21-06-26.json",
+      "owner": "Kunanon Jarat"
+    },
+    "dns_routing": {
+      "change_ticket_url": "phase-07-cutover-execution-runbook_24-06-26.md",
+      "current_origin": "GKE/GCP app runtime (manut-ce)",
+      "cutover_origin": "Cloudflare Workers production (manut-app) + Pages shell at https://app.manut.xyz",
+      "routing_owner": "Kunanon Jarat"
+    },
+    "write_freeze": {
+      "start_at": "2026-06-24T19:00:00.000Z",
+      "end_at": "2026-06-24T23:00:00.000Z",
+      "announcement_url": "process/features/cloudflare-stack-migration/reports/phase-07-cutover-execution-runbook_24-06-26.md",
+      "coordinator": "Kunanon Jarat"
+    },
+    "smoke_readiness": {
+      "public_smoke_command": "pnpm --filter @manut/cloudflare smoke:worker -- https://manut-app.bettergogocash.workers.dev --json --out process/features/cloudflare-stack-migration/reports/phase-07-cloudflare-production-smoke_21-06-26.json",
+      "authenticated_smoke_command": "pnpm --filter @manut/cloudflare auth:smoke-report --input process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke-input_24-06-26.json --out process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json --json",
+      "evidence_path": "process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json",
+      "owner": "Kunanon Jarat"
+    }
+  },
+  "checks": [
+    {
+      "id": "maintenance-window-announced",
+      "ok": true,
+      "evidence": "Maintenance window scheduled 2026-06-25 02:00–06:00 ICT (4h) via phase-07-cutover-execution-runbook",
+      "observed_at": "2026-06-24T16:35:00.000Z",
+      "url": "https://app.manut.xyz",
+      "note": "Low-traffic window selected by operator"
+    },
+    {
+      "id": "rollback-checkpoint-confirmed",
+      "ok": true,
+      "evidence": "GKE rollback path documented; production deploy evidence captured",
+      "observed_at": "2026-06-24T16:35:00.000Z",
+      "url": "https://app.manut.xyz",
+      "note": "Rollback remains available until Phase 8"
+    },
+    {
+      "id": "dns-change-approved",
+      "ok": true,
+      "evidence": "DNS/routing switch to Cloudflare approved after hard gates pass",
+      "observed_at": "2026-06-24T16:35:00.000Z",
+      "url": "https://app.manut.xyz",
+      "note": "Execute only after D1 validation + authenticated smoke"
+    },
+    {
+      "id": "write-freeze-confirmed",
+      "ok": true,
+      "evidence": "Write freeze aligned with maintenance window for final D1 delta import",
+      "observed_at": "2026-06-24T16:35:00.000Z",
+      "url": "https://app.manut.xyz",
+      "note": "Freeze GKE writes during delta import"
+    },
+    {
+      "id": "smoke-plan-ready",
+      "ok": true,
+      "evidence": "Public Worker smoke + authenticated smoke runbooks ready",
+      "observed_at": "2026-06-24T16:35:00.000Z",
+      "url": "https://app.manut.xyz",
+      "note": "Better Stack API monitors waived; endpoint probes required"
+    }
+  ]
+}

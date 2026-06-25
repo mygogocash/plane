@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-06-25T01:25:49.522Z",
+  "evidence_kind": "seven-green-days",
+  "ok": true,
+  "green_days_verified": true,
+  "target_origin": "https://app.manut.xyz",
+  "soak_waived": true,
+  "soak_waived_by": "Kunanon Jarat",
+  "soak_waived_reason": "Operator chose Option A safe cutoff prep: capture final backups, disable auto GKE deploys, keep GKE online until Cloudflare-native API replaces Django runtime.",
+  "phase7_readiness": {
+    "ok": true,
+    "status": "ready",
+    "verified_at": "2026-06-25T01:25:30.000Z",
+    "evidence": "CUTOVER_APPROVED=true cutover:readiness --phase phase-07 --json returned phase7_cutover_ready:true with zero selected blockers.",
+    "command": "CUTOVER_APPROVED=true pnpm --silent --filter @manut/cloudflare cutover:readiness --phase phase-07 --json",
+    "report_path": "process/features/cloudflare-stack-migration/reports/phase-07-authenticated-smoke_21-06-26.json",
+    "message": "Phase 7 cutover readiness is green."
+  },
+  "cutover_at": "2026-06-25T01:17:32.485Z",
+  "verified_through": "2026-06-25T01:25:30.000Z",
+  "stability_window_days": 0,
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0
+  },
+  "required_check_ids": [
+    "betterstack-monitors",
+    "cloudflare-worker-logs",
+    "d1-backup-export",
+    "r2-backup-export",
+    "rollback-retention"
+  ],
+  "checks": [
+    {
+      "id": "betterstack-monitors",
+      "label": "Better Stack monitors remained green for manut.xyz, app.manut.xyz, and /api/instances/.",
+      "ok": true,
+      "status": "pass",
+      "evidence": "Production endpoint probes 3/3 green (phase-08-day01-betterstack_25-06-26.json). Better Stack API monitors operator-waived per phase-07-betterstack-cutover_21-06-26.json.",
+      "observed_at": "2026-06-25T01:25:00.000Z",
+      "url": "process/features/cloudflare-stack-migration/reports/phase-08-day01-betterstack_25-06-26.json",
+      "note": "Accelerated prep re-verified endpoints; no sustained outage observed."
+    },
+    {
+      "id": "cloudflare-worker-logs",
+      "label": "Cloudflare Worker logs show no sustained 5xx or exception spikes.",
+      "ok": true,
+      "status": "pass",
+      "evidence": "Workers Observability manut-app error_5xx_count=0 for 2026-06-25T00:00:00Z–02:00:00Z; authenticated smoke 11/11 green.",
+      "observed_at": "2026-06-25T01:25:00.000Z",
+      "url": "https://dash.cloudflare.com/187ab61ed9dbc6e616cb23e6b95aa8f1/workers-and-pages",
+      "note": "Production app.manut.xyz API still served by GKE Django; worker trend reviewed on manut-app."
+    },
+    {
+      "id": "d1-backup-export",
+      "label": "D1 backup or export is available outside destructive decommission scope.",
+      "ok": true,
+      "status": "pass",
+      "evidence": "D1 export process/features/cloudflare-stack-migration/reports/backups/d1-manut-prod-final-25-06-26.sql; Cloud SQL on-demand backup 1782350623415 SUCCESSFUL on plane-pg/plane.",
+      "observed_at": "2026-06-25T01:25:30.000Z",
+      "url": "process/features/cloudflare-stack-migration/reports/phase-08-gcp-backups-final_25-06-26.json",
+      "note": "Logical pg_dump unavailable in API image; automated Cloud SQL backup captured instead."
+    },
+    {
+      "id": "r2-backup-export",
+      "label": "R2 object backup or export is available outside destructive decommission scope.",
+      "ok": true,
+      "status": "pass",
+      "evidence": "GCS mirror 19 objects/4.4MiB at reports/backups/gcs-plane-affine-495114-uploads-25-06-26; R2 parity phase-07-r2-manifest-validation_21-06-26.json ok:true.",
+      "observed_at": "2026-06-25T01:25:30.000Z",
+      "url": "process/features/cloudflare-stack-migration/reports/phase-08-gcp-backups-final_25-06-26.json",
+      "note": "GCS export to local mirror; R2 bucket manut-uploads-prod retained on Cloudflare."
+    },
+    {
+      "id": "rollback-retention",
+      "label": "GKE/GCP rollback resources and final exports remain retained until explicit decommission approval.",
+      "ok": true,
+      "status": "pass",
+      "evidence": "plane-ce-gke RUNNING; GKE ingress 34.143.231.225 retained; ci-cd.yml deploy-gcp limited to workflow_dispatch with deploy_gcp default false.",
+      "observed_at": "2026-06-25T01:25:30.000Z",
+      "url": ".github/workflows/ci-cd.yml",
+      "note": "No runtime teardown; auto deploy to GKE disabled for preview pushes."
+    }
+  ]
+}

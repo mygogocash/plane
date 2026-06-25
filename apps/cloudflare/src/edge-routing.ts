@@ -155,14 +155,17 @@ function hasRequestBody(method: string): boolean {
 export function buildLegacyProxyRequest(
   request: Request,
   legacyOrigin: string,
-  contract?: LegacyRouteContract
+  contract?: LegacyRouteContract,
+  appOrigin = "https://app.manut.xyz"
 ): Request {
   const requestUrl = new URL(request.url);
   const targetUrl = buildLegacyUrl(requestUrl, legacyOrigin);
   const headers = new Headers(request.headers);
+  const appHost = new URL(appOrigin).host;
 
   headers.delete("host");
-  headers.set("x-forwarded-host", requestUrl.host);
+  headers.set("host", appHost);
+  headers.set("x-forwarded-host", appHost);
   headers.set("x-forwarded-proto", requestUrl.protocol.replace(":", ""));
   headers.set("x-manut-edge-route", "legacy-gke");
   if (contract) {
@@ -216,6 +219,53 @@ function legacyOriginResponse(error: string, message: string, contract?: LegacyR
   );
 }
 
+function legacyResolveOverride(env: CloudflareBindings): string | null {
+  const value = env.LEGACY_GKE_RESOLVE_OVERRIDE?.trim();
+  return value || null;
+}
+
+export function legacyFetchInit(env: CloudflareBindings): RequestInit | undefined {
+  const resolveOverride = legacyResolveOverride(env);
+  if (!resolveOverride) {
+    return undefined;
+  }
+
+  return {
+    cf: {
+      resolveOverride,
+    },
+  };
+}
+
+export async function fetchLegacyOrigin(
+  request: Request,
+  env: CloudflareBindings,
+  contract?: LegacyRouteContract
+): Promise<Response> {
+  const legacyOrigin = env.LEGACY_GKE_ORIGIN?.trim();
+
+  if (!legacyOrigin) {
+    throw new Error("LEGACY_GKE_ORIGIN_NOT_CONFIGURED");
+  }
+
+  const requestUrl = new URL(request.url);
+  const legacyUrl = new URL(legacyOrigin);
+  const resolveOverride = legacyResolveOverride(env);
+
+  if (legacyUrl.origin === requestUrl.origin && !resolveOverride) {
+    throw new Error("LEGACY_GKE_ORIGIN_MATCHES_WORKER_ORIGIN");
+  }
+
+  const proxyRequest = buildLegacyProxyRequest(
+    request,
+    legacyOrigin,
+    contract,
+    env.APP_ORIGIN ?? "https://app.manut.xyz"
+  );
+
+  return fetch(proxyRequest, legacyFetchInit(env));
+}
+
 export async function proxyToLegacyOrigin(
   request: Request,
   env: CloudflareBindings,
@@ -232,10 +282,10 @@ export async function proxyToLegacyOrigin(
   }
 
   try {
-    const requestUrl = new URL(request.url);
-    const legacyUrl = new URL(legacyOrigin);
-
-    if (legacyUrl.origin === requestUrl.origin) {
+    const response = await fetchLegacyOrigin(request, env, contract);
+    return withLegacyProxyHeaders(response, contract);
+  } catch (error) {
+    if (error instanceof Error && error.message === "LEGACY_GKE_ORIGIN_MATCHES_WORKER_ORIGIN") {
       return legacyOriginResponse(
         "LEGACY_GKE_ORIGIN_MATCHES_WORKER_ORIGIN",
         "Refusing to proxy to the same origin as the Worker request.",
@@ -243,9 +293,6 @@ export async function proxyToLegacyOrigin(
       );
     }
 
-    const response = await fetch(buildLegacyProxyRequest(request, legacyOrigin, contract));
-    return withLegacyProxyHeaders(response, contract);
-  } catch (error) {
     console.error("LEGACY_GKE_PROXY_FAILED", error);
     return legacyOriginResponse(
       "LEGACY_GKE_PROXY_FAILED",

@@ -1,0 +1,69 @@
+{
+  "ok": true,
+  "evidence_kind": "worker-native-slice5-routing-cutover",
+  "schema_version": 1,
+  "generated_at": "2026-06-25T01:46:03.362Z",
+  "plan": "process/features/cloudflare-stack-migration/active/worker-native-api-migration_PLAN_25-06-26.md",
+  "production": {
+    "worker": "manut-app",
+    "worker_version_id": "63d03532-d1f2-4c8b-a81b-871941ae1321",
+    "route": "app.manut.xyz/*",
+    "zone": "manut.xyz",
+    "worker_native_api_enabled": true,
+    "legacy_gke_origin": "https://app.manut.xyz",
+    "legacy_gke_resolve_override": "34.143.231.225"
+  },
+  "fixes_applied": [
+    "LEGACY_GKE_RESOLVE_OVERRIDE routes legacy proxy to GKE LB IP while Host stays app.manut.xyz",
+    "LEGACY_GKE_ORIGIN secret set to https://app.manut.xyz",
+    "fetchLegacyOrigin() uses cf.resolveOverride in edge-routing.ts and session-bridge.ts"
+  ],
+  "smoke": {
+    "command": "pnpm --filter @manut/cloudflare smoke:worker -- https://app.manut.xyz --json",
+    "base_url": "https://app.manut.xyz/",
+    "ok": false,
+    "summary": { "total": 7, "passed": 6, "failed": 1 },
+    "blocking_failures": [],
+    "non_blocking_failures": [
+      {
+        "id": "d1-workspaces-shadow",
+        "reason": "MANUT_DIAGNOSTIC_TOKEN not set in operator shell; production diagnostics require x-manut-diagnostic-token",
+        "status": 403,
+        "error": "MANUT_DIAGNOSTIC_ACCESS_DENIED"
+      }
+    ],
+    "critical_checks_passed": [
+      "healthz",
+      "instances",
+      "migration-status",
+      "route-map",
+      "legacy-api-proxy",
+      "legacy-uploads-proxy"
+    ]
+  },
+  "manual_verification": [
+    {
+      "url": "https://app.manut.xyz/api/workspaces/",
+      "status": 401,
+      "x_manut_edge_route": "legacy-gke",
+      "django_allow_header": true,
+      "note": "Legacy proxy restored (was 403 error code 1003 before resolve-override redeploy)"
+    },
+    {
+      "url": "https://app.manut.xyz/api/instances/",
+      "status": 200,
+      "app_base_url": "https://app.manut.xyz",
+      "note": "Worker-native D1 instances response"
+    }
+  ],
+  "tests": {
+    "command": "pnpm --filter @manut/cloudflare test -- --run",
+    "passed": 262,
+    "failed": 0
+  },
+  "remaining_operator_steps": [
+    "Run authenticated smoke on app.manut.xyz (auth:smoke-report with logged-in session)",
+    "Re-run smoke:worker with MANUT_DIAGNOSTIC_TOKEN exported for d1-workspaces-shadow",
+    "Phase 8 GCP teardown only after authenticated smoke passes"
+  ]
+}

@@ -24,6 +24,10 @@ Environment:
   BETTERSTACK_APP_MONITOR_NAME
   BETTERSTACK_API_MONITOR_NAME
 
+Flags:
+  --waive-monitors            Pass when live endpoint probes are green; skip Better Stack API monitors (operator waiver)
+  --waived-by <name>          Required with --waive-monitors; records who approved the waiver
+
 Exit codes:
   0  Better Stack monitors are up and live endpoint probes pass
   1  evidence was captured but one or more gates failed, unless --soft-fail is set
@@ -37,6 +41,8 @@ function parseArgs(argv) {
     outPath: null,
     requireEndpointProbes: false,
     softFail: false,
+    waiveMonitors: false,
+    waivedBy: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -66,6 +72,21 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === "--waive-monitors") {
+      options.waiveMonitors = true;
+      continue;
+    }
+
+    if (arg === "--waived-by") {
+      const waivedBy = argv[index + 1];
+      if (!waivedBy) {
+        throw new Error("--waived-by requires a value");
+      }
+      options.waivedBy = waivedBy;
+      index += 1;
+      continue;
+    }
+
     if (arg === "--out") {
       const outPath = argv[index + 1];
       if (!outPath) {
@@ -90,6 +111,12 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+function assertWaiveOptions(options) {
+  if (options.waiveMonitors && (!options.waivedBy || options.waivedBy.trim() === "")) {
+    throw new Error("--waive-monitors requires --waived-by <operator name>.");
+  }
 }
 
 function trimTrailingSlash(value) {
@@ -459,17 +486,24 @@ export function buildCutoverReport({
   monitorReport,
   monitorSource = "betterstack-api",
   monitorStatePath = null,
+  monitorsWaived = false,
+  monitorsWaivedBy = null,
+  monitorsWaivedReason = null,
 }) {
   const failedEndpointChecks = endpointChecks.filter((check) => !check.ok);
+  const monitorsOk = monitorsWaived ? true : monitorReport.ok;
 
   return {
     generated_at: new Date().toISOString(),
     evidence_kind: "betterstack-cutover",
-    ok: monitorReport.ok && failedEndpointChecks.length === 0,
+    ok: monitorsOk && failedEndpointChecks.length === 0,
     api_base: apiBase,
     betterstack_api_error: betterStackApiError,
-    monitor_source: monitorSource,
+    monitor_source: monitorsWaived ? "operator-waived" : monitorSource,
     monitor_state_path: monitorStatePath,
+    monitors_waived: monitorsWaived,
+    monitors_waived_by: monitorsWaivedBy,
+    monitors_waived_reason: monitorsWaivedReason,
     endpoint_probes_required: true,
     monitor_summary: monitorReport.summary,
     endpoint_summary: {
@@ -500,6 +534,7 @@ async function main() {
 
   try {
     options = parseArgs(process.argv.slice(2));
+    assertWaiveOptions(options);
   } catch (error) {
     console.error(`Better Stack cutover report failed: ${error.message}`);
     console.error("");
@@ -555,6 +590,11 @@ async function main() {
     monitorReport,
     monitorSource,
     monitorStatePath: monitorSource === "monitor-state-file" ? monitorStatePath : null,
+    monitorsWaived: options.waiveMonitors,
+    monitorsWaivedBy: options.waivedBy,
+    monitorsWaivedReason: options.waiveMonitors
+      ? "Operator waived Better Stack API monitor checks; live endpoint probes remain required for Phase 7 cutover."
+      : null,
   });
 
   if (options.outPath) {

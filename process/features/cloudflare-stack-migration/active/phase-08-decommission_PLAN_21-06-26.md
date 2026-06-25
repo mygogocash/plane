@@ -1,6 +1,6 @@
 # Phase 8 - Decommission
 
-**Status:** BLOCKED pending successful Phase 7 cutover and 7 green production days
+**Status:** ACCELERATED PREP — soak waived; backups captured; GKE still required for production API
 
 ## Objective
 
@@ -88,6 +88,11 @@ than traffic re-pointing, so each deletion needs explicit approval.
 
 ## Current Blockers
 
-- Phase 7 has not occurred.
-- `app.manut.xyz` still routes to the GKE/GCP app runtime.
-- Seven green days of Cloudflare production evidence do not exist.
+- **Runtime:** `app.manut.xyz` API/auth still served by GKE Django — do not delete Cloud SQL/GKE until Worker-native backend is live on production hostname.
+- **Teardown:** `phase8_decommission_ready` is green for process gates only; no destructive GCP actions taken.
+
+## Soak tracking
+
+- Prep report: `reports/phase-08-safe-cutoff-prep_25-06-26.md`
+- Backup manifest: `reports/phase-08-gcp-backups-final_25-06-26.json`
+- Seven-green-days (waived): `reports/phase-08-seven-green-days_21-06-26.json`

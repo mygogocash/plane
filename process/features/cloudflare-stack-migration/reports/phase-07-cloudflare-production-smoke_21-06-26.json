@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-21T11:37:03.869Z",
+  "generated_at": "2026-06-24T16:39:01.050Z",
   "evidence_kind": "worker-smoke",
   "base_url": "https://manut-app.bettergogocash.workers.dev/",
   "ok": true,
@@ -14,9 +14,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/healthz",
       "status": 200,
-      "duration_ms": 157,
+      "duration_ms": 155,
       "content_type": "application/json",
-      "cf_ray": "a0f2b813dc13ce76-SIN",
+      "cf_ray": "a10d2a85eceb7a82-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -38,9 +38,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/instances/",
       "status": 200,
-      "duration_ms": 674,
+      "duration_ms": 401,
       "content_type": "application/json",
-      "cf_ray": "a0f2b813dc65ff7d-SIN",
+      "cf_ray": "a10d2a860880a069-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -62,9 +62,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/migration-status",
       "status": 200,
-      "duration_ms": 139,
+      "duration_ms": 159,
       "content_type": "application/json",
-      "cf_ray": "a0f2b813ddc3d8e3-SIN",
+      "cf_ray": "a10d2a85faf2fd2b-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -88,7 +88,7 @@
       "status": 200,
       "duration_ms": 139,
       "content_type": "application/json",
-      "cf_ray": "a0f2b813db3e5fab-SIN",
+      "cf_ray": "a10d2a85ebc0fdbe-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -110,9 +110,9 @@
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/cloudflare/d1/workspaces",
       "status": 200,
-      "duration_ms": 570,
+      "duration_ms": 233,
       "content_type": "application/json",
-      "cf_ray": "a0f2b813df3dab47-SIN",
+      "cf_ray": "a10d2a85ea235f7e-SIN",
       "edge_route": null,
       "edge_contract": null,
       "assertions": [
@@ -133,10 +133,10 @@
       "id": "legacy-api-proxy",
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/api/workspaces/",
-      "status": 401,
-      "duration_ms": 287,
-      "content_type": "application/json",
-      "cf_ray": "a0f2b813deab3dc5-SIN",
+      "status": 403,
+      "duration_ms": 174,
+      "content_type": "text/plain; charset=UTF-8",
+      "cf_ray": "a10d2a85f98b4104-SIN",
       "edge_route": "legacy-gke",
       "edge_contract": "api",
       "assertions": [
@@ -144,23 +144,23 @@
           "ok": true,
           "name": "status",
           "expected": [401, 403],
-          "actual": 401
+          "actual": 403
         },
         {
           "ok": true,
           "name": "headers-contract"
         }
       ],
-      "body_sample": "{\"detail\":\"Authentication credentials were not provided.\"}"
+      "body_sample": "error code: 1003\n"
     },
     {
       "id": "legacy-uploads-proxy",
       "ok": true,
       "url": "https://manut-app.bettergogocash.workers.dev/uploads",
       "status": 403,
-      "duration_ms": 234,
-      "content_type": "application/xml; charset=UTF-8",
-      "cf_ray": "a0f2b813dcef3f4b-SIN",
+      "duration_ms": 177,
+      "content_type": "text/plain; charset=UTF-8",
+      "cf_ray": "a10d2a860b9c797f-SIN",
       "edge_route": "legacy-gke",
       "edge_contract": "uploads",
       "assertions": [
@@ -175,7 +175,7 @@
           "name": "headers-contract"
         }
       ],
-      "body_sample": "<?xml version='1.0' encoding='UTF-8'?><Error><Code>AccessDenied</Code><Message>Access denied.</Message><Details>Anonymous caller does not have storage.objects.g"
+      "body_sample": "error code: 1003\n"
     }
   ]
 }

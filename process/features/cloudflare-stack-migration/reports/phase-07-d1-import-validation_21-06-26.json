@@ -1,0 +1,69 @@
+{
+  "generated_at": "2026-06-24T23:55:10.941Z",
+  "evidence_kind": "d1-import-validation",
+  "required_scope": {
+    "count_tables": ["workspaces", "projects"],
+    "relationships": ["projects.workspace_id"]
+  },
+  "ok": true,
+  "source_counts": "/Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-postgres-source-counts-canonical_24-06-26.json",
+  "target_counts": "/Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-d1-target-counts_24-06-26.json",
+  "relationship_checks_source": "/Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-d1-target-relationships_24-06-26.json",
+  "summary": {
+    "count_tables_matched": 2,
+    "count_tables_mismatched": 0,
+    "required_scope_source_rows": 13,
+    "required_scope_target_rows": 13,
+    "relationship_checks_total": 1,
+    "relationship_checks_failed": 0
+  },
+  "operator_runbook": {
+    "readiness_blocker_id": "d1-import-validation",
+    "canonical_report": "process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json",
+    "runbook": "process/features/cloudflare-stack-migration/references/phase-07-d1-import-validation-runbook_24-06-26.md",
+    "production_action_gate": "These tools only normalize and validate evidence. Run the production D1 import only after explicit operator approval.",
+    "required_inputs": {
+      "postgres_source_counts": "/Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-postgres-source-counts-canonical_24-06-26.json",
+      "d1_target_counts": "/Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-d1-target-counts_24-06-26.json",
+      "d1_relationship_checks": "/Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-d1-target-relationships_24-06-26.json"
+    },
+    "commands": {
+      "target_evidence": "pnpm --filter @manut/cloudflare d1:target-evidence -- --json --out <d1-target-snapshot.json> --counts-out <d1-target-counts.json> --relationships-out <d1-target-relationships.json>",
+      "validate_import": "pnpm --filter @manut/cloudflare d1:validate-import -- /Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-postgres-source-counts-canonical_24-06-26.json /Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-d1-target-counts_24-06-26.json --relationships /Users/kunanonjarat/Developer/mygogocash-plane/process/features/cloudflare-stack-migration/reports/phase-07-d1-target-relationships_24-06-26.json --out process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json --json",
+      "readiness": "pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json"
+    }
+  },
+  "operator_next_steps": [
+    "Write or keep the canonical D1 import validation report at process/features/cloudflare-stack-migration/reports/phase-07-d1-import-validation_21-06-26.json.",
+    "Re-run the cutover readiness command and confirm the d1-import-validation blocker changes to pass."
+  ],
+  "validation_errors": [],
+  "count_report": {
+    "ok": true,
+    "matchedTableCount": 2,
+    "mismatchedTableCount": 0,
+    "matches": [
+      {
+        "table": "projects",
+        "sourceCount": 10,
+        "targetCount": 10
+      },
+      {
+        "table": "workspaces",
+        "sourceCount": 3,
+        "targetCount": 3
+      }
+    ],
+    "mismatches": []
+  },
+  "relationship_checks": [
+    {
+      "name": "projects.workspace_id",
+      "ok": true,
+      "source": "projects",
+      "target": "workspaces",
+      "orphan_count": 0,
+      "details": null
+    }
+  ]
+}

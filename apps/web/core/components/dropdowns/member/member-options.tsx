@@ -64,6 +64,7 @@ export const MemberOptions = observer(function MemberOptions(props: Props) {
   // popper-js init
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "bottom-start",
+    strategy: "fixed",
     modifiers: [
       {
         name: "preventOverflow",
@@ -77,11 +78,11 @@ export const MemberOptions = observer(function MemberOptions(props: Props) {
   useEffect(() => {
     if (isOpen) {
       onDropdownOpen?.();
-      if (!isMobile) {
-        inputRef.current && inputRef.current.focus();
+      if (!isMobile && inputRef.current) {
+        inputRef.current.focus();
       }
     }
-  }, [isOpen, isMobile]);
+  }, [isOpen, isMobile, onDropdownOpen]);
 
   const searchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (query !== "" && e.key === "Escape") {
@@ -126,7 +127,7 @@ export const MemberOptions = observer(function MemberOptions(props: Props) {
   );
 
   return createPortal(
-    <Combobox.Options data-prevent-outside-click static>
+    <Combobox.Options className="fixed z-30" data-prevent-outside-click static>
       <div
         className={cn(
           "z-30 my-1 w-48 rounded-sm border-[0.5px] border-strong bg-surface-1 px-2 py-2.5 text-11 shadow-raised-200 focus:outline-none",

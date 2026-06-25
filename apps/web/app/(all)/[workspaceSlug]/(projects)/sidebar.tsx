@@ -14,6 +14,7 @@ import { SidebarFavoritesMenu } from "@/components/workspace/sidebar/favorites/f
 import { SidebarProjectsList } from "@/components/workspace/sidebar/projects-list";
 import { SidebarQuickActions } from "@/components/workspace/sidebar/quick-actions";
 import { SidebarMenuItems } from "@/components/workspace/sidebar/sidebar-menu-items";
+import { WorkspaceCopilotPanel } from "@/components/workspace/sidebar/workspace-copilot-panel";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -34,14 +35,17 @@ export const AppSidebar = observer(function AppSidebar() {
   const isFavoriteEmpty = isEmpty(groupedFavorites);
 
   return (
-    <SidebarWrapper title="Projects" quickActions={<SidebarQuickActions />}>
-      <SidebarMenuItems />
-      {/* Favorites Menu */}
-      {canPerformWorkspaceMemberActions && !isFavoriteEmpty && <SidebarFavoritesMenu />}
-      {/* Teams List */}
-      <SidebarTeamsList />
-      {/* Projects List */}
-      <SidebarProjectsList />
-    </SidebarWrapper>
+    <>
+      <SidebarWrapper title="Projects" quickActions={<SidebarQuickActions />}>
+        <SidebarMenuItems />
+        {/* Favorites Menu */}
+        {canPerformWorkspaceMemberActions && !isFavoriteEmpty && <SidebarFavoritesMenu />}
+        {/* Teams List */}
+        <SidebarTeamsList />
+        {/* Projects List */}
+        <SidebarProjectsList />
+      </SidebarWrapper>
+      <WorkspaceCopilotPanel />
+    </>
   );
 });

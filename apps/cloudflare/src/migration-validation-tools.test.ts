@@ -11,8 +11,24 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  buildD1ValidationRelationshipChecks,
+  D1_VALIDATION_FIXTURE_COUNTS,
+} from "../tools/d1-import-validation-queries.mjs";
+
 const packageRoot = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(packageRoot, "..", "..");
+
+function fixtureTargetCounts(overrides = {}) {
+  return Object.entries({ ...D1_VALIDATION_FIXTURE_COUNTS, ...overrides }).map(([table, count]) => ({
+    table,
+    count,
+  }));
+}
+
+function fixtureSourceCounts(overrides = {}) {
+  return { counts: { ...D1_VALIDATION_FIXTURE_COUNTS, ...overrides } };
+}
 
 function runTool(args: string[]) {
   try {
@@ -35,13 +51,11 @@ function runTool(args: string[]) {
 }
 
 function d1RelationshipCheck(overrides: Record<string, unknown> = {}) {
-  return {
-    name: "projects.workspace_id",
-    source: "projects",
-    target: "workspaces",
-    orphan_count: 0,
-    ...overrides,
-  };
+  return buildD1ValidationRelationshipChecks(overrides)[0];
+}
+
+function d1RelationshipChecks(overrides: Record<string, unknown> = {}) {
+  return buildD1ValidationRelationshipChecks(overrides);
 }
 
 describe("migration validation tools", () => {
@@ -52,15 +66,9 @@ describe("migration validation tools", () => {
     const relationshipsPath = path.join(root, "relationships.json");
     const outPath = path.join(root, "report.json");
 
-    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1, projects: 2 } }));
-    await writeFile(
-      targetPath,
-      JSON.stringify([
-        { table: "workspaces", count: 1 },
-        { table: "projects", count: 2 },
-      ])
-    );
-    await writeFile(relationshipsPath, JSON.stringify({ checks: [d1RelationshipCheck()] }));
+    await writeFile(sourcePath, JSON.stringify(fixtureSourceCounts()));
+    await writeFile(targetPath, JSON.stringify(fixtureTargetCounts()));
+    await writeFile(relationshipsPath, JSON.stringify({ checks: d1RelationshipChecks() }));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -79,7 +87,7 @@ describe("migration validation tools", () => {
     expect(stdoutReport).toMatchObject({
       ok: true,
       summary: {
-        count_tables_matched: 2,
+        count_tables_matched: 6,
         count_tables_mismatched: 0,
         relationship_checks_failed: 0,
       },
@@ -99,9 +107,9 @@ describe("migration validation tools", () => {
     const d1Counts = path.join(tmpDir, "d1-counts.json");
     const relationships = path.join(tmpDir, "relationships.json");
 
-    await writeFile(sourceCounts, JSON.stringify({ counts: { workspaces: 1, projects: 2 } }), "utf8");
+    await writeFile(sourceCounts, JSON.stringify(fixtureSourceCounts()), "utf8");
     await writeFile(d1Counts, JSON.stringify({ counts: { workspaces: 0, projects: 0 } }), "utf8");
-    await writeFile(relationships, JSON.stringify([d1RelationshipCheck()]), "utf8");
+    await writeFile(relationships, JSON.stringify(d1RelationshipChecks()), "utf8");
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -117,7 +125,7 @@ describe("migration validation tools", () => {
     expect(report).toMatchObject({
       ok: false,
       summary: {
-        required_scope_source_rows: 3,
+        required_scope_source_rows: 15,
         required_scope_target_rows: 0,
       },
     });
@@ -132,14 +140,8 @@ describe("migration validation tools", () => {
     const targetPath = path.join(root, "d1-counts.json");
     const outPath = path.join(root, "report.json");
 
-    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1, projects: 2 } }));
-    await writeFile(
-      targetPath,
-      JSON.stringify([
-        { table: "workspaces", count: 1 },
-        { table: "projects", count: 2 },
-      ])
-    );
+    await writeFile(sourcePath, JSON.stringify(fixtureSourceCounts()));
+    await writeFile(targetPath, JSON.stringify(fixtureTargetCounts()));
 
     const result = runTool(["tools/validate-d1-import.mjs", sourcePath, targetPath, "--json", "--out", outPath]);
     const stdoutReport = JSON.parse(result.stdout);
@@ -164,7 +166,7 @@ describe("migration validation tools", () => {
 
     await writeFile(sourcePath, JSON.stringify({ counts: {} }));
     await writeFile(targetPath, JSON.stringify([]));
-    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
+    await writeFile(relationshipsPath, JSON.stringify(d1RelationshipChecks()));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -200,6 +202,10 @@ describe("migration validation tools", () => {
       JSON.stringify([
         { table_name: "workspaces", count: 0 },
         { table_name: "projects", count: 0 },
+        { table_name: "users", count: 0 },
+        { table_name: "profiles", count: 0 },
+        { table_name: "workspace_members", count: 0 },
+        { table_name: "issues", count: 0 },
       ])
     );
     await writeFile(
@@ -207,9 +213,13 @@ describe("migration validation tools", () => {
       JSON.stringify([
         { table_name: "workspaces", count: 0 },
         { table_name: "projects", count: 0 },
+        { table_name: "users", count: 0 },
+        { table_name: "profiles", count: 0 },
+        { table_name: "workspace_members", count: 0 },
+        { table_name: "issues", count: 0 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
+    await writeFile(relationshipsPath, JSON.stringify(d1RelationshipChecks()));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -245,15 +255,9 @@ describe("migration validation tools", () => {
 
     await rm(path.dirname(repoOutPath), { recursive: true, force: true });
     await rm(path.dirname(packageOutPath), { recursive: true, force: true });
-    await writeFile(sourcePath, JSON.stringify({ counts: { workspaces: 1, projects: 2 } }));
-    await writeFile(
-      targetPath,
-      JSON.stringify([
-        { table: "workspaces", count: 1 },
-        { table: "projects", count: 2 },
-      ])
-    );
-    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
+    await writeFile(sourcePath, JSON.stringify(fixtureSourceCounts()));
+    await writeFile(targetPath, JSON.stringify(fixtureTargetCounts()));
+    await writeFile(relationshipsPath, JSON.stringify(d1RelationshipChecks()));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -283,10 +287,7 @@ describe("migration validation tools", () => {
     await writeFile(
       sourcePath,
       JSON.stringify({
-        results: [
-          { table: "workspaces", count: 1 },
-          { table: "projects", count: 2 },
-        ],
+        results: fixtureTargetCounts(),
       })
     );
     await writeFile(
@@ -294,10 +295,7 @@ describe("migration validation tools", () => {
       JSON.stringify([
         {
           success: true,
-          results: [
-            { table: "workspaces", count: 1 },
-            { table: "projects", count: 2 },
-          ],
+          results: fixtureTargetCounts(),
         },
       ])
     );
@@ -306,7 +304,7 @@ describe("migration validation tools", () => {
       JSON.stringify([
         {
           success: true,
-          results: [{ name: "projects.workspace_id", source: "projects", target: "workspaces", orphan_count: 0 }],
+          results: d1RelationshipChecks(),
         },
       ])
     );
@@ -325,8 +323,8 @@ describe("migration validation tools", () => {
     expect(report).toMatchObject({
       ok: true,
       summary: {
-        count_tables_matched: 2,
-        relationship_checks_total: 1,
+        count_tables_matched: 6,
+        relationship_checks_total: 6,
       },
     });
   });
@@ -339,19 +337,13 @@ describe("migration validation tools", () => {
 
     await writeFile(
       sourcePath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(
       targetPath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
-    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
+    await writeFile(relationshipsPath, JSON.stringify(d1RelationshipChecks()));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -367,7 +359,7 @@ describe("migration validation tools", () => {
     expect(report).toMatchObject({
       ok: true,
       summary: {
-        count_tables_matched: 2,
+        count_tables_matched: 6,
       },
     });
   });
@@ -398,7 +390,7 @@ describe("migration validation tools", () => {
         { table_name: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
+    await writeFile(relationshipsPath, JSON.stringify(d1RelationshipChecks()));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -437,7 +429,7 @@ describe("migration validation tools", () => {
         { table_name: "projects", count: 2 },
       ])
     );
-    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
+    await writeFile(relationshipsPath, JSON.stringify(d1RelationshipChecks()));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -460,17 +452,11 @@ describe("migration validation tools", () => {
 
     await writeFile(
       sourcePath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(
       targetPath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(
       relationshipsPath,
@@ -502,7 +488,7 @@ describe("migration validation tools", () => {
 
     await writeFile(sourcePath, JSON.stringify([{ table_name: "workspaces", count: 1 }]));
     await writeFile(targetPath, JSON.stringify([{ table_name: "workspaces", count: 1 }]));
-    await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck()]));
+    await writeFile(relationshipsPath, JSON.stringify(d1RelationshipChecks()));
 
     const result = runTool([
       "tools/validate-d1-import.mjs",
@@ -517,7 +503,7 @@ describe("migration validation tools", () => {
     expect(result.exitCode).toBe(1);
     expect(report).toMatchObject({
       ok: false,
-      validation_errors: ["D1 import validation is missing count table coverage: projects."],
+      validation_errors: [expect.stringContaining("D1 import validation is missing count table coverage:")],
     });
   });
 
@@ -529,17 +515,11 @@ describe("migration validation tools", () => {
 
     await writeFile(
       sourcePath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(
       targetPath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.owner_id", orphan_count: 0 }]));
 
@@ -556,7 +536,7 @@ describe("migration validation tools", () => {
     expect(result.exitCode).toBe(1);
     expect(report).toMatchObject({
       ok: false,
-      validation_errors: ["D1 import validation is missing relationship coverage: projects.workspace_id."],
+      validation_errors: [expect.stringContaining("D1 import validation is missing relationship coverage:")],
     });
   });
 
@@ -568,17 +548,11 @@ describe("migration validation tools", () => {
 
     await writeFile(
       sourcePath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(
       targetPath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(relationshipsPath, JSON.stringify([{ name: "projects.workspace_id", orphan_count: 0 }]));
 
@@ -595,9 +569,9 @@ describe("migration validation tools", () => {
     expect(result.exitCode).toBe(1);
     expect(report).toMatchObject({
       ok: false,
-      validation_errors: [
+      validation_errors: expect.arrayContaining([
         "D1 import validation relationship projects.workspace_id must include source projects and target workspaces.",
-      ],
+      ]),
     });
   });
 
@@ -609,17 +583,11 @@ describe("migration validation tools", () => {
 
     await writeFile(
       sourcePath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(
       targetPath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 1 },
-        { table_name: "projects", count: 2 },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count })))
     );
     await writeFile(relationshipsPath, JSON.stringify([d1RelationshipCheck({ ok: true, orphan_count: undefined })]));
 
@@ -644,10 +612,7 @@ describe("migration validation tools", () => {
 
     await writeFile(
       inputPath,
-      JSON.stringify([
-        { table_name: "workspaces", count: "1" },
-        { table_name: "projects", count: "2" },
-      ])
+      JSON.stringify(fixtureTargetCounts().map(({ table, count }) => ({ table_name: table, count: String(count) })))
     );
 
     const result = runTool([
@@ -671,13 +636,10 @@ describe("migration validation tools", () => {
       evidence_kind: "postgres-source-counts",
       generated_at: "2026-06-22T12:00:00.000Z",
       source: "cloud-sql:manut-pg18-prod",
-      counts: {
-        projects: 2,
-        workspaces: 1,
-      },
+      counts: D1_VALIDATION_FIXTURE_COUNTS,
       summary: {
-        required_tables_present: 2,
-        required_scope_source_rows: 3,
+        required_tables_present: 6,
+        required_scope_source_rows: 15,
       },
     });
     expect(fileReport).toMatchObject({ ok: true });
@@ -695,7 +657,7 @@ describe("migration validation tools", () => {
     expect(result.exitCode).toBe(1);
     expect(report).toMatchObject({
       ok: false,
-      validation_errors: ["Postgres source counts are missing required table coverage: projects."],
+      validation_errors: [expect.stringContaining("Postgres source counts are missing required table coverage:")],
     });
   });
 
@@ -705,10 +667,11 @@ describe("migration validation tools", () => {
 
     await writeFile(
       inputPath,
-      JSON.stringify([
-        { table_name: "workspaces", count: 0 },
-        { table_name: "projects", count: 0 },
-      ])
+      JSON.stringify(
+        fixtureTargetCounts({ workspaces: 0, projects: 0, users: 0, profiles: 0, workspace_members: 0, issues: 0 }).map(
+          ({ table, count }) => ({ table_name: table, count })
+        )
+      )
     );
 
     const result = runTool(["tools/postgres-source-counts-report.mjs", "--input", inputPath, "--json"]);
