@@ -5,14 +5,14 @@
  */
 
 import type { CloudflareBindings } from "../../types";
-import { proxyLegacyApiGetOrFail } from "../legacy-proxy";
+import { isResponse, mapAuthenticatedUserPayload, resolveLegacyAuthenticatedUser } from "../../session-bridge";
+import { jsonResponse } from "../http";
 
 export async function handleUsersMeRequest(request: Request, env: CloudflareBindings): Promise<Response> {
-  return proxyLegacyApiGetOrFail(
-    request,
-    env,
-    "/api/users/me/",
-    "LEGACY_USERS_ME_PROXY_FAILED",
-    "Unable to load the authenticated user from the legacy session bridge."
-  );
+  const user = await resolveLegacyAuthenticatedUser(request, env);
+  if (isResponse(user)) {
+    return user;
+  }
+
+  return jsonResponse(mapAuthenticatedUserPayload(user));
 }

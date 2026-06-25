@@ -43,6 +43,75 @@ type IssueRow = {
   updated_at: string;
 };
 
+export async function getUserByEmail(env: CloudflareBindings, email: string) {
+  const db = requireDatabase(env);
+  if (isResponse(db)) {
+    return db;
+  }
+
+  try {
+    return await db
+      .prepare(
+        `SELECT id, email, display_name, first_name, last_name, avatar, is_active, is_bot, last_active, created_at, updated_at
+         FROM users
+         WHERE email = ? AND is_active = 1
+         LIMIT 1`
+      )
+      .bind(email.toLowerCase().trim())
+      .first<{
+        id: string;
+        email: string;
+        display_name: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        avatar: string | null;
+        is_active: number;
+        is_bot: number;
+        last_active: string | null;
+        created_at: string;
+        updated_at: string;
+      }>();
+  } catch (error) {
+    console.error("D1_USER_BY_EMAIL_FAILED", error);
+    return d1QueryFailed("users");
+  }
+}
+
+export function mapUserMePayload(user: {
+  id: string;
+  email: string;
+  display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: string | null;
+  is_active: number;
+  is_bot: number;
+  last_active: string | null;
+  created_at: string;
+  updated_at: string;
+}) {
+  return {
+    id: user.id,
+    avatar: user.avatar,
+    cover_image: null,
+    avatar_url: user.avatar,
+    cover_image_url: null,
+    date_joined: user.created_at,
+    display_name: user.display_name,
+    email: user.email,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    is_active: Boolean(user.is_active),
+    is_bot: Boolean(user.is_bot),
+    is_email_verified: true,
+    user_timezone: "UTC",
+    username: user.email,
+    is_password_autoset: true,
+    last_login_medium: "magic-code",
+    last_login_time: user.last_active,
+  };
+}
+
 export async function getUserById(env: CloudflareBindings, userId: string) {
   const db = requireDatabase(env);
   if (isResponse(db)) {

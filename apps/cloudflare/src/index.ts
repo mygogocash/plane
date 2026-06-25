@@ -10,6 +10,9 @@ import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
 import { resolveRequestRouting, WORKER_NATIVE_ROUTE_DEFINITIONS } from "./api-router";
 import { handleD1WorkspaceProjectsRequest, handleD1WorkspacesRequest } from "./d1-core";
 import { buildInstancePayload } from "./instance";
+import { handleEmailDispatchJob, isResendConfigured } from "./auth/email-dispatch";
+import { handleAuthRequest, matchAuthRoute } from "./auth/handlers";
+import { serveWorkerAssets, shouldServeWorkerAssets } from "./assets";
 import { consumeJobQueue } from "./jobs";
 import { LiveRoomDurableObject } from "./live-room";
 import { handleWorkerNativeApiRequest } from "./native-api";
@@ -151,6 +154,8 @@ app.get("/api/cloudflare/migration-status", (c) =>
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
     worker_native_api_enabled: c.env.WORKER_NATIVE_API_ENABLED?.toLowerCase() === "true",
     r2_uploads_read_enabled: isR2UploadsReadEnabled(c.env),
+    resend_configured: isResendConfigured(c.env),
+    resend_from_email: c.env.RESEND_FROM_EMAIL ?? "Manut <no-reply@gogocash.co>",
     cache_target: "kv",
     data_target: "d1",
     d1_shadow_domains: ["workspaces", "projects", "users", "profiles", "workspace_members", "issues"],
@@ -227,6 +232,12 @@ app.all("/api/cloudflare/live/rooms/*", async (c) => {
 });
 
 app.all("*", async (c) => {
+  const url = new URL(c.req.url);
+  const authRoute = matchAuthRoute(c.req.method, url.pathname);
+  if (authRoute) {
+    return handleAuthRequest(c.req.raw, c.env, authRoute);
+  }
+
   const routing = resolveRequestRouting(c.req.raw, c.env);
 
   if (routing.kind === "worker-native") {
@@ -238,6 +249,13 @@ app.all("*", async (c) => {
   if (classification.action === "legacy-proxy") {
     if (classification.contract === "uploads" && isR2UploadsReadEnabled(c.env)) {
       return handleUploadsRequest(c.req.raw, c.env);
+    }
+
+    if (shouldServeWorkerAssets(classification.contract)) {
+      const assetResponse = await serveWorkerAssets(c.req.raw, c.env);
+      if (assetResponse) {
+        return assetResponse;
+      }
     }
 
     return proxyToLegacyOrigin(c.req.raw, c.env, classification.contract);
@@ -267,7 +285,11 @@ app.notFound((c) =>
 export const worker = {
   fetch: app.fetch,
   async queue(batch, env) {
-    const summary = await consumeJobQueue(batch, env);
+    const summary = await consumeJobQueue(batch, env, {
+      "email-dispatch": async (envelope, context) => {
+        await handleEmailDispatchJob(envelope, context.env);
+      },
+    });
     console.log(
       "MANUT_QUEUE_CONSUMER_SUMMARY",
       JSON.stringify({

@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { instanceConfig } from "./schema";
 import type { CloudflareBindings, InstancePayload } from "./types";
+import { isResendConfigured } from "./auth/email-dispatch";
 
 async function readConfigValue(env: CloudflareBindings, key: string): Promise<string | null> {
   if (!env.MANUT_DB) {
@@ -48,7 +49,7 @@ export async function buildInstancePayload(env: CloudflareBindings, now = new Da
       is_google_enabled: false,
       is_magic_login_enabled: true,
       is_self_managed: true,
-      is_smtp_configured: true,
+      is_smtp_configured: isResendConfigured(env),
       is_workspace_creation_disabled: false,
       posthog_api_key: null,
       posthog_host: null,
