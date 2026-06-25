@@ -1,6 +1,6 @@
 # Phase 4 - D1 Backend Rewrite
 
-**Status:** CODE DONE for first D1 shadow read slice; full backend rewrite blocked
+**Status:** CODE DONE for shadow reads; continued in `worker-native-api-migration_PLAN_25-06-26.md`
 
 ## Objective
 

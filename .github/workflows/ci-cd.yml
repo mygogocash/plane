@@ -9,9 +9,9 @@ on:
         default: true
         type: boolean
       deploy_gcp:
-        description: "Deploy to GKE after images are published"
+        description: "Deploy to GKE after images are published (manual only; auto deploy disabled during Cloudflare cutover)"
         required: true
-        default: true
+        default: false
         type: boolean
   pull_request:
     branches:
@@ -395,12 +395,14 @@ jobs:
     name: Deploy to GKE
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    # GKE deploy is manual-only during Cloudflare cutover (workflow_dispatch + deploy_gcp=true).
+    # Preview branch pushes still build images but no longer roll the cluster automatically.
     needs:
       - metadata
       - changes
       - build-components
       - api-ci
-    if: ${{ needs.changes.outputs.any == 'true' && ((github.event_name == 'push' && github.ref_name == 'preview') || (github.event_name == 'workflow_dispatch' && inputs.deploy_gcp)) }}
+    if: ${{ needs.changes.outputs.any == 'true' && github.event_name == 'workflow_dispatch' && inputs.deploy_gcp }}
     permissions:
       contents: read
       id-token: write

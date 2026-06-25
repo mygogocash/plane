@@ -5,34 +5,14 @@
  */
 
 import type { CloudflareBindings } from "../../types";
-import { isResponse as isBridgeResponse, resolveLegacyAuthenticatedUser } from "../../session-bridge";
-import { getUserWorkspaces } from "../db";
-import { isResponse, jsonResponse } from "../http";
+import { proxyLegacyApiGetOrFail } from "../legacy-proxy";
 
 export async function handleUsersMeSettingsRequest(request: Request, env: CloudflareBindings): Promise<Response> {
-  const auth = await resolveLegacyAuthenticatedUser(request, env);
-  if (isBridgeResponse(auth)) {
-    return auth;
-  }
-
-  const workspaces = await getUserWorkspaces(env, auth.id);
-  if (isResponse(workspaces)) {
-    return workspaces;
-  }
-
-  const fallback = workspaces[0];
-
-  return jsonResponse({
-    id: auth.id,
-    email: auth.email,
-    workspace: {
-      last_workspace_id: fallback?.id ?? null,
-      last_workspace_slug: fallback?.slug ?? null,
-      last_workspace_name: fallback?.name ?? null,
-      last_workspace_logo: fallback?.logo ?? "",
-      fallback_workspace_id: fallback?.id ?? null,
-      fallback_workspace_slug: fallback?.slug ?? null,
-      invites: 0,
-    },
-  });
+  return proxyLegacyApiGetOrFail(
+    request,
+    env,
+    "/api/users/me/settings/",
+    "LEGACY_USERS_ME_SETTINGS_PROXY_FAILED",
+    "Unable to load user settings from the legacy session bridge."
+  );
 }

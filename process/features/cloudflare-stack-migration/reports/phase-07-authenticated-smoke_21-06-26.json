@@ -1,17 +1,18 @@
 {
-  "template_kind": "authenticated-smoke-input",
+  "generated_at": "2026-06-25T01:17:32.485Z",
+  "evidence_kind": "authenticated-smoke",
   "schema_version": 1,
   "evidence_model_version": 2,
-  "generated_at": "2026-06-25T01:20:00.000Z",
-  "instructions": "Filled from live authenticated production smoke on app.manut.xyz by operator Kunanon Jarat.",
-  "actor": "Kunanon Jarat <fronk.kunanon@gogocash.co>",
+  "ok": true,
   "target_origin": "https://app.manut.xyz",
+  "actor": "Kunanon Jarat <fronk.kunanon@gogocash.co>",
   "cloudflare_route_verified": true,
   "cloudflare_route_evidence": {
     "url": "https://app.manut.xyz/cdn-cgi/trace",
     "note": "colo=SIN visit_scheme=https tls=TLSv1.3 during authenticated smoke run 2026-06-25"
   },
   "operator_evidence_required": true,
+  "operator_evidence_verified": true,
   "operator_evidence": {
     "run_id": "auth-smoke-2026-06-25T01:12:00Z",
     "workspace_identifier": "gogocash",
@@ -20,116 +21,150 @@
     "browser_artifact": "Cursor browser smoke session on MANUT project; MANUT-1 work item exercised then removed",
     "note": "Magic-link login succeeded; GoGoCash workspace and Manut project data verified in production."
   },
+  "summary": {
+    "total": 11,
+    "passed": 11,
+    "failed": 0
+  },
   "checks": [
     {
       "id": "login",
       "label": "User can log in and reach the authenticated app shell.",
       "ok": true,
+      "status": "pass",
       "evidence": "Magic-link login completed; landed on GoGoCash stickies shell with workspace sidebar visible.",
       "observed_at": "2026-06-25T01:05:00.000Z",
       "url": "https://app.manut.xyz/gogocash/stickies/",
       "note": "Session established for fronk.kunanon@gogocash.co",
-      "title": "Your stickies"
+      "title": "Your stickies",
+      "blockers": []
     },
     {
       "id": "session-refresh",
       "label": "Authenticated session survives a hard refresh.",
       "ok": true,
+      "status": "pass",
       "evidence": "Reloaded authenticated routes (stickies and Manut issues) without re-prompting for email or magic code.",
       "observed_at": "2026-06-25T01:12:30.000Z",
       "url": "https://app.manut.xyz/gogocash/projects/75def81d-6882-47e3-a9c7-92c9791e4914/issues/",
       "note": "Workspace context remained GoGoCash after navigation refresh cycle",
-      "title": "Manut - Work items"
+      "title": "Manut - Work items",
+      "blockers": []
     },
     {
       "id": "workspace-sidebar",
       "label": "Workspace sidebar renders expected workspace context.",
       "ok": true,
+      "status": "pass",
       "evidence": "Sidebar showed GoGoCash workspace with Manut, Protocol Camp, GoGoCash Product, Business Development, GoGoCash Marketing projects.",
       "observed_at": "2026-06-25T01:12:45.000Z",
       "url": "https://app.manut.xyz/gogocash/stickies/",
       "note": "Workspace switcher label GoGoCash",
-      "title": "Your stickies"
+      "title": "Your stickies",
+      "blockers": []
     },
     {
       "id": "project-list",
       "label": "Project list loads for the authenticated workspace.",
       "ok": true,
+      "status": "pass",
       "evidence": "Manut project issues view loaded; historical projects visible in sidebar and project navigation.",
       "observed_at": "2026-06-25T01:13:00.000Z",
       "url": "https://app.manut.xyz/gogocash/projects/75def81d-6882-47e3-a9c7-92c9791e4914/issues/",
       "note": "10 projects present in workspace per operator confirmation and sidebar",
-      "title": "Manut - Work items"
+      "title": "Manut - Work items",
+      "blockers": []
     },
     {
       "id": "work-item-create",
       "label": "A non-critical work item can be created.",
       "ok": true,
+      "status": "pass",
       "evidence": "Created MANUT-1 titled smoke-20260625 phase7 cutover test in Manut project.",
       "observed_at": "2026-06-25T01:14:10.000Z",
       "url": "https://app.manut.xyz/gogocash/projects/75def81d-6882-47e3-a9c7-92c9791e4914/issues/",
       "note": "Issue id 7a11d0a6-e758-44ea-9983-bde8b8c282ce",
-      "title": "Manut - Work items"
+      "title": "Manut - Work items",
+      "blockers": []
     },
     {
       "id": "work-item-edit",
       "label": "The non-critical work item can be edited.",
       "ok": true,
+      "status": "pass",
       "evidence": "Renamed MANUT-1 to smoke-20260625 phase7 cutover test (edited); title persisted on issue detail.",
       "observed_at": "2026-06-25T01:15:20.000Z",
       "url": "https://app.manut.xyz/gogocash/browse/MANUT-1",
       "note": "Document title updated to include (edited)",
-      "title": "MANUT-1 smoke-20260625 phase7 cutover test (edited)"
+      "title": "MANUT-1 smoke-20260625 phase7 cutover test (edited)",
+      "blockers": []
     },
     {
       "id": "work-item-delete",
       "label": "The non-critical work item can be deleted or archived.",
       "ok": true,
+      "status": "pass",
       "evidence": "Deleted MANUT-1 from Manut issues list; project returned to zero work items.",
       "observed_at": "2026-06-25T01:19:30.000Z",
       "url": "https://app.manut.xyz/gogocash/projects/75def81d-6882-47e3-a9c7-92c9791e4914/issues/",
       "note": "Smoke issue removed after CRUD verification",
-      "title": "Manut - Work items"
+      "title": "Manut - Work items",
+      "blockers": []
     },
     {
       "id": "upload-attachment",
       "label": "Attachment or logo upload succeeds and resolves through uploads.",
       "ok": true,
+      "status": "pass",
       "evidence": "Uploaded smoke-upload.png to MANUT-1 via assets v2 presigned POST (GCS 204); attachment listed on issue before cleanup.",
       "observed_at": "2026-06-25T01:16:10.000Z",
       "url": "https://app.manut.xyz/uploads/c0c5b239-912f-4397-966d-7d6c5b40f415/ac0ed7c7c0734c5a802a889b249efc93-smoke-upload.png",
       "note": "Object key ac0ed7c7c0734c5a802a889b249efc93-smoke-upload.png in plane-affine-495114-uploads bucket",
-      "title": "MANUT-1 smoke-20260625 phase7 cutover test (edited)"
+      "title": "MANUT-1 smoke-20260625 phase7 cutover test (edited)",
+      "blockers": []
     },
     {
       "id": "live-update",
       "label": "A representative live update propagates to another view or session.",
       "ok": true,
+      "status": "pass",
       "evidence": "Title edit to (edited) appeared on Manut issues list without manual list refresh.",
       "observed_at": "2026-06-25T01:15:45.000Z",
       "url": "https://app.manut.xyz/gogocash/projects/75def81d-6882-47e3-a9c7-92c9791e4914/issues/",
       "note": "List row MANUT-1 reflected edited title",
-      "title": "Manut - Work items"
+      "title": "Manut - Work items",
+      "blockers": []
     },
     {
       "id": "admin-route",
       "label": "The authorized admin route loads or correctly denies non-admin users.",
       "ok": true,
+      "status": "pass",
       "evidence": "Visited /god-mode/ as workspace member; instance admin gate displayed (Manut Admin) without granting god-mode access.",
       "observed_at": "2026-06-25T01:17:00.000Z",
       "url": "https://app.manut.xyz/god-mode/",
       "note": "Non-instance-admin correctly blocked from admin console",
-      "title": "Admin – Instance Setup & Sign-In"
+      "title": "Admin – Instance Setup & Sign-In",
+      "blockers": []
     },
     {
       "id": "public-space-route",
       "label": "A public space route loads without authenticated-session leakage.",
       "ok": true,
+      "status": "pass",
       "evidence": "Manut Space shell served at /spaces/gogocash/ with public boards metadata; HTML contained no workspace member identifiers.",
       "observed_at": "2026-06-25T01:17:30.000Z",
       "url": "https://app.manut.xyz/spaces/gogocash/",
       "note": "curl HTML review showed Manut Space assets only; no Fronk email in response",
-      "title": "Manut Space - public boards and roadmaps"
+      "title": "Manut Space - public boards and roadmaps",
+      "blockers": []
     }
-  ]
+  ],
+  "errors": [],
+  "warnings": [],
+  "validation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  }
 }

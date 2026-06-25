@@ -227,7 +227,7 @@ describe("Manut Cloudflare Worker foundation", () => {
     });
   });
 
-  it("returns worker-native auth bridge failure for registered routes when WORKER_NATIVE_API_ENABLED is true", async () => {
+  it("returns worker-native legacy proxy failure when WORKER_NATIVE_API_ENABLED is true without LEGACY_GKE_ORIGIN", async () => {
     const response = await app.request(
       "/api/users/me/workspaces/",
       {},
@@ -237,10 +237,10 @@ describe("Manut Cloudflare Worker foundation", () => {
       }
     );
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(502);
     expect(response.headers.get("x-manut-edge-route")).toBe("worker-native-api");
     await expect(response.json()).resolves.toMatchObject({
-      error: "LEGACY_SESSION_BRIDGE_UNAVAILABLE",
+      error: "LEGACY_USERS_ME_WORKSPACES_PROXY_FAILED",
     });
   });
 

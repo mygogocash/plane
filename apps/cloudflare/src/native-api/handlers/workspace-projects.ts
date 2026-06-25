@@ -5,33 +5,18 @@
  */
 
 import type { CloudflareBindings } from "../../types";
-import { isResponse as isBridgeResponse, resolveLegacyAuthenticatedUser } from "../../session-bridge";
-import { getWorkspaceBySlug, getWorkspaceProjects, mapProjectPayload } from "../db";
-import { errorResponse, isResponse, jsonResponse } from "../http";
+import { proxyLegacyApiGetOrFail } from "../legacy-proxy";
 
 export async function handleWorkspaceProjectsRequest(
   request: Request,
   env: CloudflareBindings,
   params: { slug: string }
 ): Promise<Response> {
-  const auth = await resolveLegacyAuthenticatedUser(request, env);
-  if (isBridgeResponse(auth)) {
-    return auth;
-  }
-
-  const workspace = await getWorkspaceBySlug(env, params.slug, auth.id);
-  if (isResponse(workspace)) {
-    return workspace;
-  }
-
-  if (!workspace) {
-    return errorResponse(404, "WORKSPACE_NOT_FOUND", "Workspace was not found for the authenticated user.");
-  }
-
-  const projects = await getWorkspaceProjects(env, workspace.id);
-  if (isResponse(projects)) {
-    return projects;
-  }
-
-  return jsonResponse(projects.map((project) => mapProjectPayload(project, { memberRole: workspace.role })));
+  return proxyLegacyApiGetOrFail(
+    request,
+    env,
+    `/api/workspaces/${encodeURIComponent(params.slug)}/projects/`,
+    "LEGACY_WORKSPACE_PROJECTS_PROXY_FAILED",
+    "Unable to load workspace projects from the legacy session bridge."
+  );
 }

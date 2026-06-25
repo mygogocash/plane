@@ -198,6 +198,69 @@ function parseTimestamp(value, label) {
   return { ok: true, timestamp };
 }
 
+function normalizeSoakWaiver(input) {
+  const fallback = {
+    ok: false,
+    waived: false,
+    waived_by: null,
+    waived_reason: null,
+    message: null,
+  };
+
+  if (!isRecord(input)) {
+    return fallback;
+  }
+
+  const waived = input.soak_waived === true;
+  if (!waived) {
+    return fallback;
+  }
+
+  const waivedBy = typeof input.soak_waived_by === "string" ? input.soak_waived_by.trim() : null;
+  const waivedReason = typeof input.soak_waived_reason === "string" ? input.soak_waived_reason.trim() : null;
+
+  if (!waivedBy) {
+    return {
+      ...fallback,
+      waived: true,
+      message: "Operator-waived soak evidence must include soak_waived_by.",
+    };
+  }
+
+  if (!waivedReason) {
+    return {
+      ...fallback,
+      waived: true,
+      waived_by: waivedBy,
+      message: "Operator-waived soak evidence must include soak_waived_reason.",
+    };
+  }
+
+  return {
+    ok: true,
+    waived: true,
+    waived_by: waivedBy,
+    waived_reason: waivedReason,
+    message: "Operator waived the seven-day post-cutover soak; all required checks must still pass.",
+  };
+}
+
+function validateSoakWaiver(report) {
+  if (report.soak_waived !== true) {
+    return { ok: true };
+  }
+
+  if (typeof report.soak_waived_by !== "string" || report.soak_waived_by.trim() === "") {
+    return { ok: false, message: "Operator-waived soak evidence must include soak_waived_by." };
+  }
+
+  if (typeof report.soak_waived_reason !== "string" || report.soak_waived_reason.trim() === "") {
+    return { ok: false, message: "Operator-waived soak evidence must include soak_waived_reason." };
+  }
+
+  return { ok: true };
+}
+
 function stabilityWindowDays(cutoverAt, verifiedThrough) {
   const cutover = parseTimestamp(cutoverAt, "cutover_at");
   if (!cutover.ok) {
@@ -274,13 +337,18 @@ export function validateSevenGreenDaysReport(report) {
     return { ok: false, message: "Seven green days report must set green_days_verified: true." };
   }
 
+  const soakWaiver = validateSoakWaiver(report);
+  if (!soakWaiver.ok) {
+    return soakWaiver;
+  }
+
   const targetOrigin = validateTargetOrigin(report.target_origin);
   if (!targetOrigin.ok) {
     return targetOrigin;
   }
 
   const window = stabilityWindowDays(report.cutover_at, report.verified_through);
-  if (!window.ok) {
+  if (!window.ok && report.soak_waived !== true) {
     return { ok: false, message: window.message };
   }
 
@@ -332,6 +400,8 @@ export function buildSevenGreenDaysReport(input, options = {}) {
   }
 
   const window = stabilityWindowDays(input.cutover_at, input.verified_through);
+  const soakWaiver = normalizeSoakWaiver(input);
+  const windowSatisfied = window.ok || soakWaiver.ok;
   const checksById = new Map(
     normalizeInputChecks(input)
       .map(normalizeCheck)
@@ -366,9 +436,12 @@ export function buildSevenGreenDaysReport(input, options = {}) {
   const report = {
     generated_at: new Date().toISOString(),
     evidence_kind: "seven-green-days",
-    ok: phase7Readiness.ok && window.ok && failed.length === 0,
-    green_days_verified: phase7Readiness.ok && window.ok && failed.length === 0,
+    ok: phase7Readiness.ok && windowSatisfied && failed.length === 0,
+    green_days_verified: phase7Readiness.ok && windowSatisfied && failed.length === 0,
     target_origin: options.targetOrigin ?? input.target_origin ?? null,
+    soak_waived: soakWaiver.waived,
+    soak_waived_by: soakWaiver.waived_by,
+    soak_waived_reason: soakWaiver.waived_reason,
     phase7_readiness: phase7Readiness,
     cutover_at: input.cutover_at ?? null,
     verified_through: input.verified_through ?? null,
@@ -384,11 +457,13 @@ export function buildSevenGreenDaysReport(input, options = {}) {
 
   const validation = !phase7Readiness.ok
     ? { ok: false, message: phase7Readiness.message }
-    : !window.ok
-      ? { ok: false, message: window.message }
-      : failed.length > 0
-        ? { ok: false, message: failedCheckMessage(failed[0]) }
-        : validateSevenGreenDaysReport(report);
+    : soakWaiver.waived && !soakWaiver.ok
+      ? { ok: false, message: soakWaiver.message }
+      : !windowSatisfied
+        ? { ok: false, message: window.message ?? soakWaiver.message }
+        : failed.length > 0
+          ? { ok: false, message: failedCheckMessage(failed[0]) }
+          : validateSevenGreenDaysReport(report);
   return validation.ok
     ? report
     : { ...report, ok: false, green_days_verified: false, validation_error: validation.message };

@@ -78,42 +78,7 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     pattern: /^\/api\/workspaces\/([^/]+)\/projects\/$/,
     paramNames: ["slug"],
   },
-  {
-    id: "workspace-project-issues-list",
-    method: "GET",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/$/,
-    paramNames: ["slug", "projectId"],
-  },
-  {
-    id: "workspace-project-issue-create",
-    method: "POST",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/$/,
-    paramNames: ["slug", "projectId"],
-  },
-  {
-    id: "workspace-project-issue-update",
-    method: "PATCH",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/([^/]+)\/$/,
-    paramNames: ["slug", "projectId", "issueId"],
-  },
-  {
-    id: "workspace-project-issue-delete",
-    method: "DELETE",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/([^/]+)\/$/,
-    paramNames: ["slug", "projectId", "issueId"],
-  },
+  // Issue CRUD stays on legacy GKE until D1 issue import is populated (manut-prod currently has 0 rows).
   {
     id: "workspace-asset-presign",
     method: "POST",
@@ -122,6 +87,38 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     implemented: true,
     pattern: /^\/api\/assets\/v2\/workspaces\/([^/]+)\/$/,
     paramNames: ["slug"],
+  },
+];
+
+/** Slice 4 issue handlers exist but are not routed until D1 issue import is live. */
+export const WORKER_NATIVE_DEFERRED_ROUTE_DEFINITIONS: WorkerNativeRouteDefinition[] = [
+  {
+    id: "workspace-project-issues-list",
+    method: "GET",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+  },
+  {
+    id: "workspace-project-issue-create",
+    method: "POST",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+  },
+  {
+    id: "workspace-project-issue-update",
+    method: "PATCH",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+  },
+  {
+    id: "workspace-project-issue-delete",
+    method: "DELETE",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
   },
 ];
 

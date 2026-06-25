@@ -14,8 +14,11 @@ This report lists the exact commands and artifacts still required.
 Run readiness:
 
 ```bash
-pnpm --silent --filter @manut/cloudflare cutover:readiness -- --json
+pnpm --silent --filter @manut/cloudflare cutover:readiness --json
+pnpm --filter @manut/cloudflare cutover:prep --json
 ```
+
+`cutover:prep` prints blocker commands and regenerates input templates (non-destructive).
 
 | Gate                           | Owner                                 | Required action                                                                                            |
 | ------------------------------ | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |

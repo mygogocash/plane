@@ -34,17 +34,18 @@ describe("worker native api router", () => {
     });
   });
 
-  it("extracts workspace and project params for issue routes", () => {
-    const route = matchWorkerNativeRoute("PATCH", "/api/workspaces/gogocash/projects/abc-123/issues/def-456/");
+  it("routes issue APIs to legacy GKE until D1 issue import is populated", () => {
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/issues/")).toBeNull();
 
-    expect(route).toMatchObject({
-      route: { id: "workspace-project-issue-update" },
-      params: {
-        slug: "gogocash",
-        projectId: "abc-123",
-        issueId: "def-456",
-      },
-    });
+    const routing = resolveRequestRouting(
+      new Request("https://app.manut.xyz/api/workspaces/gogocash/projects/abc-123/issues/"),
+      { WORKER_NATIVE_API_ENABLED: "true" } satisfies CloudflareBindings
+    );
+
+    expect(routing.kind).toBe("edge");
+    if (routing.kind === "edge") {
+      expect(routing.classification.action).toBe("legacy-proxy");
+    }
   });
 
   it("does not match unregistered routes", () => {
@@ -71,7 +72,7 @@ describe("worker native api router", () => {
     }
   });
 
-  it("registers all slice 2-4 smoke routes as implemented", () => {
+  it("registers active slice 2-4 smoke routes as implemented", () => {
     expect(WORKER_NATIVE_ROUTE_DEFINITIONS.every((route) => route.implemented)).toBe(true);
     expect(WORKER_NATIVE_ROUTE_DEFINITIONS.map((route) => route.id)).toEqual([
       "users-me",
@@ -79,10 +80,6 @@ describe("worker native api router", () => {
       "users-me-workspaces",
       "workspace-detail",
       "workspace-projects",
-      "workspace-project-issues-list",
-      "workspace-project-issue-create",
-      "workspace-project-issue-update",
-      "workspace-project-issue-delete",
       "workspace-asset-presign",
     ]);
   });
