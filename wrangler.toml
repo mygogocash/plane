@@ -27,6 +27,7 @@ head_sampling_rate = 1
 APP_ENV = "production"
 APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-production"
+LEGACY_GKE_RESOLVE_OVERRIDE = "34.143.231.225"
 
 [[d1_databases]]
 binding = "MANUT_DB"
@@ -57,3 +58,7 @@ class_name = "LiveRoomDurableObject"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["LiveRoomDurableObject"]
+
+[[routes]]
+pattern = "app.manut.xyz/*"
+zone_name = "manut.xyz"

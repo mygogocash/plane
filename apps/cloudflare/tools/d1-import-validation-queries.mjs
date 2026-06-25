@@ -17,6 +17,34 @@ export const D1_VALIDATION_TABLES = [
     target_table: "projects",
     where: "deleted_at IS NULL",
   },
+  {
+    table: "users",
+    source_table: "users",
+    target_table: "users",
+    where: "is_bot = false AND is_active = true",
+    d1_where: "is_bot = 0 AND is_active = 1",
+  },
+  {
+    table: "profiles",
+    source_table: "profiles",
+    target_table: "profiles",
+    where:
+      "user_id IN (SELECT id FROM users WHERE is_bot = false AND (is_active = true OR id IN (SELECT member_id FROM workspace_members WHERE deleted_at IS NULL AND is_active = true)))",
+    d1_where: "user_id IN (SELECT id FROM users WHERE is_active = 1)",
+  },
+  {
+    table: "workspace_members",
+    source_table: "workspace_members",
+    target_table: "workspace_members",
+    where: "deleted_at IS NULL AND is_active = true",
+    d1_where: "is_active = 1",
+  },
+  {
+    table: "issues",
+    source_table: "issues",
+    target_table: "issues",
+    where: "deleted_at IS NULL",
+  },
 ];
 
 export const D1_VALIDATION_RELATIONSHIPS = [
@@ -31,7 +59,82 @@ export const D1_VALIDATION_RELATIONSHIPS = [
     source_where: "p.deleted_at IS NULL",
     target_where: "w.deleted_at IS NULL",
   },
+  {
+    name: "profiles.user_id",
+    source: "profiles",
+    target: "users",
+    source_alias: "p",
+    target_alias: "u",
+    source_key: "user_id",
+    target_key: "id",
+    source_where: "1 = 1",
+    target_where: "u.is_active = 1",
+  },
+  {
+    name: "workspace_members.workspace_id",
+    source: "workspace_members",
+    target: "workspaces",
+    source_alias: "wm",
+    target_alias: "w",
+    source_key: "workspace_id",
+    target_key: "id",
+    source_where: "wm.is_active = 1",
+    target_where: "w.deleted_at IS NULL",
+  },
+  {
+    name: "workspace_members.member_id",
+    source: "workspace_members",
+    target: "users",
+    source_alias: "wm",
+    target_alias: "u",
+    source_key: "member_id",
+    target_key: "id",
+    source_where: "wm.is_active = 1",
+    target_where: "u.is_active = 1",
+  },
+  {
+    name: "issues.project_id",
+    source: "issues",
+    target: "projects",
+    source_alias: "i",
+    target_alias: "p",
+    source_key: "project_id",
+    target_key: "id",
+    source_where: "i.deleted_at IS NULL",
+    target_where: "p.deleted_at IS NULL",
+  },
+  {
+    name: "issues.workspace_id",
+    source: "issues",
+    target: "workspaces",
+    source_alias: "i",
+    target_alias: "w",
+    source_key: "workspace_id",
+    target_key: "id",
+    source_where: "i.deleted_at IS NULL",
+    target_where: "w.deleted_at IS NULL",
+  },
 ];
+
+export const D1_VALIDATION_FIXTURE_COUNTS = Object.freeze({
+  workspaces: 1,
+  projects: 2,
+  users: 3,
+  profiles: 3,
+  workspace_members: 6,
+  issues: 0,
+});
+
+export function buildD1ValidationRelationshipChecks(overrides = {}) {
+  return D1_VALIDATION_RELATIONSHIPS.map((relationship) => ({
+    name: relationship.name,
+    source: relationship.source,
+    target: relationship.target,
+    orphan_count: 0,
+    ok: true,
+    ...overrides,
+  }));
+}
 
 function usage() {
   return `Usage: node apps/cloudflare/tools/d1-import-validation-queries.mjs [--json] [--out <manifest.json>] [--sql-dir <dir>] [--generated-at <iso>]
@@ -91,10 +194,11 @@ function parseArgs(argv) {
 function countSelect(table, dialect) {
   const countExpression = dialect === "postgres" ? "COUNT(*)::bigint" : "COUNT(*)";
   const tableName = dialect === "postgres" ? table.source_table : table.target_table;
+  const whereClause = dialect === "d1" && table.d1_where ? table.d1_where : table.where;
 
   return `SELECT '${table.table}' AS table_name, ${countExpression} AS count
 FROM ${tableName}
-WHERE ${table.where}`;
+WHERE ${whereClause}`;
 }
 
 function buildCountSql(dialect) {
@@ -127,13 +231,10 @@ export function buildD1ValidationQueries({ generatedAt = new Date().toISOString(
     evidence_kind: "d1-import-validation-queries",
     schema_version: 1,
     generated_at: generatedAt,
-    scope: "active-workspaces-projects-shadow-read",
-    tables: D1_VALIDATION_TABLES.map(({ table, source_table, target_table, where }) => ({
-      table,
-      source_table,
-      target_table,
-      where,
-    })),
+    scope: "worker-native-identity-and-issues",
+    tables: D1_VALIDATION_TABLES.map(({ table, source_table, target_table, where, d1_where }) =>
+      Object.assign({ table, source_table, target_table, where }, d1_where ? { d1_where } : {})
+    ),
     relationships: D1_VALIDATION_RELATIONSHIPS.map(
       ({ name, source, target, source_key, target_key, source_where, target_where }) => ({
         name,

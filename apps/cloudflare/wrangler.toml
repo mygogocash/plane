@@ -64,6 +64,7 @@ name = "manut-app"
 APP_ENV = "production"
 APP_ORIGIN = "https://app.manut.xyz"
 INSTANCE_VERSION = "cloudflare-production"
+LEGACY_GKE_RESOLVE_OVERRIDE = "34.143.231.225"
 # Set LEGACY_GKE_ORIGIN outside checked-in config to a distinct GKE origin
 # before enabling legacy proxy smoke. Do not point it at APP_ORIGIN.
 
@@ -93,3 +94,7 @@ max_batch_timeout = 30
 [[env.production.durable_objects.bindings]]
 name = "LIVE_ROOMS"
 class_name = "LiveRoomDurableObject"
+
+[[env.production.routes]]
+pattern = "app.manut.xyz/*"
+zone_name = "manut.xyz"
