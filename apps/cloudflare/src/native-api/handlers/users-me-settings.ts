@@ -5,7 +5,7 @@
  */
 
 import type { CloudflareBindings } from "../../types";
-import { getUserWorkspaces, mapWorkspacePayload } from "../db";
+import { buildUserSettingsWorkspacePayload, getUserWorkspaces } from "../db";
 import { isResponse, jsonResponse } from "../http";
 import { isResponse as isBridgeResponse, resolveLegacyAuthenticatedUser } from "../../session-bridge";
 
@@ -20,11 +20,9 @@ export async function handleUsersMeSettingsRequest(request: Request, env: Cloudf
     return workspaces;
   }
 
-  const workspace = workspaces[0] ? mapWorkspacePayload(workspaces[0]) : null;
-
   return jsonResponse({
     id: user.id,
     email: user.email,
-    workspace,
+    workspace: buildUserSettingsWorkspacePayload(workspaces),
   });
 }

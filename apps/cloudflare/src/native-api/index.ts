@@ -7,10 +7,12 @@
 import type { WorkerNativeRouteDefinition } from "../api-router";
 import type { CloudflareBindings } from "../types";
 import { handleUsersMeRequest } from "./handlers/users-me";
+import { handleUsersMeProfileRequest } from "./handlers/users-me-profile";
 import { handleUsersMeSettingsRequest } from "./handlers/users-me-settings";
 import { handleUsersMeWorkspacesRequest } from "./handlers/users-me-workspaces";
 import { handleWorkspaceAssetPresignRequest } from "./handlers/workspace-asset-presign";
 import { handleWorkspaceDetailRequest } from "./handlers/workspace-detail";
+import { handleWorkspaceMemberMeRequest } from "./handlers/workspace-member-me";
 import {
   handleWorkspaceProjectIssueCreateRequest,
   handleWorkspaceProjectIssueDeleteRequest,
@@ -41,6 +43,8 @@ export async function handleWorkerNativeApiRequest(
   switch (route.id) {
     case "users-me":
       return handleUsersMeRequest(request, env);
+    case "users-me-profile":
+      return handleUsersMeProfileRequest(request, env);
     case "users-me-settings":
       return handleUsersMeSettingsRequest(request, env);
     case "users-me-workspaces":
@@ -49,6 +53,8 @@ export async function handleWorkerNativeApiRequest(
       return handleWorkspaceDetailRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-projects":
       return handleWorkspaceProjectsRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-member-me":
+      return handleWorkspaceMemberMeRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-project-issues-list":
       return handleWorkspaceProjectIssuesListRequest(request, env, {
         slug: params.slug ?? "",

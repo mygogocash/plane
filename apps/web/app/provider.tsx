@@ -13,8 +13,17 @@ import { TranslationProvider } from "@plane/i18n";
 import { Toast } from "@plane/propel/toast";
 // helpers
 import { resolveGeneralTheme } from "@plane/utils";
+import { LogoSpinner } from "@/components/common/logo-spinner";
 // mobx store provider
 import { StoreProvider } from "@/lib/store-context";
+
+function AppBootFallback() {
+  return (
+    <div className="relative flex h-screen w-full items-center justify-center bg-canvas">
+      <LogoSpinner />
+    </div>
+  );
+}
 
 // lazy imports
 const AppProgressBar = lazy(function AppProgressBar() {
@@ -40,19 +49,17 @@ export function AppProvider(props: IAppProvider) {
 
   return (
     <StoreProvider>
-      <>
+      <Suspense fallback={<AppBootFallback />}>
         <AppProgressBar />
         <TranslationProvider>
           <Toast theme={resolveGeneralTheme(resolvedTheme)} />
           <StoreWrapper>
             <InstanceWrapper>
-              <Suspense>
-                <SWRConfig value={WEB_SWR_CONFIG}>{children}</SWRConfig>
-              </Suspense>
+              <SWRConfig value={WEB_SWR_CONFIG}>{children}</SWRConfig>
             </InstanceWrapper>
           </StoreWrapper>
         </TranslationProvider>
-      </>
+      </Suspense>
     </StoreProvider>
   );
 }

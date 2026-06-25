@@ -9,10 +9,12 @@ import { classifyEdgeRoute, type EdgeRouteClassification } from "./edge-routing"
 
 export type WorkerNativeRouteId =
   | "users-me"
+  | "users-me-profile"
   | "users-me-settings"
   | "users-me-workspaces"
   | "workspace-detail"
   | "workspace-projects"
+  | "workspace-member-me"
   | "workspace-project-issues-list"
   | "workspace-project-issue-create"
   | "workspace-project-issue-update"
@@ -40,6 +42,15 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     slice: "worker-native-api-migration-slice-2",
     implemented: true,
     pattern: /^\/api\/users\/me\/$/,
+    paramNames: [],
+  },
+  {
+    id: "users-me-profile",
+    method: "GET",
+    path: "/api/users/me/profile/",
+    slice: "worker-native-api-migration-slice-2",
+    implemented: true,
+    pattern: /^\/api\/users\/me\/profile\/$/,
     paramNames: [],
   },
   {
@@ -76,6 +87,15 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     slice: "worker-native-api-migration-slice-3",
     implemented: true,
     pattern: /^\/api\/workspaces\/([^/]+)\/projects\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-member-me",
+    method: "GET",
+    path: "/api/workspaces/:slug/workspace-members/me/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/workspace-members\/me\/$/,
     paramNames: ["slug"],
   },
   // Issue CRUD stays on legacy GKE until D1 issue import is populated (manut-prod currently has 0 rows).
