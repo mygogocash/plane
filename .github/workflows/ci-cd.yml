@@ -1,5 +1,9 @@
 name: Manut CI/CD
 
+# GCP/GKE runtime retired 2026-06-25. Production deploys via Cloudflare Workers Builds
+# (`.github/workflows/cloudflare-ci-cd.yml`). GCP image publish and GKE deploy jobs remain
+# only for optional manual `workflow_dispatch` and will fail without restored GCP resources.
+
 on:
   workflow_dispatch:
     inputs:
@@ -334,7 +338,7 @@ jobs:
       - metadata
       - changes
       - web-ci
-    if: ${{ needs.changes.outputs.any == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish_images)) }}
+    if: ${{ needs.changes.outputs.any == 'true' && github.event_name == 'workflow_dispatch' && inputs.publish_images }}
     permissions:
       contents: read
       id-token: write
@@ -746,8 +750,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
-      - deploy-gcp
-    if: ${{ needs.deploy-gcp.result == 'success' }}
+      - metadata
+      - changes
+      - web-ci
+      - api-ci
+    if: ${{ needs.changes.outputs.any == 'true' && github.event_name == 'push' }}
     permissions:
       contents: read
     env:

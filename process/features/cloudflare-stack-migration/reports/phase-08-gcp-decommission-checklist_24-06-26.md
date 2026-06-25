@@ -1,7 +1,7 @@
 # Phase 8 GCP Decommission Checklist
 
-**Status:** ACCELERATED PREP — soak waived; GKE retained for production API  
-**Rule:** No GCP production resource is deleted without explicit operator approval and retained backups (R0).
+**Status:** EXECUTED — GCP runtime deleted 2026-06-25; Cloudflare is primary  
+**Rule:** No further GCP production resources remain in `affine-495114` (see executed report).
 
 ## Preconditions
 
