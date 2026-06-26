@@ -12,9 +12,13 @@ export type WorkerNativeRouteId =
   | "users-me-profile"
   | "users-me-settings"
   | "users-me-workspaces"
+  | "users-me-workspace-project-roles"
   | "workspace-detail"
   | "workspace-projects"
   | "workspace-member-me"
+  | "workspace-members"
+  | "workspace-states"
+  | "workspace-sidebar-preferences"
   | "workspace-project-issues-list"
   | "workspace-project-issue-create"
   | "workspace-project-issue-update"
@@ -72,6 +76,15 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     paramNames: [],
   },
   {
+    id: "users-me-workspace-project-roles",
+    method: "GET",
+    path: "/api/users/me/workspaces/:slug/project-roles/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/users\/me\/workspaces\/([^/]+)\/project-roles\/$/,
+    paramNames: ["slug"],
+  },
+  {
     id: "workspace-detail",
     method: "GET",
     path: "/api/workspaces/:slug/",
@@ -96,6 +109,33 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     slice: "worker-native-api-migration-slice-3",
     implemented: true,
     pattern: /^\/api\/workspaces\/([^/]+)\/workspace-members\/me\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-members",
+    method: "GET",
+    path: "/api/workspaces/:slug/members/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/members\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-states",
+    method: "GET",
+    path: "/api/workspaces/:slug/states/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/states\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-sidebar-preferences",
+    method: "GET",
+    path: "/api/workspaces/:slug/sidebar-preferences/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/sidebar-preferences\/$/,
     paramNames: ["slug"],
   },
   // Issue CRUD stays on legacy GKE until D1 issue import is populated (manut-prod currently has 0 rows).

@@ -25,6 +25,10 @@ describe("Wrangler production config", () => {
     expect(wranglerConfig).not.toContain('LEGACY_GKE_ORIGIN = "https://app.manut.xyz"');
   });
 
+  it("runs the worker first for API and auth routes so POST login is not blocked by static assets", () => {
+    expect(wranglerConfig).toContain('run_worker_first = ["/api/*", "/auth/*"');
+  });
+
   it("keeps logs and traces observability persistent across deployments", () => {
     expect(wranglerConfig).toContain("[observability]");
     expect(wranglerConfig).toContain("head_sampling_rate = 1");
@@ -39,5 +43,9 @@ describe("Root Wrangler config for Workers Builds", () => {
   it("points assets at a repo-root-relative web client build directory", () => {
     expect(rootWranglerConfig).toContain('directory = "apps/web/build/client"');
     expect(rootWranglerConfig).not.toContain('directory = "../web/build/client"');
+  });
+
+  it("runs the worker first for API and auth routes so POST login is not blocked by static assets", () => {
+    expect(rootWranglerConfig).toContain('run_worker_first = ["/api/*", "/auth/*"');
   });
 });

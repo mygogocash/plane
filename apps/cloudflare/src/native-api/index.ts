@@ -10,9 +10,11 @@ import { handleUsersMeRequest } from "./handlers/users-me";
 import { handleUsersMeProfileRequest } from "./handlers/users-me-profile";
 import { handleUsersMeSettingsRequest } from "./handlers/users-me-settings";
 import { handleUsersMeWorkspacesRequest } from "./handlers/users-me-workspaces";
+import { handleUsersMeWorkspaceProjectRolesRequest } from "./handlers/users-me-workspace-project-roles";
 import { handleWorkspaceAssetPresignRequest } from "./handlers/workspace-asset-presign";
 import { handleWorkspaceDetailRequest } from "./handlers/workspace-detail";
 import { handleWorkspaceMemberMeRequest } from "./handlers/workspace-member-me";
+import { handleWorkspaceMembersRequest } from "./handlers/workspace-members";
 import {
   handleWorkspaceProjectIssueCreateRequest,
   handleWorkspaceProjectIssueDeleteRequest,
@@ -20,6 +22,8 @@ import {
   handleWorkspaceProjectIssuesListRequest,
 } from "./handlers/workspace-project-issues";
 import { handleWorkspaceProjectsRequest } from "./handlers/workspace-projects";
+import { handleWorkspaceSidebarPreferencesRequest } from "./handlers/workspace-sidebar-preferences";
+import { handleWorkspaceStatesRequest } from "./handlers/workspace-states";
 import { errorResponse } from "./http";
 
 export async function handleWorkerNativeApiRequest(
@@ -49,12 +53,20 @@ export async function handleWorkerNativeApiRequest(
       return handleUsersMeSettingsRequest(request, env);
     case "users-me-workspaces":
       return handleUsersMeWorkspacesRequest(request, env);
+    case "users-me-workspace-project-roles":
+      return handleUsersMeWorkspaceProjectRolesRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-detail":
       return handleWorkspaceDetailRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-projects":
       return handleWorkspaceProjectsRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-member-me":
       return handleWorkspaceMemberMeRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-members":
+      return handleWorkspaceMembersRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-states":
+      return handleWorkspaceStatesRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-sidebar-preferences":
+      return handleWorkspaceSidebarPreferencesRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-project-issues-list":
       return handleWorkspaceProjectIssuesListRequest(request, env, {
         slug: params.slug ?? "",
