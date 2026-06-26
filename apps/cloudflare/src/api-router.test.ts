@@ -15,10 +15,22 @@ import {
 import type { CloudflareBindings } from "./types";
 
 describe("worker native api router", () => {
-  it("is disabled unless WORKER_NATIVE_API_ENABLED is true", () => {
-    expect(isWorkerNativeApiEnabled({})).toBe(false);
-    expect(isWorkerNativeApiEnabled({ WORKER_NATIVE_API_ENABLED: "false" })).toBe(false);
+  it("defaults to enabled when legacy GKE origin is not configured", () => {
+    expect(isWorkerNativeApiEnabled({})).toBe(true);
+    expect(isWorkerNativeApiEnabled({ LEGACY_GKE_ORIGIN: "" })).toBe(true);
     expect(isWorkerNativeApiEnabled({ WORKER_NATIVE_API_ENABLED: "true" })).toBe(true);
+    expect(isWorkerNativeApiEnabled({ WORKER_NATIVE_API_ENABLED: "false" })).toBe(false);
+    expect(
+      isWorkerNativeApiEnabled({
+        LEGACY_GKE_ORIGIN: "https://legacy-gke.manut.internal",
+      })
+    ).toBe(false);
+    expect(
+      isWorkerNativeApiEnabled({
+        LEGACY_GKE_ORIGIN: "https://legacy-gke.manut.internal",
+        WORKER_NATIVE_API_ENABLED: "true",
+      })
+    ).toBe(true);
   });
 
   it("matches registered routes with trailing slash normalization", () => {
@@ -63,18 +75,18 @@ describe("worker native api router", () => {
     });
   });
 
-  it("resolves worker-native routing only when the feature flag is enabled", () => {
+  it("resolves worker-native routing when legacy proxy is unavailable", () => {
     const request = new Request("https://app.manut.xyz/api/users/me/workspaces/");
-    const enabledEnv = { WORKER_NATIVE_API_ENABLED: "true" } satisfies CloudflareBindings;
-    const disabledEnv = { WORKER_NATIVE_API_ENABLED: "false" } satisfies CloudflareBindings;
+    const legacyRetiredEnv = {} satisfies CloudflareBindings;
+    const explicitlyDisabledEnv = { WORKER_NATIVE_API_ENABLED: "false" } satisfies CloudflareBindings;
 
-    expect(resolveRequestRouting(request, enabledEnv)).toEqual({
+    expect(resolveRequestRouting(request, legacyRetiredEnv)).toEqual({
       kind: "worker-native",
       route: WORKER_NATIVE_ROUTE_DEFINITIONS.find((route) => route.id === "users-me-workspaces"),
       params: {},
     });
 
-    const disabledRouting = resolveRequestRouting(request, disabledEnv);
+    const disabledRouting = resolveRequestRouting(request, explicitlyDisabledEnv);
     expect(disabledRouting.kind).toBe("edge");
     if (disabledRouting.kind === "edge") {
       expect(disabledRouting.classification.action).toBe("legacy-proxy");

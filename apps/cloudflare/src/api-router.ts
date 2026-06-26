@@ -211,7 +211,16 @@ function normalizePath(pathname: string): string {
 }
 
 export function isWorkerNativeApiEnabled(env: CloudflareBindings): boolean {
-  return env.WORKER_NATIVE_API_ENABLED?.toLowerCase() === "true";
+  const explicit = env.WORKER_NATIVE_API_ENABLED?.trim().toLowerCase();
+  if (explicit === "true") {
+    return true;
+  }
+  if (explicit === "false") {
+    return false;
+  }
+
+  // Legacy GKE proxy was retired; without an origin configured, native routes are the only backend.
+  return !env.LEGACY_GKE_ORIGIN?.trim();
 }
 
 export function matchWorkerNativeRoute(method: string, pathname: string): MatchedWorkerNativeRoute | null {

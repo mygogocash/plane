@@ -213,7 +213,7 @@ describe("Manut Cloudflare Worker foundation", () => {
       active_phase: "worker-native-api-migration",
       app_origin: "https://app.manut.xyz",
       legacy_proxy_configured: false,
-      worker_native_api_enabled: false,
+      worker_native_api_enabled: true,
       cache_target: "kv",
       d1_shadow_domains: ["workspaces", "projects", "users", "profiles", "workspace_members", "issues"],
       worker_native_route_ids: expect.arrayContaining(["users-me-workspaces", "workspace-detail"]),
@@ -224,6 +224,16 @@ describe("Manut Cloudflare Worker foundation", () => {
       upload_target: "r2",
       queue_target: "cloudflare-queues",
       live_target: "durable-objects",
+    });
+  });
+
+  it("returns worker-native unauthorized without a session when legacy proxy is retired", async () => {
+    const response = await app.request("/api/users/me/workspaces/", {}, env);
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("x-manut-edge-route")).toBe("worker-native-api");
+    await expect(response.json()).resolves.toMatchObject({
+      detail: "Authentication credentials were not provided.",
     });
   });
 

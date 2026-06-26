@@ -7,7 +7,7 @@
 import { Hono } from "hono";
 
 import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
-import { resolveRequestRouting, WORKER_NATIVE_ROUTE_DEFINITIONS } from "./api-router";
+import { resolveRequestRouting, WORKER_NATIVE_ROUTE_DEFINITIONS, isWorkerNativeApiEnabled } from "./api-router";
 import { handleD1WorkspaceProjectsRequest, handleD1WorkspacesRequest } from "./d1-core";
 import { buildInstancePayload } from "./instance";
 import { handleEmailDispatchJob, isResendConfigured } from "./auth/email-dispatch";
@@ -152,7 +152,7 @@ app.get("/api/cloudflare/migration-status", (c) =>
     active_phase: "worker-native-api-migration",
     app_origin: c.env.APP_ORIGIN ?? "https://app.manut.xyz",
     legacy_proxy_configured: Boolean(c.env.LEGACY_GKE_ORIGIN?.trim()),
-    worker_native_api_enabled: c.env.WORKER_NATIVE_API_ENABLED?.toLowerCase() === "true",
+    worker_native_api_enabled: isWorkerNativeApiEnabled(c.env),
     r2_uploads_read_enabled: isR2UploadsReadEnabled(c.env),
     resend_configured: isResendConfigured(c.env),
     resend_from_email: c.env.RESEND_FROM_EMAIL ?? "Manut <no-reply@gogocash.co>",
