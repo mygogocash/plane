@@ -26,7 +26,6 @@ from rest_framework.test import APIClient
 from plane.app.permissions import ROLE
 from plane.db.models import (
     Intake,
-    IntakeIssue,
     Issue,
     Project,
     ProjectMember,

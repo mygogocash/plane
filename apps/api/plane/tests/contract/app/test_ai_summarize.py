@@ -15,12 +15,9 @@ from plane.db.models import (
     InitiativeProject,
     Issue,
     IssueBlocker,
-    IssueType,
     Project,
-    ProjectIssueType,
     ProjectMember,
     State,
-    StatusUpdate,
     User,
     WorkspaceMember,
 )
@@ -202,7 +199,10 @@ class TestAISummarizeEndpoints:
 
         assert initiative_response.status_code == status.HTTP_200_OK
         assert initiative_response.data["rollup"]["percent_complete"] == 100
-        assert project_issue.name in project_response.data["markdown"] or project_response.data["rollup"]["percent_complete"] == 100
+        assert (
+            project_issue.name in project_response.data["markdown"]
+            or project_response.data["rollup"]["percent_complete"] == 100
+        )
 
     def test_empty_entity_returns_no_activity_zeroed_rollup(
         self, session_client, workspace, project, cycle, create_user

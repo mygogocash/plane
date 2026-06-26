@@ -157,7 +157,7 @@ class TestAISummaryShareEndpoints:
             generated_by=create_user,
             created_by=create_user,
         )
-        revoked_summary = AISummary.objects.create(
+        AISummary.objects.create(
             workspace=workspace,
             project=project,
             entity_type=AISummary.EntityType.PROJECT,

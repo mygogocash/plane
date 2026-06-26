@@ -120,7 +120,12 @@ class TestSlackBindingCrud:
     def test_binding_rejected_when_integration_not_connected(self, session_client, workspace, project):
         response = session_client.post(
             _channels_url(workspace.slug),
-            {"slack_project_sync": "00000000-0000-0000-0000-000000000000", "channel_id": "C1", "direction": "inbound", "kind": "request"},
+            {
+                "slack_project_sync": "00000000-0000-0000-0000-000000000000",
+                "channel_id": "C1",
+                "direction": "inbound",
+                "kind": "request",
+            },
             format="json",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST

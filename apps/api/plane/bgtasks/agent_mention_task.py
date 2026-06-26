@@ -30,7 +30,6 @@ from plane.db.models import (
     AgentMention,
     AuditLog,
     AutomationAgent,
-    Issue,
     IssueComment,
     ProjectMember,
 )
@@ -143,7 +142,7 @@ def process_agent_mention(mention, action, actor, depth=0):
     mention.save(update_fields=["status", "updated_at"])
 
     try:
-        result = execute_agent_action(
+        execute_agent_action(
             slug=mention.workspace.slug,
             user=actor,
             agent=agent,
