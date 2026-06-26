@@ -72,6 +72,7 @@ type ProjectRow = {
   name: string;
   identifier: string;
   network: number;
+  logo_props: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -563,7 +564,7 @@ export async function getWorkspaceProjects(env: CloudflareBindings, workspaceId:
   try {
     const result = await db
       .prepare(
-        `SELECT id, workspace_id, name, identifier, network, created_at, updated_at
+        `SELECT id, workspace_id, name, identifier, network, logo_props, created_at, updated_at
          FROM projects
          WHERE workspace_id = ?
            AND deleted_at IS NULL
@@ -588,7 +589,7 @@ export async function getProjectInWorkspace(env: CloudflareBindings, workspaceId
   try {
     return await db
       .prepare(
-        `SELECT id, workspace_id, name, identifier, network, created_at, updated_at
+        `SELECT id, workspace_id, name, identifier, network, logo_props, created_at, updated_at
          FROM projects
          WHERE id = ?
            AND workspace_id = ?
@@ -702,7 +703,7 @@ export function mapProjectPayload(row: ProjectRow, options: { memberRole?: numbe
     member_role: options.memberRole ?? null,
     archived_at: null,
     sort_order: 0,
-    logo_props: {},
+    logo_props: parseLogoProps(row.logo_props),
     cycle_view: false,
     issue_views_view: false,
     module_view: false,
@@ -711,6 +712,18 @@ export function mapProjectPayload(row: ProjectRow, options: { memberRole?: numbe
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
+}
+
+function parseLogoProps(value: string | null | undefined): Record<string, unknown> {
+  if (!value) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 export function mapIssuePayload(row: IssueRow) {

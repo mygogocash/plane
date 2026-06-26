@@ -17,6 +17,7 @@ describe("mapProjectPayload", () => {
         name: "Manut",
         identifier: "MANUT",
         network: 2,
+        logo_props: null,
         created_at: "2026-06-01T00:00:00.000Z",
         updated_at: "2026-06-02T00:00:00.000Z",
       },
@@ -33,5 +34,35 @@ describe("mapProjectPayload", () => {
       page_view: true,
     });
     expect(payload).not.toHaveProperty("workspace_id");
+  });
+
+  it("parses a stored logo_props JSON string into the project payload", () => {
+    const payload = mapProjectPayload({
+      id: "project-2",
+      workspace_id: "workspace-1",
+      name: "Tutor me",
+      identifier: "TUTORME",
+      network: 2,
+      logo_props: JSON.stringify({ in_use: "emoji", emoji: { value: "🎓" } }),
+      created_at: "2026-06-01T00:00:00.000Z",
+      updated_at: "2026-06-02T00:00:00.000Z",
+    });
+
+    expect(payload.logo_props).toEqual({ in_use: "emoji", emoji: { value: "🎓" } });
+  });
+
+  it("falls back to an empty object when logo_props JSON is invalid", () => {
+    const payload = mapProjectPayload({
+      id: "project-3",
+      workspace_id: "workspace-1",
+      name: "Tutor me",
+      identifier: "TUTORME",
+      network: 2,
+      logo_props: "{not valid json",
+      created_at: "2026-06-01T00:00:00.000Z",
+      updated_at: "2026-06-02T00:00:00.000Z",
+    });
+
+    expect(payload.logo_props).toEqual({});
   });
 });

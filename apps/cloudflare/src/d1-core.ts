@@ -6,6 +6,18 @@
 
 import type { CloudflareBindings } from "./types";
 
+function parseLogoPropsJson(value: string | null | undefined): Record<string, unknown> {
+  if (!value) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 type D1WorkspaceRow = {
   id: string;
   name: string;
@@ -22,6 +34,7 @@ type D1ProjectRow = {
   name: string;
   identifier: string;
   network: number;
+  logo_props: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -80,6 +93,7 @@ function mapProject(row: D1ProjectRow) {
     name: row.name,
     identifier: row.identifier,
     network: row.network,
+    logo_props: parseLogoPropsJson(row.logo_props),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -150,7 +164,7 @@ export async function handleD1WorkspaceProjectsRequest(
     }
 
     const result = await env.MANUT_DB.prepare(
-      `SELECT p.id, p.workspace_id, p.name, p.identifier, p.network, p.created_at, p.updated_at
+      `SELECT p.id, p.workspace_id, p.name, p.identifier, p.network, p.logo_props, p.created_at, p.updated_at
        FROM projects p
        JOIN workspaces w ON w.id = p.workspace_id
        WHERE w.slug = ? AND w.deleted_at IS NULL AND p.deleted_at IS NULL

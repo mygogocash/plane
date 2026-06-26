@@ -88,11 +88,24 @@ export function buildWorkspaceMemberInsert(row) {
 );`;
 }
 
-export function buildIdentityImportSql({ users = [], profiles = [], workspaceMembers = [] } = {}) {
+export function buildProjectLogoPropsUpdate(row) {
+  const logoProps = normalizeJsonText(row.logo_props) ?? "{}";
+  return `UPDATE projects
+SET logo_props = ${sqlLiteral(logoProps)}
+WHERE id = ${sqlLiteral(row.id)};`;
+}
+
+export function buildIdentityImportSql({
+  users = [],
+  profiles = [],
+  workspaceMembers = [],
+  projectLogoProps = [],
+} = {}) {
   const statements = [
     ...users.map((row) => buildUserInsert(row)),
     ...profiles.map((row) => buildProfileInsert(row)),
     ...workspaceMembers.map((row) => buildWorkspaceMemberInsert(row)),
+    ...projectLogoProps.map((row) => buildProjectLogoPropsUpdate(row)),
   ];
 
   return `${statements.join("\n")}\n`;

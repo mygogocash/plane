@@ -53,6 +53,12 @@ WHERE wm.deleted_at IS NULL
   AND wm.is_active = true
   AND u.is_bot = false
 ORDER BY wm.created_at ASC;`,
+  project_logo_props: `SELECT
+  p.id::text AS id,
+  COALESCE(p.logo_props::text, '{}') AS logo_props
+FROM projects p
+WHERE p.deleted_at IS NULL
+ORDER BY p.created_at ASC;`,
 };
 
 export const KUBECTL_IDENTITY_EXPORT_PYTHON = `import json

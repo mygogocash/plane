@@ -70,8 +70,9 @@ function normalizePayload(raw) {
   const users = raw.users ?? [];
   const profiles = raw.profiles ?? [];
   const workspaceMembers = raw.workspace_members ?? raw.workspaceMembers ?? [];
+  const projectLogoProps = raw.project_logo_props ?? raw.projectLogoProps ?? [];
 
-  return { users, profiles, workspaceMembers };
+  return { users, profiles, workspaceMembers, projectLogoProps };
 }
 
 function exportIdentityFromKubectl(options) {
@@ -97,8 +98,8 @@ export function buildIdentityImportReport(
   payload,
   { generatedAt = new Date().toISOString(), source = "postgres" } = {}
 ) {
-  const { users, profiles, workspaceMembers } = normalizePayload(payload);
-  const sql = buildIdentityImportSql({ users, profiles, workspaceMembers });
+  const { users, profiles, workspaceMembers, projectLogoProps } = normalizePayload(payload);
+  const sql = buildIdentityImportSql({ users, profiles, workspaceMembers, projectLogoProps });
 
   return {
     ok: true,
@@ -110,6 +111,7 @@ export function buildIdentityImportReport(
       users: users.length,
       profiles: profiles.length,
       workspace_members: workspaceMembers.length,
+      project_logo_props: projectLogoProps.length,
     },
     sql,
   };
@@ -155,7 +157,7 @@ async function main() {
   } else {
     console.log("D1 identity import SQL generated.");
     console.log(
-      `Counts: users=${report.counts.users}, profiles=${report.counts.profiles}, workspace_members=${report.counts.workspace_members}`
+      `Counts: users=${report.counts.users}, profiles=${report.counts.profiles}, workspace_members=${report.counts.workspace_members}, project_logo_props=${report.counts.project_logo_props}`
     );
   }
 }
