@@ -94,6 +94,25 @@ function fakeD1ForFronk(): D1Database {
           if (query.includes("FROM workspaces w") && query.includes("JOIN workspace_members")) {
             return { results: workspaces as T[] };
           }
+          if (query.includes("FROM projects p") && query.includes("project_id")) {
+            return {
+              results: [{ project_id: "75def81d-6882-47e3-a9c7-92c9791e4914", role: 20 }] as T[],
+            };
+          }
+          if (query.includes("JOIN users u ON u.id = wm.member_id")) {
+            return {
+              results: [
+                {
+                  ...workspaceMembers[0],
+                  email: users[0].email,
+                  display_name: users[0].display_name,
+                  first_name: users[0].first_name,
+                  last_name: users[0].last_name,
+                  avatar: users[0].avatar,
+                },
+              ] as T[],
+            };
+          }
           return { results: [] as T[] };
         },
         async first<T>() {
@@ -235,5 +254,36 @@ describe("post-login API parity", () => {
       role: 20,
       workspace: GOGOCASH_WORKSPACE_ID,
     });
+
+    const projectRolesResponse = await app.request(
+      "/api/users/me/workspaces/gogocash/project-roles/",
+      { headers },
+      env
+    );
+    expect(projectRolesResponse.status).toBe(200);
+    await expect(projectRolesResponse.json()).resolves.toEqual({
+      "75def81d-6882-47e3-a9c7-92c9791e4914": 20,
+    });
+
+    const membersResponse = await app.request("/api/workspaces/gogocash/members/", { headers }, env);
+    expect(membersResponse.status).toBe(200);
+    await expect(membersResponse.json()).resolves.toEqual([
+      expect.objectContaining({
+        id: MEMBER_ROW_ID,
+        role: 20,
+        member: expect.objectContaining({
+          id: FRONK_USER_ID,
+          email: "fronk.kunanon@gogocash.co",
+        }),
+      }),
+    ]);
+
+    const statesResponse = await app.request("/api/workspaces/gogocash/states/", { headers }, env);
+    expect(statesResponse.status).toBe(200);
+    await expect(statesResponse.json()).resolves.toEqual([]);
+
+    const sidebarResponse = await app.request("/api/workspaces/gogocash/sidebar-preferences/", { headers }, env);
+    expect(sidebarResponse.status).toBe(200);
+    await expect(sidebarResponse.json()).resolves.toEqual({});
   });
 });

@@ -82,6 +82,25 @@ describe("worker native api router", () => {
     }
   });
 
+  it("matches workspace shell routes used on initial workspace load", () => {
+    expect(matchWorkerNativeRoute("GET", "/api/users/me/workspaces/gogocash/project-roles/")).toMatchObject({
+      route: { id: "users-me-workspace-project-roles" },
+      params: { slug: "gogocash" },
+    });
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/members/")).toMatchObject({
+      route: { id: "workspace-members" },
+      params: { slug: "gogocash" },
+    });
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/states/")).toMatchObject({
+      route: { id: "workspace-states" },
+      params: { slug: "gogocash" },
+    });
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/sidebar-preferences/")).toMatchObject({
+      route: { id: "workspace-sidebar-preferences" },
+      params: { slug: "gogocash" },
+    });
+  });
+
   it("registers active slice 2-4 smoke routes as implemented", () => {
     expect(WORKER_NATIVE_ROUTE_DEFINITIONS.every((route) => route.implemented)).toBe(true);
     expect(WORKER_NATIVE_ROUTE_DEFINITIONS.map((route) => route.id)).toEqual([
@@ -89,9 +108,13 @@ describe("worker native api router", () => {
       "users-me-profile",
       "users-me-settings",
       "users-me-workspaces",
+      "users-me-workspace-project-roles",
       "workspace-detail",
       "workspace-projects",
       "workspace-member-me",
+      "workspace-members",
+      "workspace-states",
+      "workspace-sidebar-preferences",
       "workspace-asset-presign",
     ]);
   });
