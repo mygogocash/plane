@@ -7,6 +7,7 @@
 import { Hono } from "hono";
 
 import { classifyEdgeRoute, proxyToLegacyOrigin } from "./edge-routing";
+import { legacyNativeCompatibilityStubResponse } from "./legacy-get-stubs";
 import { resolveRequestRouting, WORKER_NATIVE_ROUTE_DEFINITIONS, isWorkerNativeApiEnabled } from "./api-router";
 import { handleD1WorkspaceProjectsRequest, handleD1WorkspacesRequest } from "./d1-core";
 import { buildInstancePayload } from "./instance";
@@ -242,6 +243,11 @@ app.all("*", async (c) => {
 
   if (routing.kind === "worker-native") {
     return handleWorkerNativeApiRequest(c.req.raw, c.env, routing.route, routing.params);
+  }
+
+  const legacyStubResponse = isWorkerNativeApiEnabled(c.env) ? legacyNativeCompatibilityStubResponse(c.req.raw) : null;
+  if (legacyStubResponse) {
+    return legacyStubResponse;
   }
 
   const classification = routing.classification;

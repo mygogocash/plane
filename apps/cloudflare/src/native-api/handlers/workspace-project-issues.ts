@@ -14,6 +14,7 @@ import {
   listProjectIssues,
   mapIssuePayload,
 } from "../db";
+import { buildEmptyIssuesListResponse } from "../issue-response";
 import { errorResponse, isResponse, jsonResponse, nowIso, requireDatabase } from "../http";
 
 async function resolveProjectContext(
@@ -62,7 +63,19 @@ export async function handleWorkspaceProjectIssuesListRequest(
     return issues;
   }
 
-  return jsonResponse(issues.map((issue) => mapIssuePayload(issue)));
+  const groupedBy = new URL(request.url).searchParams.get("group_by") ?? "state";
+
+  if (issues.length === 0) {
+    return jsonResponse(buildEmptyIssuesListResponse(groupedBy));
+  }
+
+  return jsonResponse({
+    ...buildEmptyIssuesListResponse(groupedBy),
+    total_count: issues.length,
+    count: issues.length,
+    total_results: issues.length,
+    results: issues.map((issue) => mapIssuePayload(issue)),
+  });
 }
 
 export async function handleWorkspaceProjectIssueCreateRequest(

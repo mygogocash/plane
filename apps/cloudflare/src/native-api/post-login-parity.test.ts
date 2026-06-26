@@ -13,6 +13,7 @@ import { buildUserSettingsWorkspacePayload, mapUserProfilePayload, mapWorkspaceM
 
 const FRONK_USER_ID = "86b06908-f09d-4e9b-8b39-bc74aa9d1008";
 const GOGOCASH_WORKSPACE_ID = "c0c5b239-912f-4397-966d-7d6c5b40f415";
+const FASTWORK_PROJECT_ID = "75def81d-6882-47e3-a9c7-92c9791e4914";
 const MEMBER_ROW_ID = "eaea3f26-ca5e-4e7a-9ad2-f3ff847e041c";
 
 function fakeKv(store = new Map<string, string>()) {
@@ -81,6 +82,18 @@ function fakeD1ForFronk(): D1Database {
       slug: "gogocash",
     },
   ];
+  const projects = [
+    {
+      id: FASTWORK_PROJECT_ID,
+      workspace_id: GOGOCASH_WORKSPACE_ID,
+      name: "Fastwork",
+      identifier: "FAST",
+      network: 2,
+      logo_props: JSON.stringify({ in_use: "emoji", emoji: { value: "⚡" } }),
+      created_at: "2026-06-05T00:00:00.000Z",
+      updated_at: "2026-06-05T00:00:00.000Z",
+    },
+  ];
 
   return {
     prepare(query: string) {
@@ -96,8 +109,11 @@ function fakeD1ForFronk(): D1Database {
           }
           if (query.includes("FROM projects p") && query.includes("project_id")) {
             return {
-              results: [{ project_id: "75def81d-6882-47e3-a9c7-92c9791e4914", role: 20 }] as T[],
+              results: [{ project_id: FASTWORK_PROJECT_ID, role: 20 }] as T[],
             };
+          }
+          if (query.includes("FROM issues")) {
+            return { results: [] as T[] };
           }
           if (query.includes("JOIN users u ON u.id = wm.member_id")) {
             return {
@@ -138,6 +154,12 @@ function fakeD1ForFronk(): D1Database {
               return workspaces[0] as T;
             }
             return null;
+          }
+          if (query.includes("FROM projects") && query.includes("WHERE id = ?")) {
+            const projectId = state.args[0];
+            const workspaceId = state.args[1];
+            return (projects.find((row) => row.id === projectId && row.workspace_id === workspaceId) ??
+              null) as T | null;
           }
           return null;
         },
@@ -262,8 +284,69 @@ describe("post-login API parity", () => {
     );
     expect(projectRolesResponse.status).toBe(200);
     await expect(projectRolesResponse.json()).resolves.toEqual({
-      "75def81d-6882-47e3-a9c7-92c9791e4914": 20,
+      [FASTWORK_PROJECT_ID]: 20,
     });
+
+    const projectDetailResponse = await app.request(
+      `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/`,
+      { headers },
+      env
+    );
+    expect(projectDetailResponse.status).toBe(200);
+    await expect(projectDetailResponse.json()).resolves.toMatchObject({
+      id: FASTWORK_PROJECT_ID,
+      name: "Fastwork",
+      identifier: "FAST",
+      member_role: 20,
+      logo_props: { in_use: "emoji", emoji: { value: "⚡" } },
+      description_html: "<p></p>",
+    });
+
+    const projectStatesResponse = await app.request(
+      `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/states/`,
+      { headers },
+      env
+    );
+    expect(projectStatesResponse.status).toBe(200);
+    await expect(projectStatesResponse.json()).resolves.toEqual([]);
+
+    const projectMemberMeResponse = await app.request(
+      `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/project-members/me/`,
+      { headers },
+      env
+    );
+    expect(projectMemberMeResponse.status).toBe(200);
+    await expect(projectMemberMeResponse.json()).resolves.toMatchObject({
+      member: FRONK_USER_ID,
+      role: 20,
+    });
+
+    const issuesResponse = await app.request(
+      `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/issues/`,
+      { headers },
+      env
+    );
+    expect(issuesResponse.status).toBe(200);
+    await expect(issuesResponse.json()).resolves.toMatchObject({
+      grouped_by: "state",
+      results: [],
+      total_count: 0,
+    });
+
+    const labelsResponse = await app.request(
+      `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/issue-labels/`,
+      { headers },
+      env
+    );
+    expect(labelsResponse.status).toBe(200);
+    await expect(labelsResponse.json()).resolves.toEqual([]);
+
+    const clientErrorResponse = await app.request(
+      "/api/client-errors/",
+      { method: "POST", headers, body: JSON.stringify({ message: "test" }) },
+      env
+    );
+    expect(clientErrorResponse.status).toBe(204);
 
     const membersResponse = await app.request("/api/workspaces/gogocash/members/", { headers }, env);
     expect(membersResponse.status).toBe(200);

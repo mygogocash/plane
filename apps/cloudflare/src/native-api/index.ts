@@ -21,6 +21,9 @@ import {
   handleWorkspaceProjectIssueUpdateRequest,
   handleWorkspaceProjectIssuesListRequest,
 } from "./handlers/workspace-project-issues";
+import { handleWorkspaceProjectDetailRequest } from "./handlers/workspace-project-detail";
+import { handleWorkspaceProjectMemberMeRequest } from "./handlers/workspace-project-member-me";
+import { handleWorkspaceProjectStatesRequest } from "./handlers/workspace-project-states";
 import { handleWorkspaceProjectsRequest } from "./handlers/workspace-projects";
 import { handleWorkspaceSidebarPreferencesRequest } from "./handlers/workspace-sidebar-preferences";
 import { handleWorkspaceStatesRequest } from "./handlers/workspace-states";
@@ -67,6 +70,21 @@ export async function handleWorkerNativeApiRequest(
       return handleWorkspaceStatesRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-sidebar-preferences":
       return handleWorkspaceSidebarPreferencesRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-project-detail":
+      return handleWorkspaceProjectDetailRequest(request, env, {
+        slug: params.slug ?? "",
+        projectId: params.projectId ?? "",
+      });
+    case "workspace-project-states":
+      return handleWorkspaceProjectStatesRequest(request, env, {
+        slug: params.slug ?? "",
+        projectId: params.projectId ?? "",
+      });
+    case "workspace-project-member-me":
+      return handleWorkspaceProjectMemberMeRequest(request, env, {
+        slug: params.slug ?? "",
+        projectId: params.projectId ?? "",
+      });
     case "workspace-project-issues-list":
       return handleWorkspaceProjectIssuesListRequest(request, env, {
         slug: params.slug ?? "",

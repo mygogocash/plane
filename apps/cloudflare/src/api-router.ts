@@ -19,6 +19,9 @@ export type WorkerNativeRouteId =
   | "workspace-members"
   | "workspace-states"
   | "workspace-sidebar-preferences"
+  | "workspace-project-detail"
+  | "workspace-project-states"
+  | "workspace-project-member-me"
   | "workspace-project-issues-list"
   | "workspace-project-issue-create"
   | "workspace-project-issue-update"
@@ -138,7 +141,69 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     pattern: /^\/api\/workspaces\/([^/]+)\/sidebar-preferences\/$/,
     paramNames: ["slug"],
   },
-  // Issue CRUD stays on legacy GKE until D1 issue import is populated (manut-prod currently has 0 rows).
+  {
+    id: "workspace-project-detail",
+    method: "GET",
+    path: "/api/workspaces/:slug/projects/:projectId/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/$/,
+    paramNames: ["slug", "projectId"],
+  },
+  {
+    id: "workspace-project-states",
+    method: "GET",
+    path: "/api/workspaces/:slug/projects/:projectId/states/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/states\/$/,
+    paramNames: ["slug", "projectId"],
+  },
+  {
+    id: "workspace-project-member-me",
+    method: "GET",
+    path: "/api/workspaces/:slug/projects/:projectId/project-members/me/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/project-members\/me\/$/,
+    paramNames: ["slug", "projectId"],
+  },
+  {
+    id: "workspace-project-issues-list",
+    method: "GET",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/$/,
+    paramNames: ["slug", "projectId"],
+  },
+  {
+    id: "workspace-project-issue-create",
+    method: "POST",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/$/,
+    paramNames: ["slug", "projectId"],
+  },
+  {
+    id: "workspace-project-issue-update",
+    method: "PATCH",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/([^/]+)\/$/,
+    paramNames: ["slug", "projectId", "issueId"],
+  },
+  {
+    id: "workspace-project-issue-delete",
+    method: "DELETE",
+    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/issues\/([^/]+)\/$/,
+    paramNames: ["slug", "projectId", "issueId"],
+  },
   {
     id: "workspace-asset-presign",
     method: "POST",
@@ -150,37 +215,8 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
   },
 ];
 
-/** Slice 4 issue handlers exist but are not routed until D1 issue import is live. */
-export const WORKER_NATIVE_DEFERRED_ROUTE_DEFINITIONS: WorkerNativeRouteDefinition[] = [
-  {
-    id: "workspace-project-issues-list",
-    method: "GET",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-  },
-  {
-    id: "workspace-project-issue-create",
-    method: "POST",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-  },
-  {
-    id: "workspace-project-issue-update",
-    method: "PATCH",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-  },
-  {
-    id: "workspace-project-issue-delete",
-    method: "DELETE",
-    path: "/api/workspaces/:slug/projects/:projectId/issues/:issueId/",
-    slice: "worker-native-api-migration-slice-4",
-    implemented: true,
-  },
-];
+/** Reserved for routes implemented but intentionally withheld from production routing. */
+export const WORKER_NATIVE_DEFERRED_ROUTE_DEFINITIONS: WorkerNativeRouteDefinition[] = [];
 
 export const WORKER_NATIVE_ROUTE_DEFINITIONS: WorkerNativeRouteDefinition[] = WORKER_NATIVE_ROUTE_MATCHERS.map(
   ({ pattern: _pattern, paramNames: _paramNames, ...definition }) => definition

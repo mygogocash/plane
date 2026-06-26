@@ -714,6 +714,27 @@ export function mapProjectPayload(row: ProjectRow, options: { memberRole?: numbe
   };
 }
 
+export function mapProjectDetailPayload(row: ProjectRow, options: { memberRole?: number } = {}) {
+  return {
+    ...mapProjectPayload(row, options),
+    description: "",
+    description_html: "<p></p>",
+    cover_image: null,
+    cover_image_url: null,
+    default_assignee: null,
+    default_state: null,
+    estimate: null,
+    anchor: null,
+    is_favorite: false,
+    timezone: "UTC",
+    next_work_item_sequence: 1,
+    archive_in: 0,
+    close_in: 0,
+    guest_view_all_features: false,
+    project_lead: null,
+  };
+}
+
 function parseLogoProps(value: string | null | undefined): Record<string, unknown> {
   if (!value) {
     return {};

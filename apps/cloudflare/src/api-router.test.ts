@@ -46,18 +46,38 @@ describe("worker native api router", () => {
     });
   });
 
-  it("routes issue APIs to legacy GKE until D1 issue import is populated", () => {
-    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/issues/")).toBeNull();
+  it("routes issue APIs through worker-native handlers when legacy GKE is retired", () => {
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/issues/")).toMatchObject({
+      route: { id: "workspace-project-issues-list" },
+      params: { slug: "gogocash", projectId: "abc-123" },
+    });
 
     const routing = resolveRequestRouting(
       new Request("https://app.manut.xyz/api/workspaces/gogocash/projects/abc-123/issues/"),
-      { WORKER_NATIVE_API_ENABLED: "true" } satisfies CloudflareBindings
+      {} satisfies CloudflareBindings
     );
 
-    expect(routing.kind).toBe("edge");
-    if (routing.kind === "edge") {
-      expect(routing.classification.action).toBe("legacy-proxy");
+    expect(routing.kind).toBe("worker-native");
+    if (routing.kind === "worker-native") {
+      expect(routing.route.id).toBe("workspace-project-issues-list");
     }
+  });
+
+  it("matches project shell routes used when opening a project", () => {
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/")).toMatchObject({
+      route: { id: "workspace-project-detail" },
+      params: { slug: "gogocash", projectId: "abc-123" },
+    });
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/states/")).toMatchObject({
+      route: { id: "workspace-project-states" },
+      params: { slug: "gogocash", projectId: "abc-123" },
+    });
+    expect(
+      matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/project-members/me/")
+    ).toMatchObject({
+      route: { id: "workspace-project-member-me" },
+      params: { slug: "gogocash", projectId: "abc-123" },
+    });
   });
 
   it("does not match unregistered routes", () => {
@@ -127,6 +147,13 @@ describe("worker native api router", () => {
       "workspace-members",
       "workspace-states",
       "workspace-sidebar-preferences",
+      "workspace-project-detail",
+      "workspace-project-states",
+      "workspace-project-member-me",
+      "workspace-project-issues-list",
+      "workspace-project-issue-create",
+      "workspace-project-issue-update",
+      "workspace-project-issue-delete",
       "workspace-asset-presign",
     ]);
   });
