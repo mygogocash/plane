@@ -19,6 +19,8 @@ const ACCEPTED_BUILD_COMMANDS = new Set([
 const ACCEPTED_PRODUCTION_DEPLOY_COMMANDS = new Set([
   "pnpm --filter @manut/cloudflare deploy:production",
   "pnpm --dir ../.. --filter @manut/cloudflare deploy:production",
+  "pnpm --filter @manut/cloudflare deploy:worker",
+  "pnpm --dir ../.. --filter @manut/cloudflare deploy:worker",
 ]);
 const ACCEPTED_PREVIEW_DEPLOY_COMMANDS = new Set([
   "pnpm --filter @manut/cloudflare exec wrangler versions upload --env production",
@@ -159,7 +161,7 @@ export function buildTemplate() {
       github_check_url: "https://github.com/mygogocash/plane/actions/runs/<run_id>",
       branch: "codex/cloudflare-cutoff-gates",
       commit_sha: "<commit-sha>",
-      build_command: "pnpm --filter @manut/cloudflare ci:cloudflare",
+      build_command: "pnpm --filter @manut/cloudflare deploy:build",
       build_command_observed: false,
       deploy_command: "pnpm --filter @manut/cloudflare exec wrangler versions upload --env production",
       deploy_command_observed: false,
