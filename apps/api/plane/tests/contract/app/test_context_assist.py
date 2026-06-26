@@ -9,15 +9,12 @@ from rest_framework import status
 
 from plane.app.permissions import ROLE
 from plane.db.models import (
-    Cycle,
-    CycleIssue,
     Issue,
     IssueActivity,
     IssueBlocker,
     Project,
     ProjectMember,
     State,
-    StatusUpdate,
     User,
     Workspace,
     WorkspaceMember,
