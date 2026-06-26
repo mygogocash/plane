@@ -65,6 +65,6 @@ pattern = "app.manut.xyz/*"
 zone_name = "manut.xyz"
 
 [assets]
-directory = "../web/build/client"
+directory = "apps/web/build/client"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
