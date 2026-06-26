@@ -148,7 +148,8 @@ class TestGenerateBriefAndTranslate:
         api_client.force_authenticate(user=guest)
 
         with _configured_llm(), _mock_brief_llm(
-            "<h2>Problem</h2><p>x</p><h2>Solution</h2><p>x</p><h2>Acceptance Criteria</h2><p>x</p><h2>Notes</h2><p>x</p>"
+            "<h2>Problem</h2><p>x</p><h2>Solution</h2><p>x</p>"
+            "<h2>Acceptance Criteria</h2><p>x</p><h2>Notes</h2><p>x</p>"
         ):
             response = api_client.post(_generate_brief_url(workspace.slug, project.id, issue.id), format="json")
 

@@ -35,7 +35,6 @@ from plane.db.models import (
     Intake,
     IntakeIssue,
     Issue,
-    IssueAssignee,
     Label,
     Project,
     ProjectMember,

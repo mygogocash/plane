@@ -133,7 +133,11 @@ def _apply_draft(*, slug, user, project, draft, draft_token):
 
         assignee_suggestion = item.get("assignee_suggestion")
         if assignee_suggestion:
-            member = User.objects.filter(id=assignee_suggestion).first() if _looks_like_uuid(assignee_suggestion) else None
+            member = (
+                User.objects.filter(id=assignee_suggestion).first()
+                if _looks_like_uuid(assignee_suggestion)
+                else None
+            )
             if member and ProjectMember.objects.filter(project=project, member=member, is_active=True).exists():
                 IssueAssignee.objects.get_or_create(
                     issue=issue,

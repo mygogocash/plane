@@ -17,7 +17,7 @@ from rest_framework.response import Response
 
 # Module imports
 from plane.app.permissions import ROLE, allow_permission
-from plane.db.models import AutomationRule, Project, Workspace
+from plane.db.models import AutomationRule, Workspace
 from plane.utils.automation_actions import validate_actions_payload
 
 from .base import BaseAPIView

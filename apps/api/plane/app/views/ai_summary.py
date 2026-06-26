@@ -68,7 +68,9 @@ def _summarize_entity(*, entity_label, rollup, is_empty):
     return payload, None
 
 
-def _create_shared_summary(request, slug, *, workspace, project, entity_type, entity_id, entity_label, rollup, is_empty):
+def _create_shared_summary(
+    request, slug, *, workspace, project, entity_type, entity_id, entity_label, rollup, is_empty
+):
     payload, error_response = _summarize_entity(
         entity_label=entity_label,
         rollup=rollup,
@@ -200,7 +202,9 @@ class InitiativeSummarizeEndpoint(BaseAPIView):
 class InitiativeSummarizeShareEndpoint(BaseAPIView):
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER], level="WORKSPACE")
     def post(self, request, slug, initiative_id):
-        initiative = Initiative.objects.filter(workspace__slug=slug, id=initiative_id).select_related("workspace").first()
+        initiative = (
+            Initiative.objects.filter(workspace__slug=slug, id=initiative_id).select_related("workspace").first()
+        )
         if initiative is None:
             return Response({"error": "Initiative not found"}, status=status.HTTP_404_NOT_FOUND)
 
