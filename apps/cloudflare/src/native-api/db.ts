@@ -368,6 +368,114 @@ export function mapWorkspaceMemberMePayload(row: WorkspaceMemberRow) {
   };
 }
 
+type WorkspaceMemberWithUserRow = WorkspaceMemberRow & {
+  email: string;
+  display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: string | null;
+};
+
+export async function getWorkspaceProjectRoles(env: CloudflareBindings, slug: string, userId: string) {
+  const db = requireDatabase(env);
+  if (isResponse(db)) {
+    return db;
+  }
+
+  try {
+    const result = await db
+      .prepare(
+        `SELECT p.id AS project_id, wm.role
+         FROM projects p
+         JOIN workspaces w ON w.id = p.workspace_id
+         JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.member_id = ?
+         WHERE w.slug = ?
+           AND w.deleted_at IS NULL
+           AND p.deleted_at IS NULL
+           AND wm.is_active = 1`
+      )
+      .bind(userId, slug)
+      .all<{ project_id: string; role: number }>();
+
+    return result.results ?? [];
+  } catch (error) {
+    console.error("D1_WORKSPACE_PROJECT_ROLES_FAILED", error);
+    return d1QueryFailed("projects");
+  }
+}
+
+export function mapWorkspaceProjectRolesPayload(rows: Array<{ project_id: string; role: number }>) {
+  return rows.reduce<Record<string, number>>((roles, row) => {
+    roles[row.project_id] = row.role;
+    return roles;
+  }, {});
+}
+
+export async function getWorkspaceMembers(env: CloudflareBindings, slug: string) {
+  const db = requireDatabase(env);
+  if (isResponse(db)) {
+    return db;
+  }
+
+  try {
+    const result = await db
+      .prepare(
+        `SELECT
+           wm.id,
+           wm.workspace_id,
+           wm.member_id,
+           wm.role,
+           wm.is_active,
+           wm.created_at,
+           wm.updated_at,
+           u.email,
+           u.display_name,
+           u.first_name,
+           u.last_name,
+           u.avatar
+         FROM workspace_members wm
+         JOIN workspaces w ON w.id = wm.workspace_id
+         JOIN users u ON u.id = wm.member_id
+         WHERE w.slug = ?
+           AND w.deleted_at IS NULL
+           AND wm.is_active = 1
+           AND u.is_active = 1
+           AND u.is_bot = 0
+         ORDER BY u.display_name COLLATE NOCASE ASC, u.email COLLATE NOCASE ASC`
+      )
+      .bind(slug)
+      .all<WorkspaceMemberWithUserRow>();
+
+    return result.results ?? [];
+  } catch (error) {
+    console.error("D1_WORKSPACE_MEMBERS_FAILED", error);
+    return d1QueryFailed("workspace-members");
+  }
+}
+
+export function mapWorkspaceMemberPayload(row: WorkspaceMemberWithUserRow) {
+  return {
+    id: row.id,
+    member: {
+      id: row.member_id,
+      email: row.email,
+      display_name: row.display_name,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      avatar: row.avatar,
+      avatar_url: row.avatar,
+    },
+    role: row.role,
+    created_at: row.created_at,
+    email: row.email,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    display_name: row.display_name,
+    avatar_url: row.avatar,
+    is_active: Boolean(row.is_active),
+  };
+}
+
 export async function getUserWorkspaces(env: CloudflareBindings, userId: string) {
   const db = requireDatabase(env);
   if (isResponse(db)) {

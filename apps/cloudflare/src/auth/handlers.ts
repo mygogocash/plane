@@ -133,12 +133,21 @@ export async function handleMagicGenerate(request: Request, env: CloudflareBindi
   }
 }
 
+async function readMagicSignInParams(request: Request): Promise<URLSearchParams> {
+  const form = await readFormBody(request);
+  if ([...form.keys()].length > 0) {
+    return form;
+  }
+
+  return new URL(request.url).searchParams;
+}
+
 async function handleMagicSignInLike(
   request: Request,
   env: CloudflareBindings,
   mode: "sign-in" | "sign-up"
 ): Promise<Response> {
-  const form = await readFormBody(request);
+  const form = await readMagicSignInParams(request);
   const email = form.get("email")?.trim().toLowerCase() ?? "";
   const code = form.get("code")?.trim() ?? "";
   const nextPath = form.get("next_path");
@@ -225,6 +234,30 @@ export async function handleMagicSignUp(request: Request, env: CloudflareBinding
   return handleMagicSignInLike(request, env, "sign-up");
 }
 
+export async function handleMagicSignInGet(request: Request, env: CloudflareBindings): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  const email = params.get("email")?.trim().toLowerCase() ?? "";
+  const code = params.get("code")?.trim() ?? "";
+
+  if (email && code) {
+    return handleMagicSignInLike(request, env, "sign-in");
+  }
+
+  return redirectResponse(buildSafeRedirectUrl(env, params.get("next_path") ?? "/"));
+}
+
+export async function handleMagicSignUpGet(request: Request, env: CloudflareBindings): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  const email = params.get("email")?.trim().toLowerCase() ?? "";
+  const code = params.get("code")?.trim() ?? "";
+
+  if (email && code) {
+    return handleMagicSignInLike(request, env, "sign-up");
+  }
+
+  return redirectResponse(buildSafeRedirectUrl(env, params.get("next_path") ?? "/"));
+}
+
 export async function handleSignOut(request: Request, env: CloudflareBindings): Promise<Response> {
   const sessionId = readCookie(request, "session-id");
   if (sessionId) {
@@ -244,7 +277,9 @@ export type AuthRouteId =
   | "email-check"
   | "magic-generate"
   | "magic-sign-in"
+  | "magic-sign-in-get"
   | "magic-sign-up"
+  | "magic-sign-up-get"
   | "sign-out";
 
 const AUTH_ROUTES: Array<{ id: AuthRouteId; method: string; pattern: RegExp }> = [
@@ -252,7 +287,9 @@ const AUTH_ROUTES: Array<{ id: AuthRouteId; method: string; pattern: RegExp }> =
   { id: "email-check", method: "POST", pattern: /^\/auth\/email-check\/?$/ },
   { id: "magic-generate", method: "POST", pattern: /^\/auth\/magic-generate\/?$/ },
   { id: "magic-sign-in", method: "POST", pattern: /^\/auth\/magic-sign-in\/?$/ },
+  { id: "magic-sign-in-get", method: "GET", pattern: /^\/auth\/magic-sign-in\/?$/ },
   { id: "magic-sign-up", method: "POST", pattern: /^\/auth\/magic-sign-up\/?$/ },
+  { id: "magic-sign-up-get", method: "GET", pattern: /^\/auth\/magic-sign-up\/?$/ },
   { id: "sign-out", method: "POST", pattern: /^\/auth\/sign-out\/?$/ },
 ];
 
@@ -282,8 +319,12 @@ export async function handleAuthRequest(
       return handleMagicGenerate(request, env);
     case "magic-sign-in":
       return handleMagicSignIn(request, env);
+    case "magic-sign-in-get":
+      return handleMagicSignInGet(request, env);
     case "magic-sign-up":
       return handleMagicSignUp(request, env);
+    case "magic-sign-up-get":
+      return handleMagicSignUpGet(request, env);
     case "sign-out":
       return handleSignOut(request, env);
     default: {

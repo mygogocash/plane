@@ -29,6 +29,8 @@ describe("auth routes", () => {
   it("matches worker-native auth endpoints", () => {
     expect(matchAuthRoute("GET", "/auth/get-csrf-token")).toBe("get-csrf-token");
     expect(matchAuthRoute("POST", "/auth/magic-generate/")).toBe("magic-generate");
+    expect(matchAuthRoute("GET", "/auth/magic-sign-in/")).toBe("magic-sign-in-get");
+    expect(matchAuthRoute("POST", "/auth/magic-sign-in/")).toBe("magic-sign-in");
   });
 
   it("creates a session cookie after magic code verification path", async () => {
