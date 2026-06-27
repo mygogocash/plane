@@ -145,6 +145,10 @@ describe("worker native api router", () => {
       route: { id: "workspace-home-preferences" },
       params: { slug: "gogocash" },
     });
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/details/")).toMatchObject({
+      route: { id: "workspace-projects-details" },
+      params: { slug: "gogocash" },
+    });
     expect(matchWorkerNativeRoute("PATCH", "/api/workspaces/gogocash/home-preferences/quick_links/")).toMatchObject({
       route: { id: "workspace-home-preference-update" },
       params: { slug: "gogocash", key: "quick_links" },
@@ -161,6 +165,7 @@ describe("worker native api router", () => {
       "users-me-workspace-project-roles",
       "workspace-detail",
       "workspace-projects",
+      "workspace-projects-details",
       "workspace-member-me",
       "workspace-members",
       "workspace-states",
@@ -168,6 +173,11 @@ describe("worker native api router", () => {
       "workspace-sidebar-preferences",
       "workspace-home-preferences",
       "workspace-home-preference-update",
+      "workspace-quick-links",
+      "workspace-quick-links",
+      "workspace-quick-link-detail",
+      "workspace-quick-link-detail",
+      "workspace-recent-visits",
       "workspace-project-detail",
       "workspace-project-states",
       "workspace-project-intake-state",

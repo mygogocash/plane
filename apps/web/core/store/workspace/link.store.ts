@@ -93,9 +93,14 @@ export class WorkspaceLinkStore implements IWorkspaceLinkStore {
   };
 
   fetchLinks = async (workspaceSlug: string) => {
-    const response = await this.workspaceService.fetchWorkspaceLinks(workspaceSlug);
-    this.addLinks(workspaceSlug, response);
-    return response;
+    try {
+      const response = await this.workspaceService.fetchWorkspaceLinks(workspaceSlug);
+      this.addLinks(workspaceSlug, response);
+      return response;
+    } catch (error) {
+      this.addLinks(workspaceSlug, []);
+      throw error;
+    }
   };
 
   createLink = async (workspaceSlug: string, data: Partial<TLink>) => {

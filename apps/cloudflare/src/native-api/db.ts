@@ -580,6 +580,35 @@ export async function getWorkspaceProjects(env: CloudflareBindings, workspaceId:
   }
 }
 
+export async function getProjectNextWorkItemSequences(env: CloudflareBindings, workspaceId: string) {
+  const db = requireDatabase(env);
+  if (isResponse(db)) {
+    return db;
+  }
+
+  try {
+    const result = await db
+      .prepare(
+        `SELECT project_id, COALESCE(MAX(sequence_id), 0) AS max_sequence
+         FROM issues
+         WHERE workspace_id = ?
+         GROUP BY project_id`
+      )
+      .bind(workspaceId)
+      .all<{ project_id: string; max_sequence: number }>();
+
+    const sequences = new Map<string, number>();
+    for (const row of result.results ?? []) {
+      sequences.set(row.project_id, row.max_sequence + 1);
+    }
+
+    return sequences;
+  } catch (error) {
+    console.error("D1_PROJECT_NEXT_SEQUENCE_FAILED", error);
+    return d1QueryFailed("issues");
+  }
+}
+
 export async function getProjectInWorkspace(env: CloudflareBindings, workspaceId: string, projectId: string) {
   const db = requireDatabase(env);
   if (isResponse(db)) {
@@ -773,7 +802,19 @@ export function mapProjectDetailPayload(row: ProjectRow, options: { memberRole?:
   };
 }
 
-function parseLogoProps(value: string | null | undefined): Record<string, unknown> {
+export function mapProjectListPayload(
+  row: ProjectRow,
+  options: { memberRole?: number; nextWorkItemSequence?: number } = {}
+) {
+  return {
+    ...mapProjectDetailPayload(row, options),
+    members: [] as string[],
+    intake_count: 0,
+    next_work_item_sequence: options.nextWorkItemSequence ?? 1,
+  };
+}
+
+export function parseLogoProps(value: string | null | undefined): Record<string, unknown> {
   if (!value) {
     return {};
   }

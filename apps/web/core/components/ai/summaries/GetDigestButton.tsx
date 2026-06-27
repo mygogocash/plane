@@ -127,6 +127,7 @@ export const GetDigestButton = ({
   const [isCopyingShareLink, setIsCopyingShareLink] = useState(false);
 
   if (!featureEnabled) return null;
+  if (isProviderConfigured === false) return null;
 
   const providerHint = getDigestDisabledHint(isProviderConfigured);
   const isButtonDisabled = disabled || status === "loading" || status === "not_configured" || !entityId;

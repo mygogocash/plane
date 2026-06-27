@@ -211,6 +211,8 @@ export const AskAIAction = ({
   owner,
   service = defaultCopilotQueryService,
 }: TAskAIActionProps) => {
+  if (isProviderConfigured === false) return null;
+
   const [isOpen, setIsOpen] = useState(Boolean(initialResult || initialStatus));
   const [question, setQuestion] = useState(initialQuestion ?? defaultQuestion(owner));
   const [result, setResult] = useState<TCopilotQueryResponse | null>(initialResult);

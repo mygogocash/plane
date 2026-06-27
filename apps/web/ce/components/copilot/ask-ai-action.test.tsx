@@ -61,7 +61,7 @@ describe("AskAIAction", () => {
     expect(markup).toContain("Progress is green");
   });
 
-  it("renders a disabled 'configure AI provider' state when the endpoint returns 409", async () => {
+  it("renders nothing when the instance AI provider is not configured", async () => {
     const service = {
       query: vi.fn().mockRejectedValue({
         status: 409,
@@ -74,11 +74,12 @@ describe("AskAIAction", () => {
       question: "Summarize progress",
       service,
     });
-    const markup = renderToStaticMarkup(<AskAIAction owner={owner} service={service} initialStatus="not_configured" />);
+    const markup = renderToStaticMarkup(
+      <AskAIAction owner={owner} service={service} isProviderConfigured={false} initialStatus="not_configured" />
+    );
 
     expect(result).toMatchObject({ status: "not_configured" });
-    expect(markup).toContain("Configure AI provider");
-    expect(markup).toContain("disabled");
+    expect(markup).toBe("");
   });
 
   it("renders an 'AI unavailable' message (no crash) on 503 without blocking the view", async () => {

@@ -15,12 +15,16 @@ export type WorkerNativeRouteId =
   | "users-me-workspace-project-roles"
   | "workspace-detail"
   | "workspace-projects"
+  | "workspace-projects-details"
   | "workspace-member-me"
   | "workspace-members"
   | "workspace-states"
   | "workspace-sidebar-preferences"
   | "workspace-home-preferences"
   | "workspace-home-preference-update"
+  | "workspace-quick-links"
+  | "workspace-quick-link-detail"
+  | "workspace-recent-visits"
   | "workspace-project-detail"
   | "workspace-project-states"
   | "workspace-project-intake-state"
@@ -109,6 +113,15 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     paramNames: ["slug"],
   },
   {
+    id: "workspace-projects-details",
+    method: "GET",
+    path: "/api/workspaces/:slug/projects/details/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/details\/$/,
+    paramNames: ["slug"],
+  },
+  {
     id: "workspace-member-me",
     method: "GET",
     path: "/api/workspaces/:slug/workspace-members/me/",
@@ -170,6 +183,51 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     implemented: true,
     pattern: /^\/api\/workspaces\/([^/]+)\/home-preferences\/([^/]+)\/$/,
     paramNames: ["slug", "key"],
+  },
+  {
+    id: "workspace-quick-links",
+    method: "GET",
+    path: "/api/workspaces/:slug/quick-links/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/quick-links\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-quick-links",
+    method: "POST",
+    path: "/api/workspaces/:slug/quick-links/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/quick-links\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-quick-link-detail",
+    method: "PATCH",
+    path: "/api/workspaces/:slug/quick-links/:linkId/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/quick-links\/([^/]+)\/$/,
+    paramNames: ["slug", "linkId"],
+  },
+  {
+    id: "workspace-quick-link-detail",
+    method: "DELETE",
+    path: "/api/workspaces/:slug/quick-links/:linkId/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/quick-links\/([^/]+)\/$/,
+    paramNames: ["slug", "linkId"],
+  },
+  {
+    id: "workspace-recent-visits",
+    method: "GET",
+    path: "/api/workspaces/:slug/recent-visits/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/recent-visits\/$/,
+    paramNames: ["slug"],
   },
   {
     id: "workspace-project-detail",

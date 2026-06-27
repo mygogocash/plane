@@ -92,13 +92,12 @@ describe("GetDigestButton", () => {
     expect(markup).toContain("AI is thinking");
   });
 
-  it("provider missing → disabled button with connect hint", () => {
+  it("provider missing → renders nothing", () => {
     const markup = renderToStaticMarkup(
       <GetDigestButton workspaceSlug="acme" entityType="project" entityId="project-1" isProviderConfigured={false} />
     );
 
-    expect(markup).toContain("Configure AI provider");
-    expect(markup).toContain("disabled");
+    expect(markup).toBe("");
   });
 
   it("requestEntityDigest loads summarizeEntity for the scoped entity", async () => {

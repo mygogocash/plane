@@ -60,6 +60,7 @@ export const GenerateBriefButton = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!shouldShowBriefButton({ featureEnabled })) return null;
+  if (isProviderConfigured === false) return null;
 
   const providerHint = getBriefDisabledHint(isProviderConfigured);
   const isActionDisabled = disabled || status === "loading" || status === "not_configured" || !issueId || !projectId;

@@ -154,6 +154,12 @@ function fakeD1ForFronk(): D1Database {
               results: [{ project_id: FASTWORK_PROJECT_ID, role: 20 }] as T[],
             };
           }
+          if (query.includes("FROM projects") && query.includes("workspace_id = ?")) {
+            const workspaceId = state.args[0];
+            return {
+              results: projects.filter((row) => row.workspace_id === workspaceId) as T[],
+            };
+          }
           if (query.includes("FROM issues")) {
             return { results: [] as T[] };
           }
@@ -379,6 +385,20 @@ describe("post-login API parity", () => {
     await expect(projectRolesResponse.json()).resolves.toEqual({
       [FASTWORK_PROJECT_ID]: 20,
     });
+
+    const projectsDetailsResponse = await app.request("/api/workspaces/gogocash/projects/details/", { headers }, env);
+    expect(projectsDetailsResponse.status).toBe(200);
+    await expect(projectsDetailsResponse.json()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: FASTWORK_PROJECT_ID,
+          name: "Fastwork",
+          identifier: "FAST",
+          members: [],
+          next_work_item_sequence: 1,
+        }),
+      ])
+    );
 
     const projectDetailResponse = await app.request(
       `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/`,

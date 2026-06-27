@@ -25,11 +25,16 @@ import { handleWorkspaceProjectDetailRequest } from "./handlers/workspace-projec
 import { handleWorkspaceProjectIntakeStateRequest } from "./handlers/workspace-project-intake-state";
 import { handleWorkspaceProjectMemberMeRequest } from "./handlers/workspace-project-member-me";
 import { handleWorkspaceProjectStatesRequest } from "./handlers/workspace-project-states";
-import { handleWorkspaceProjectsRequest } from "./handlers/workspace-projects";
+import { handleWorkspaceProjectsDetailsRequest, handleWorkspaceProjectsRequest } from "./handlers/workspace-projects";
 import {
   handleWorkspaceHomePreferenceUpdateRequest,
   handleWorkspaceHomePreferencesRequest,
 } from "./handlers/workspace-home-preferences";
+import {
+  handleWorkspaceQuickLinkDetailRequest,
+  handleWorkspaceQuickLinksRequest,
+} from "./handlers/workspace-quick-links";
+import { handleWorkspaceRecentVisitsRequest } from "./handlers/workspace-recent-visits";
 import { handleWorkspaceSidebarPreferencesRequest } from "./handlers/workspace-sidebar-preferences";
 import { handleWorkspaceStatesRequest } from "./handlers/workspace-states";
 import { errorResponse } from "./http";
@@ -67,6 +72,8 @@ export async function handleWorkerNativeApiRequest(
       return handleWorkspaceDetailRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-projects":
       return handleWorkspaceProjectsRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-projects-details":
+      return handleWorkspaceProjectsDetailsRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-member-me":
       return handleWorkspaceMemberMeRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-members":
@@ -82,6 +89,15 @@ export async function handleWorkerNativeApiRequest(
         slug: params.slug ?? "",
         key: params.key ?? "",
       });
+    case "workspace-quick-links":
+      return handleWorkspaceQuickLinksRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-quick-link-detail":
+      return handleWorkspaceQuickLinkDetailRequest(request, env, {
+        slug: params.slug ?? "",
+        linkId: params.linkId ?? "",
+      });
+    case "workspace-recent-visits":
+      return handleWorkspaceRecentVisitsRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-project-detail":
       return handleWorkspaceProjectDetailRequest(request, env, {
         slug: params.slug ?? "",

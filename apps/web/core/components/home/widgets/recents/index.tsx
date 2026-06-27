@@ -75,7 +75,7 @@ export const RecentActivityWidget = observer(function RecentActivityWidget(props
     }
   };
 
-  if (!isLoading && recents?.length === 0)
+  if (!isLoading && (!recents || recents.length === 0))
     return (
       <div ref={ref} className="max-h-[500px] overflow-y-scroll">
         <div className="mb-4 flex items-center justify-between">

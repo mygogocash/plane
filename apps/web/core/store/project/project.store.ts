@@ -350,7 +350,12 @@ export class ProjectStore implements IProjectStore {
       return projectsResponse;
     } catch (error) {
       console.log("Failed to fetch project from workspace store");
-      this.loader = "loaded";
+      runInAction(() => {
+        this.loader = "loaded";
+        if (this.fetchStatus === "partial") {
+          this.fetchStatus = "complete";
+        }
+      });
       throw error;
     }
   };
@@ -607,6 +612,7 @@ export class ProjectStore implements IProjectStore {
           set(this.projectMap, [projectId, "archived_at"], response.archived_at);
           this.rootStore.favorite.removeFavoriteFromStore(projectId);
         });
+        return response;
       })
       .catch((error) => {
         console.log("Failed to archive project from project store");
@@ -627,6 +633,7 @@ export class ProjectStore implements IProjectStore {
         runInAction(() => {
           set(this.projectMap, [projectId, "archived_at"], null);
         });
+        return undefined;
       })
       .catch((error) => {
         console.log("Failed to restore project from project store");

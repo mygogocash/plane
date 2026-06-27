@@ -35,13 +35,12 @@ describe("GenerateBriefButton", () => {
     expect(markup).toContain("View brief");
   });
 
-  it("provider missing → disabled button with connect hint", () => {
+  it("provider missing → renders nothing", () => {
     const markup = renderToStaticMarkup(
       <GenerateBriefButton workspaceSlug="acme" projectId="project-1" issueId="issue-1" isProviderConfigured={false} />
     );
 
-    expect(markup).toContain("Configure AI provider");
-    expect(markup).toContain("disabled");
+    expect(markup).toBe("");
   });
 });
 
