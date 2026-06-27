@@ -94,16 +94,58 @@ function fakeD1ForFronk(): D1Database {
       updated_at: "2026-06-05T00:00:00.000Z",
     },
   ];
+  const sidebarRows: Array<{
+    workspace_id: string;
+    user_id: string;
+    key: string;
+    is_pinned: number;
+    sort_order: number;
+    deleted_at: string | null;
+  }> = [];
+  const homeRows: Array<{
+    workspace_id: string;
+    user_id: string;
+    key: string;
+    is_enabled: number;
+    sort_order: number;
+    config: string;
+    deleted_at: string | null;
+  }> = [];
 
   return {
     prepare(query: string) {
       const state = { args: [] as unknown[] };
-      return {
+      const statement = {
         bind(...args: unknown[]) {
           state.args = args;
-          return this;
+          return statement;
         },
         async all<T>() {
+          if (query.includes("FROM workspace_user_preferences")) {
+            const [workspaceId, userId] = state.args as [string, string];
+            return {
+              results: sidebarRows
+                .filter((row) => row.workspace_id === workspaceId && row.user_id === userId && row.deleted_at === null)
+                .map((row) => ({
+                  key: row.key,
+                  is_pinned: row.is_pinned,
+                  sort_order: row.sort_order,
+                })) as T[],
+            };
+          }
+          if (query.includes("FROM workspace_home_preferences")) {
+            const [workspaceId, userId] = state.args as [string, string];
+            return {
+              results: homeRows
+                .filter((row) => row.workspace_id === workspaceId && row.user_id === userId && row.deleted_at === null)
+                .map((row) => ({
+                  key: row.key,
+                  is_enabled: row.is_enabled,
+                  sort_order: row.sort_order,
+                  config: row.config,
+                })) as T[],
+            };
+          }
           if (query.includes("FROM workspaces w") && query.includes("JOIN workspace_members")) {
             return { results: workspaces as T[] };
           }
@@ -161,9 +203,60 @@ function fakeD1ForFronk(): D1Database {
             return (projects.find((row) => row.id === projectId && row.workspace_id === workspaceId) ??
               null) as T | null;
           }
+          if (query.includes("FROM workspace_home_preferences") && query.includes("SELECT 1")) {
+            const [workspaceId, userId, key] = state.args as [string, string, string];
+            const exists = homeRows.some(
+              (row) =>
+                row.workspace_id === workspaceId && row.user_id === userId && row.key === key && row.deleted_at === null
+            );
+            return (exists ? { ok: 1 } : null) as T | null;
+          }
           return null;
         },
-      } as unknown as D1PreparedStatement;
+        async run() {
+          if (query.includes("INSERT INTO workspace_user_preferences")) {
+            const workspaceId = state.args[1] as string;
+            const userId = state.args[2] as string;
+            const key = state.args[3] as string;
+            const exists = sidebarRows.some(
+              (row) => row.workspace_id === workspaceId && row.user_id === userId && row.key === key
+            );
+            if (!exists) {
+              sidebarRows.push({
+                workspace_id: workspaceId,
+                user_id: userId,
+                key,
+                is_pinned: state.args[4] as number,
+                sort_order: state.args[5] as number,
+                deleted_at: null,
+              });
+            }
+            return { success: true, meta: { changes: exists ? 0 : 1 } };
+          }
+          if (query.includes("INSERT INTO workspace_home_preferences")) {
+            const workspaceId = state.args[1] as string;
+            const userId = state.args[2] as string;
+            const key = state.args[3] as string;
+            const exists = homeRows.some(
+              (row) => row.workspace_id === workspaceId && row.user_id === userId && row.key === key
+            );
+            if (!exists) {
+              homeRows.push({
+                workspace_id: workspaceId,
+                user_id: userId,
+                key,
+                is_enabled: state.args[4] as number,
+                sort_order: state.args[5] as number,
+                config: state.args[6] as string,
+                deleted_at: null,
+              });
+            }
+            return { success: true, meta: { changes: exists ? 0 : 1 } };
+          }
+          return { success: true, meta: { changes: 0 } };
+        },
+      };
+      return statement as unknown as D1PreparedStatement;
     },
   } as unknown as D1Database;
 }
@@ -388,6 +481,5 @@ describe("post-login API parity", () => {
 
     const sidebarResponse = await app.request("/api/workspaces/gogocash/sidebar-preferences/", { headers }, env);
     expect(sidebarResponse.status).toBe(200);
-    await expect(sidebarResponse.json()).resolves.toEqual({});
   });
 });

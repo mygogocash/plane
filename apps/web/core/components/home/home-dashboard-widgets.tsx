@@ -14,13 +14,9 @@ import type { THomeWidgetKeys, THomeWidgetProps } from "@plane/types";
 import darkWidgetsAsset from "@/app/assets/empty-state/dashboard/widgets-dark.webp?url";
 import lightWidgetsAsset from "@/app/assets/empty-state/dashboard/widgets-light.webp?url";
 // components
-import { AskPlaneAIWidget } from "@/components/ai/ask-plane-widget/AskPlaneAIWidget";
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
-import { mapUiModeToCopilotMode } from "@/components/ai/shared/ai-surface.utils";
 // hooks
-import { useCopilot } from "@/hooks/store/use-copilot";
 import { useHome } from "@/hooks/store/use-home";
-import { useInstance } from "@/hooks/store/use-instance";
 import { useProject } from "@/hooks/store/use-project";
 // plane web components
 import { HomePageHeader } from "@/plane-web/components/home/header";
@@ -75,8 +71,6 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
   const { toggleWidgetSettings, widgetsMap, showWidgetSettings, orderedWidgets, isAnyWidgetEnabled, loading } =
     useHome();
   const { loader } = useProject();
-  const { config } = useInstance();
-  const copilot = useCopilot();
   // plane hooks
   const { t } = useTranslation();
   // derived values
@@ -91,14 +85,6 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
   return (
     <div className="relative flex h-full w-full flex-col gap-5 sm:gap-7">
       <HomePageHeader />
-      <AskPlaneAIWidget
-        workspaceLabel={workspaceSlugValue}
-        isProviderConfigured={config?.has_llm_configured}
-        onActivate={({ uiMode }) => {
-          copilot.setMode(mapUiModeToCopilotMode(uiMode));
-          copilot.openPanel();
-        }}
-      />
       <ManageWidgetsModal
         workspaceSlug={workspaceSlugValue}
         isModalOpen={showWidgetSettings}

@@ -7,7 +7,7 @@
 import type { CloudflareBindings } from "../../types";
 import { isResponse as isBridgeResponse, resolveLegacyAuthenticatedUser } from "../../session-bridge";
 import { buildDefaultProjectStates } from "../default-project-states";
-import { getProjectInWorkspace, getWorkspaceBySlug } from "../db";
+import { getProjectInWorkspace, getWorkspaceBySlug, listProjectStates } from "../db";
 import { errorResponse, isResponse, jsonResponse } from "../http";
 
 export async function handleWorkspaceProjectStatesRequest(
@@ -38,5 +38,27 @@ export async function handleWorkspaceProjectStatesRequest(
     return errorResponse(404, "PROJECT_NOT_FOUND", "Project was not found in the workspace.");
   }
 
-  return jsonResponse(buildDefaultProjectStates(project.id, workspace.id));
+  const states = await listProjectStates(env, project.id);
+  if (isResponse(states)) {
+    return states;
+  }
+
+  if (states.length === 0) {
+    return jsonResponse(buildDefaultProjectStates(project.id, workspace.id));
+  }
+
+  return jsonResponse(
+    states.map((state) => ({
+      id: state.id,
+      color: state.color,
+      default: Boolean(state.is_default),
+      description: state.description,
+      group: state.group,
+      name: state.name,
+      project_id: state.project_id,
+      sequence: state.sequence,
+      workspace_id: state.workspace_id,
+      order: state.sequence,
+    }))
+  );
 }

@@ -604,6 +604,44 @@ export async function getProjectInWorkspace(env: CloudflareBindings, workspaceId
   }
 }
 
+export async function listProjectStates(env: CloudflareBindings, projectId: string) {
+  const db = requireDatabase(env);
+  if (isResponse(db)) {
+    return db;
+  }
+
+  try {
+    const result = await db
+      .prepare(
+        `SELECT id, project_id, workspace_id, name, description, color, "group", sequence, is_default,
+                created_at, updated_at
+         FROM states
+         WHERE project_id = ?
+           AND deleted_at IS NULL
+         ORDER BY sequence ASC, created_at ASC`
+      )
+      .bind(projectId)
+      .all<{
+        id: string;
+        project_id: string;
+        workspace_id: string;
+        name: string;
+        description: string;
+        color: string;
+        group: string;
+        sequence: number;
+        default: number;
+        created_at: string;
+        updated_at: string;
+      }>();
+
+    return result.results;
+  } catch (error) {
+    console.error("D1_PROJECT_STATES_FAILED", error);
+    return d1QueryFailed("states");
+  }
+}
+
 export async function listProjectIssues(env: CloudflareBindings, projectId: string) {
   const db = requireDatabase(env);
   if (isResponse(db)) {

@@ -16,6 +16,8 @@
     "d1:target-evidence": "node tools/collect-d1-target-evidence.mjs",
     "d1:identity-import": "node tools/d1-identity-import.mjs",
     "d1:issues-import": "node tools/d1-issues-import.mjs",
+    "d1:apply-sql": "node tools/d1-apply-sql.mjs",
+    "d1:work-items-restore": "node tools/d1-work-items-restore.mjs",
     "gcp:source-inventory": "node tools/gcp-source-inventory.mjs",
     "uploads:compare": "node tools/compare-upload-manifests.mjs",
     "uploads:validate": "node tools/compare-upload-manifests.mjs --require-checksum",

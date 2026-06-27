@@ -26,6 +26,10 @@ import { handleWorkspaceProjectIntakeStateRequest } from "./handlers/workspace-p
 import { handleWorkspaceProjectMemberMeRequest } from "./handlers/workspace-project-member-me";
 import { handleWorkspaceProjectStatesRequest } from "./handlers/workspace-project-states";
 import { handleWorkspaceProjectsRequest } from "./handlers/workspace-projects";
+import {
+  handleWorkspaceHomePreferenceUpdateRequest,
+  handleWorkspaceHomePreferencesRequest,
+} from "./handlers/workspace-home-preferences";
 import { handleWorkspaceSidebarPreferencesRequest } from "./handlers/workspace-sidebar-preferences";
 import { handleWorkspaceStatesRequest } from "./handlers/workspace-states";
 import { errorResponse } from "./http";
@@ -71,6 +75,13 @@ export async function handleWorkerNativeApiRequest(
       return handleWorkspaceStatesRequest(request, env, { slug: params.slug ?? "" });
     case "workspace-sidebar-preferences":
       return handleWorkspaceSidebarPreferencesRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-home-preferences":
+      return handleWorkspaceHomePreferencesRequest(request, env, { slug: params.slug ?? "" });
+    case "workspace-home-preference-update":
+      return handleWorkspaceHomePreferenceUpdateRequest(request, env, {
+        slug: params.slug ?? "",
+        key: params.key ?? "",
+      });
     case "workspace-project-detail":
       return handleWorkspaceProjectDetailRequest(request, env, {
         slug: params.slug ?? "",

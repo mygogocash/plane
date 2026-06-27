@@ -19,6 +19,8 @@ export type WorkerNativeRouteId =
   | "workspace-members"
   | "workspace-states"
   | "workspace-sidebar-preferences"
+  | "workspace-home-preferences"
+  | "workspace-home-preference-update"
   | "workspace-project-detail"
   | "workspace-project-states"
   | "workspace-project-intake-state"
@@ -141,6 +143,33 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     implemented: true,
     pattern: /^\/api\/workspaces\/([^/]+)\/sidebar-preferences\/$/,
     paramNames: ["slug"],
+  },
+  {
+    id: "workspace-sidebar-preferences",
+    method: "PATCH",
+    path: "/api/workspaces/:slug/sidebar-preferences/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/sidebar-preferences\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-home-preferences",
+    method: "GET",
+    path: "/api/workspaces/:slug/home-preferences/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/home-preferences\/$/,
+    paramNames: ["slug"],
+  },
+  {
+    id: "workspace-home-preference-update",
+    method: "PATCH",
+    path: "/api/workspaces/:slug/home-preferences/:key/",
+    slice: "worker-native-api-migration-slice-3",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/home-preferences\/([^/]+)\/$/,
+    paramNames: ["slug", "key"],
   },
   {
     id: "workspace-project-detail",

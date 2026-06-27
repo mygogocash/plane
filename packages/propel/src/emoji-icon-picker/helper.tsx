@@ -89,15 +89,15 @@ export const adjustColorForContrast = (hex: string): string => {
   }
 
   // Convert RGB back to hex
-  const toHex = (value: number): string => {
-    const hex = value.toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
-  };
-
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  return `#${channelToHex(r)}${channelToHex(g)}${channelToHex(b)}`;
 };
 
 export const DEFAULT_COLORS = ["#95999f", "#6d7b8a", "#5e6ad2", "#02b5ed", "#02b55c", "#f2be02", "#e57a00", "#f38e82"];
+
+function channelToHex(value: number): string {
+  const segment = value.toString(16);
+  return segment.length === 1 ? `0${segment}` : segment;
+}
 
 /**
  * Enhanced emoji to decimal conversion that preserves emoji sequences
@@ -148,15 +148,21 @@ export function emojiToString(emoji: string): string {
  */
 export function stringToEmoji(emojiString: string): string {
   if (!emojiString) return "";
-  const decimals = emojiString
-    .split("-")
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n >= 0 && n <= 0x10ffff);
-  try {
-    return decimalToEmojiEnhanced(decimals);
-  } catch {
-    return "";
+  const trimmed = emojiString.trim();
+  const segments = trimmed.split("-");
+  const decimals = segments.map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n >= 0 && n <= 0x10ffff);
+
+  // Plane stores picker selections as decimal code-point strings (e.g. "128193" or "128072-8205-…").
+  if (decimals.length > 0 && decimals.length === segments.length) {
+    try {
+      return decimalToEmojiEnhanced(decimals);
+    } catch {
+      // Fall through to raw Unicode handling below.
+    }
   }
+
+  // D1 backfill and some API payloads store the grapheme directly (e.g. "📁").
+  return trimmed;
 }
 
 export const getEmojiSize = (size: number) => size * 0.9 * 0.0625;
