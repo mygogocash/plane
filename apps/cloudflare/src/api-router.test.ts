@@ -72,6 +72,10 @@ describe("worker native api router", () => {
       route: { id: "workspace-project-states" },
       params: { slug: "gogocash", projectId: "abc-123" },
     });
+    expect(matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/intake-state/")).toMatchObject({
+      route: { id: "workspace-project-intake-state" },
+      params: { slug: "gogocash", projectId: "abc-123" },
+    });
     expect(
       matchWorkerNativeRoute("GET", "/api/workspaces/gogocash/projects/abc-123/project-members/me/")
     ).toMatchObject({
@@ -83,6 +87,12 @@ describe("worker native api router", () => {
   it("does not match unregistered routes", () => {
     expect(matchWorkerNativeRoute("POST", "/api/users/me/profile/")).toBeNull();
     expect(matchWorkerNativeRoute("POST", "/api/users/me/workspaces/")).toBeNull();
+  });
+
+  it("matches HEAD requests to GET native routes", () => {
+    expect(matchWorkerNativeRoute("HEAD", "/api/workspaces/gogocash/projects/abc-123/issues/")).toMatchObject({
+      route: { id: "workspace-project-issues-list" },
+    });
   });
 
   it("matches profile and workspace member me routes", () => {
@@ -149,6 +159,7 @@ describe("worker native api router", () => {
       "workspace-sidebar-preferences",
       "workspace-project-detail",
       "workspace-project-states",
+      "workspace-project-intake-state",
       "workspace-project-member-me",
       "workspace-project-issues-list",
       "workspace-project-issue-create",

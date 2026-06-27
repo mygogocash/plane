@@ -308,7 +308,28 @@ describe("post-login API parity", () => {
       env
     );
     expect(projectStatesResponse.status).toBe(200);
-    await expect(projectStatesResponse.json()).resolves.toEqual([]);
+    await expect(projectStatesResponse.json()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `${FASTWORK_PROJECT_ID}-backlog`,
+          name: "Backlog",
+          group: "backlog",
+          default: true,
+        }),
+      ])
+    );
+
+    const intakeStateResponse = await app.request(
+      `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/intake-state/`,
+      { headers },
+      env
+    );
+    expect(intakeStateResponse.status).toBe(200);
+    await expect(intakeStateResponse.json()).resolves.toMatchObject({
+      id: `${FASTWORK_PROJECT_ID}-intake`,
+      group: "triage",
+      name: "Triage",
+    });
 
     const projectMemberMeResponse = await app.request(
       `/api/workspaces/gogocash/projects/${FASTWORK_PROJECT_ID}/project-members/me/`,

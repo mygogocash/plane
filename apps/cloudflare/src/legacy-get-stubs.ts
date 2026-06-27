@@ -23,7 +23,6 @@ const EMPTY_OBJECT_PATTERNS = [
   /^\/api\/workspaces\/[^/]+\/projects\/[^/]+\/user-properties\/$/,
   /^\/api\/workspaces\/[^/]+\/projects\/[^/]+\/epics-user-properties\/$/,
   /^\/api\/workspaces\/[^/]+\/projects\/[^/]+\/workflow-config\/$/,
-  /^\/api\/workspaces\/[^/]+\/projects\/[^/]+\/intake-state\/$/,
 ] as const;
 
 function normalizePath(pathname: string): string {
@@ -46,6 +45,10 @@ export function legacyGetEmptyStubResponse(request: Request): Response | null {
   }
 
   if (EMPTY_OBJECT_PATTERNS.some((pattern) => pattern.test(path))) {
+    if (path.endsWith("/workflow-config/")) {
+      return jsonResponse({ workflow_status: "disabled" });
+    }
+
     return jsonResponse({});
   }
 

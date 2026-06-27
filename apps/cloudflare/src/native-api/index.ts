@@ -22,6 +22,7 @@ import {
   handleWorkspaceProjectIssuesListRequest,
 } from "./handlers/workspace-project-issues";
 import { handleWorkspaceProjectDetailRequest } from "./handlers/workspace-project-detail";
+import { handleWorkspaceProjectIntakeStateRequest } from "./handlers/workspace-project-intake-state";
 import { handleWorkspaceProjectMemberMeRequest } from "./handlers/workspace-project-member-me";
 import { handleWorkspaceProjectStatesRequest } from "./handlers/workspace-project-states";
 import { handleWorkspaceProjectsRequest } from "./handlers/workspace-projects";
@@ -77,6 +78,11 @@ export async function handleWorkerNativeApiRequest(
       });
     case "workspace-project-states":
       return handleWorkspaceProjectStatesRequest(request, env, {
+        slug: params.slug ?? "",
+        projectId: params.projectId ?? "",
+      });
+    case "workspace-project-intake-state":
+      return handleWorkspaceProjectIntakeStateRequest(request, env, {
         slug: params.slug ?? "",
         projectId: params.projectId ?? "",
       });

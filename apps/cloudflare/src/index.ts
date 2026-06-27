@@ -232,6 +232,18 @@ app.all("/api/cloudflare/live/rooms/*", async (c) => {
   return room.fetch(new Request(targetUrl.toString(), c.req.raw));
 });
 
+function respondHeadIfNeeded(request: Request, response: Response): Response {
+  if (request.method.toUpperCase() !== "HEAD") {
+    return response;
+  }
+
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 app.all("*", async (c) => {
   const url = new URL(c.req.url);
   const authRoute = matchAuthRoute(c.req.method, url.pathname);
@@ -242,12 +254,15 @@ app.all("*", async (c) => {
   const routing = resolveRequestRouting(c.req.raw, c.env);
 
   if (routing.kind === "worker-native") {
-    return handleWorkerNativeApiRequest(c.req.raw, c.env, routing.route, routing.params);
+    return respondHeadIfNeeded(
+      c.req.raw,
+      await handleWorkerNativeApiRequest(c.req.raw, c.env, routing.route, routing.params)
+    );
   }
 
   const legacyStubResponse = isWorkerNativeApiEnabled(c.env) ? legacyNativeCompatibilityStubResponse(c.req.raw) : null;
   if (legacyStubResponse) {
-    return legacyStubResponse;
+    return respondHeadIfNeeded(c.req.raw, legacyStubResponse);
   }
 
   const classification = routing.classification;

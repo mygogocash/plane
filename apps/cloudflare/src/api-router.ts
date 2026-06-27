@@ -21,6 +21,7 @@ export type WorkerNativeRouteId =
   | "workspace-sidebar-preferences"
   | "workspace-project-detail"
   | "workspace-project-states"
+  | "workspace-project-intake-state"
   | "workspace-project-member-me"
   | "workspace-project-issues-list"
   | "workspace-project-issue-create"
@@ -160,6 +161,15 @@ const WORKER_NATIVE_ROUTE_MATCHERS: WorkerNativeRouteMatcher[] = [
     paramNames: ["slug", "projectId"],
   },
   {
+    id: "workspace-project-intake-state",
+    method: "GET",
+    path: "/api/workspaces/:slug/projects/:projectId/intake-state/",
+    slice: "worker-native-api-migration-slice-4",
+    implemented: true,
+    pattern: /^\/api\/workspaces\/([^/]+)\/projects\/([^/]+)\/intake-state\/$/,
+    paramNames: ["slug", "projectId"],
+  },
+  {
     id: "workspace-project-member-me",
     method: "GET",
     path: "/api/workspaces/:slug/projects/:projectId/project-members/me/",
@@ -261,10 +271,11 @@ export function isWorkerNativeApiEnabled(env: CloudflareBindings): boolean {
 
 export function matchWorkerNativeRoute(method: string, pathname: string): MatchedWorkerNativeRoute | null {
   const normalizedMethod = method.toUpperCase();
+  const methodForMatch = normalizedMethod === "HEAD" ? "GET" : normalizedMethod;
   const normalizedPath = normalizePath(pathname);
 
   for (const matcher of WORKER_NATIVE_ROUTE_MATCHERS) {
-    if (matcher.method !== normalizedMethod) {
+    if (matcher.method !== methodForMatch) {
       continue;
     }
 

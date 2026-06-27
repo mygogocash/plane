@@ -6,11 +6,11 @@
 
 import type { CloudflareBindings } from "../../types";
 import { isResponse as isBridgeResponse, resolveLegacyAuthenticatedUser } from "../../session-bridge";
-import { buildDefaultProjectStates } from "../default-project-states";
+import { buildDefaultIntakeState } from "../default-project-states";
 import { getProjectInWorkspace, getWorkspaceBySlug } from "../db";
 import { errorResponse, isResponse, jsonResponse } from "../http";
 
-export async function handleWorkspaceProjectStatesRequest(
+export async function handleWorkspaceProjectIntakeStateRequest(
   request: Request,
   env: CloudflareBindings,
   params: { slug: string; projectId: string }
@@ -38,5 +38,5 @@ export async function handleWorkspaceProjectStatesRequest(
     return errorResponse(404, "PROJECT_NOT_FOUND", "Project was not found in the workspace.");
   }
 
-  return jsonResponse(buildDefaultProjectStates(project.id, workspace.id));
+  return jsonResponse(buildDefaultIntakeState(project.id, workspace.id));
 }
