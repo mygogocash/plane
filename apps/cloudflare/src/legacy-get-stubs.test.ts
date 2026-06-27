@@ -18,6 +18,15 @@ describe("legacy native compatibility stubs", () => {
     await expect(response?.json()).resolves.toEqual([]);
   });
 
+  it("returns empty collections for project shell HEAD routes", async () => {
+    const response = legacyGetEmptyStubResponse(
+      new Request("https://app.manut.xyz/api/workspaces/gogocash/projects/abc/members/", { method: "HEAD" })
+    );
+
+    expect(response?.status).toBe(200);
+    await expect(response?.json()).resolves.toEqual([]);
+  });
+
   it("returns empty objects for project preference GET routes", async () => {
     const response = legacyGetEmptyStubResponse(
       new Request("https://app.manut.xyz/api/workspaces/gogocash/projects/abc/workflow-config/")

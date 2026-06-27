@@ -34,7 +34,8 @@ function normalizePath(pathname: string): string {
 }
 
 export function legacyGetEmptyStubResponse(request: Request): Response | null {
-  if (request.method.toUpperCase() !== "GET") {
+  const method = request.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
     return null;
   }
 
